@@ -213,10 +213,22 @@ export default function ResetPasswordPage() {
   if (!isValidToken) {
     // URL 해시에서 에러 정보 확인
     const hash = window.location.hash
-    const urlParams = new URLSearchParams(hash.substring(1))
-    const error = urlParams.get('error')
-    const errorCode = urlParams.get('error_code')
-    const errorDescription = urlParams.get('error_description')
+    const hashParams = new URLSearchParams(hash.substring(1))
+    const error = hashParams.get('error')
+    const errorCode = hashParams.get('error_code')
+    const errorDescription = hashParams.get('error_description')
+
+    // URL 파라미터도 확인
+    const code = searchParams.get('code')
+    const type = searchParams.get('type')
+    const accessToken = searchParams.get('access_token')
+
+    console.log('토큰 검증 실패 - 디버깅 정보:', {
+      urlParams: { code, type, hasAccessToken: !!accessToken },
+      hashParams: { error, errorCode, errorDescription },
+      currentUrl: window.location.href,
+      currentHash: window.location.hash
+    })
 
     // 에러 메시지 결정
     let errorTitle = '유효하지 않은 링크'
@@ -228,6 +240,9 @@ export default function ResetPasswordPage() {
     } else if (error === 'access_denied') {
       errorTitle = '접근 거부됨'
       errorMessage = '비밀번호 재설정 링크에 접근할 수 없습니다'
+    } else if (errorCode === 'invalid_request') {
+      errorTitle = '잘못된 요청'
+      errorMessage = '비밀번호 재설정 링크가 올바르지 않습니다'
     }
 
     return (
@@ -249,12 +264,22 @@ export default function ResetPasswordPage() {
           </div>
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-yellow-900 mb-2">💡 도움말</h3>
+            <h3 className="text-sm font-medium text-yellow-900 mb-2">💡 문제 해결 방법</h3>
             <ul className="text-sm text-yellow-800 space-y-1">
               <li>• 이메일의 링크를 다시 한 번 확인해주세요</li>
               <li>• 링크를 복사해서 브라우저에 붙여넣기 해보세요</li>
               <li>• 24시간이 지난 링크는 만료됩니다</li>
-              <li>• 새로운 비밀번호 찾기를 요청해주세요</li>
+              <li>• 스팸함도 확인해보세요</li>
+              <li>• 브라우저를 새로고침해보세요</li>
+            </ul>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-blue-900 mb-2">🔧 기술적 문제인 경우</h3>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• 개발자 도구 콘솔을 확인해주세요 (F12)</li>
+              <li>• 브라우저 캐시를 삭제해보세요</li>
+              <li>• 다른 브라우저로 시도해보세요</li>
             </ul>
           </div>
 

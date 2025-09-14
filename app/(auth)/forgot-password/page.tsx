@@ -35,8 +35,12 @@ export default function ForgotPasswordPage() {
     setIsSubmitting(true)
 
     try {
+      // 현재 도메인과 정확한 리다이렉트 URL 설정
+      const redirectUrl = `${window.location.origin}/reset-password`
+      console.log('비밀번호 재설정 리다이렉트 URL:', redirectUrl)
+
       const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: `${window.location.origin}/reset-password`
+        redirectTo: redirectUrl
       })
 
       if (error) {

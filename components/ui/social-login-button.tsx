@@ -2,7 +2,6 @@
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import React from 'react'
 
 export type SocialProvider = 'google' | 'kakao' | 'naver'
 
@@ -47,11 +46,11 @@ const providerConfig = {
   }
 }
 
-export function SocialLoginButton({ 
-  provider, 
-  onClick, 
-  disabled = false, 
-  className 
+export function SocialLoginButton({
+  provider,
+  onClick,
+  disabled = false,
+  className
 }: SocialLoginButtonProps) {
   const config = providerConfig[provider]
 
