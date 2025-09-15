@@ -1,4 +1,4 @@
-name: Deploy pluck-landing
+name: Deploy web-neimed
 
 on:
   push:
@@ -17,13 +17,25 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
       - name: Deploy to Vercel
         run: |
           BRANCH="${GITHUB_REF##*/}"
           if [ "$BRANCH" = "main" ]; then
-            curl -X POST "${{ secrets.VERCEL_DEPLOY_MAIN_HOOKS }}"
+            vercel --token ${{ secrets.VERCEL_TOKEN }} --prod
           elif [ "$BRANCH" = "staging" ]; then
-            curl -X POST "${{ secrets.VERCEL_DEPLOY_STAGING_HOOKS }}"
+            vercel --token ${{ secrets.VERCEL_TOKEN }} --target staging
           elif [ "$BRANCH" = "develop" ]; then
-            curl -X POST "${{ secrets.VERCEL_DEPLOY_DEVELOP_HOOKS }}"
+            vercel --token ${{ secrets.VERCEL_TOKEN }} --target preview
           fi
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
