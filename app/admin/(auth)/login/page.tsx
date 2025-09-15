@@ -22,7 +22,7 @@ type AdminLoginFormData = z.infer<typeof adminLoginSchema>
 
 export default function AdminLoginPage() {
   const router = useRouter()
-  const { user, loading: authLoading, adminUser, signInWithEmail, signOut } = useAuthStore()
+  const { user, loading: authLoading, isAdmin, adminLoading, signInWithEmail, signOut } = useAuthStore()
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -35,10 +35,10 @@ export default function AdminLoginPage() {
   })
 
   useEffect(() => {
-    if (!authLoading && adminUser) {
+    if (!authLoading && !adminLoading && isAdmin) {
       router.push('/admin/events')
     }
-  }, [adminUser, authLoading, router])
+  }, [isAdmin, authLoading, adminLoading, router])
 
   const onSubmit = async (data: AdminLoginFormData) => {
     setIsSubmitting(true)
@@ -60,7 +60,7 @@ export default function AdminLoginPage() {
   }
 
   // 로딩 상태 렌더링
-  if (authLoading) {
+  if (authLoading || adminLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -72,7 +72,7 @@ export default function AdminLoginPage() {
   }
 
   // 일반 사용자 로그인 상태 렌더링
-  if (user && !adminUser && !authLoading) {
+  if (user && !isAdmin && !authLoading && !adminLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">

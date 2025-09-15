@@ -23,7 +23,8 @@
       "mcp__supabase-neimd__list_tables",
       "mcp__supabase-neimd__search_docs",
       "Bash(ls:*)",
-      "mcp__supabase-neimd__get_advisors"
+      "mcp__supabase-neimd__get_advisors",
+      "Bash(export:*)"
     ],
     "deny": []
   },
