@@ -33,13 +33,59 @@ export default function AuthCallbackPage() {
 
         if (data.session && data.session.user) {
           console.log('✅ OAuth 로그인 성공:', data.session.user.email)
-          
+
+          // 사용자 프로필 존재 여부 확인 및 생성
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', data.session.user.id)
+            .single()
+
+          if (!profile) {
+            console.log('📄 사용자 프로필 생성 중...')
+
+            // 사용자 메타데이터에서 이름 추출
+            const fullName = data.session.user.user_metadata?.name ||
+                           data.session.user.user_metadata?.full_name ||
+                           data.session.user.email?.split('@')[0] ||
+                           '사용자'
+
+            // 관리자 여부 확인
+            const isAdmin = data.session.user.user_metadata?.isAdmin === true
+
+            try {
+              const profileResponse = await fetch('/api/auth/create-profile', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  userId: data.session.user.id,
+                  email: data.session.user.email,
+                  name: fullName,
+                  isAdmin
+                })
+              })
+
+              if (!profileResponse.ok) {
+                console.error('❌ 프로필 생성 실패')
+                toast.error('프로필 생성에 실패했습니다.')
+              } else {
+                console.log('✅ 프로필 생성 성공')
+                toast.success('프로필이 생성되었습니다!')
+              }
+            } catch (error) {
+              console.error('❌ 프로필 생성 오류:', error)
+              toast.error('프로필 생성 중 오류가 발생했습니다.')
+            }
+          }
+
           // returnTo 파라미터 확인
           const urlParams = new URLSearchParams(window.location.search)
           const returnTo = urlParams.get('returnTo') || '/home'
-          
+
           toast.success('로그인되었습니다!')
-          
+
           // 페이지 새로고침으로 확실한 상태 동기화
           window.location.href = returnTo
         } else {
