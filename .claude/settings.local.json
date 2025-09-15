@@ -22,7 +22,8 @@
       "mcp__supabase-neimd__execute_sql",
       "mcp__supabase-neimd__list_tables",
       "mcp__supabase-neimd__search_docs",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "mcp__supabase-neimd__get_advisors"
     ],
     "deny": []
   },
