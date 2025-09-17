@@ -24,7 +24,8 @@
       "mcp__supabase-neimd__search_docs",
       "Bash(ls:*)",
       "mcp__supabase-neimd__get_advisors",
-      "Bash(export:*)"
+      "Bash(export:*)",
+      "Bash(python3:*)"
     ],
     "deny": []
   },

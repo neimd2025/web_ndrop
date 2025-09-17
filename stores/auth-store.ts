@@ -225,9 +225,18 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
       return { error: { message: '네이버 로그인 기능은 준비 중입니다.' } }
     }
 
-    // returnTo 파라미터 가져오기
+    // returnTo 파라미터 가져오기 - URL과 현재 경로 모두 체크
     const urlParams = new URLSearchParams(window.location.search)
-    const returnTo = urlParams.get('returnTo') || '/home'
+    let returnTo = urlParams.get('returnTo')
+
+    // 관리자 페이지에서 로그인하는 경우 관리자 대시보드로 이동
+    if (!returnTo) {
+      if (window.location.pathname.startsWith('/admin')) {
+        returnTo = '/admin/events'
+      } else {
+        returnTo = '/home'
+      }
+    }
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,

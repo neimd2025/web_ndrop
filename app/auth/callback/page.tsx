@@ -50,8 +50,13 @@ export default function AuthCallbackPage() {
                            data.session.user.email?.split('@')[0] ||
                            '사용자'
 
+            // returnTo 파라미터로 관리자 여부 판단
+            const urlParams = new URLSearchParams(window.location.search)
+            const returnTo = urlParams.get('returnTo') || '/home'
+            const isAdminLogin = returnTo.startsWith('/admin')
+
             // 관리자 여부 확인
-            const isAdmin = data.session.user.user_metadata?.isAdmin === true
+            const isAdmin = data.session.user.user_metadata?.isAdmin === true || isAdminLogin
 
             try {
               const profileResponse = await fetch('/api/auth/create-profile', {
@@ -82,12 +87,29 @@ export default function AuthCallbackPage() {
 
           // returnTo 파라미터 확인
           const urlParams = new URLSearchParams(window.location.search)
-          const returnTo = urlParams.get('returnTo') || '/home'
+          let returnTo = urlParams.get('returnTo') || '/home'
 
+          // 상대 경로로 만드기 (전체 URL이면 경로만 추출)
+          if (returnTo.startsWith('http')) {
+            try {
+              const url = new URL(returnTo)
+              returnTo = url.pathname + url.search + url.hash
+            } catch (e) {
+              console.error('잘못된 returnTo URL:', returnTo)
+              returnTo = '/home'
+            }
+          }
+
+          // 절대 경로로 만들기
+          if (!returnTo.startsWith('/')) {
+            returnTo = '/' + returnTo
+          }
+
+          console.log('🔄 리다이렉트 위치:', returnTo)
           toast.success('로그인되었습니다!')
 
-          // 페이지 새로고침으로 확실한 상태 동기화
-          window.location.href = returnTo
+          // Next.js 라우터로 리다이렉트 (안전하고 현재 도메인 유지)
+          router.push(returnTo)
         } else {
           console.log('⚠️ 세션 정보가 없습니다.')
           setError('세션 정보를 찾을 수 없습니다.')
