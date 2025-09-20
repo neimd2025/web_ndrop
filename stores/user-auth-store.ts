@@ -271,7 +271,6 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
         .from('user_profiles')
         .select('id, email, full_name, role, role_id, company, contact, profile_image_url')
         .eq('id', userId)
-        .eq('role_id', 1) // 일반 사용자만 조회
         .single()
 
       if (error) {
