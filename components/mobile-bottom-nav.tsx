@@ -4,11 +4,11 @@ import { Bell, Bookmark, Home, User } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
+import { createClient } from "@/utils/supabase/client"
 
 export default function MobileBottomNav() {
   const pathname = usePathname()
   const [isClient, setIsClient] = useState(false)
-
   useEffect(() => {
     setIsClient(true)
   }, [])
@@ -17,7 +17,8 @@ export default function MobileBottomNav() {
   const hideBottomNav =
     ["/", "/onboarding", "/welcome", "/login", "/signup", "/forgot-password", "/reset-password"].includes(pathname) ||
     pathname.startsWith("/admin") ||
-    pathname.startsWith("/profile/edit")
+    pathname.startsWith("/profile/edit") ||
+    pathname === "/client/onboarding"
 
   // 서버사이드 렌더링 중에는 아무것도 렌더링하지 않음
   if (!isClient) {
@@ -29,10 +30,10 @@ export default function MobileBottomNav() {
   }
 
   const navItems = [
-    { href: "/home", icon: Home, label: "홈" },
-    { href: "/saved-cards", icon: Bookmark, label: "저장된 명함" },
-    { href: "/notifications", icon: Bell, label: "알림" },
-    { href: "/my-page", icon: User, label: "마이 메뉴" },
+    { href: "/client/home", icon: Home, label: "홈" },
+    { href: "/client/saved-cards", icon: Bookmark, label: "저장된 명함" },
+    { href: "/client/notifications", icon: Bell, label: "알림" },
+    { href: "/client/my-page", icon: User, label: "마이 메뉴" },
   ]
 
   return (

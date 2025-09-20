@@ -52,7 +52,7 @@ export function UserOnboardingClient({ user }: UserOnboardingClientProps) {
   }
 
   const handleGetStarted = () => {
-    router.push('/namecard/edit')
+    router.push('/client/namecard/create')
   }
 
   return (

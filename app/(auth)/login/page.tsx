@@ -57,7 +57,7 @@ export default function LoginPage() {
           const redirectUrl = returnTo || '/admin/dashboard'
           window.location.href = redirectUrl
         } else {
-          const redirectUrl = returnTo || '/user/home'
+          const redirectUrl = returnTo || '/client/home'
           window.location.href = redirectUrl
         }
       }, 100)
@@ -94,7 +94,7 @@ export default function LoginPage() {
           if (isAdminLogin) {
             window.location.href = returnTo || '/admin/dashboard'
           } else {
-            window.location.href = returnTo || '/user/home'
+            window.location.href = returnTo || '/client/home'
           }
         }, 100)
       } else {

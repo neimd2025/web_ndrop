@@ -79,7 +79,7 @@ export function UserHomeClient({
 
         {/* 액션 버튼들 */}
         <div className="flex gap-3">
-          <Link href="/scan-card" className="flex-1">
+          <Link href="/client/scan-card" className="flex-1">
             <Card className="bg-purple-600 text-white border-0 hover:bg-purple-700 transition-colors">
               <CardContent className="p-5 text-center">
                 <Camera className="w-4 h-4 mx-auto mb-4 text-white" />
@@ -88,7 +88,7 @@ export function UserHomeClient({
             </Card>
           </Link>
 
-          <Link href="/events/join" className="flex-1">
+          <Link href="/client/events/join" className="flex-1">
             <Card className="bg-white border border-gray-200 hover:border-gray-300 transition-colors">
               <CardContent className="p-5 text-center">
                 <Calendar className="w-4 h-4 mx-auto mb-4 text-gray-700" />
@@ -131,13 +131,13 @@ export function UserHomeClient({
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">내 명함</h2>
-              <Link href="/my-qr">
+              <Link href="/client/my-qr">
                 <Button variant="ghost" size="sm" className="text-purple-600 hover:text-purple-700">
                   내 QR코드
                 </Button>
               </Link>
             </div>
-            <Link href="/my-namecard">
+            <Link href="/client/my-namecard">
               <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-200">
                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                   <span className="text-gray-600 font-bold text-lg">{getInitial()}</span>
@@ -158,7 +158,7 @@ export function UserHomeClient({
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-gray-900">내 이벤트 참가 기록</h2>
-              <Link href="/events/history">
+              <Link href="/client/events/history">
                 <Button variant="ghost" size="sm" className="text-purple-600 hover:text-purple-700">
                   전체 보기
                 </Button>

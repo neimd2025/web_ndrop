@@ -75,7 +75,7 @@ export function UserMyNamecardClient({ user, businessCards }: UserMyNamecardClie
       {/* 헤더 */}
       <div className="bg-white border-b border-gray-200 px-5 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/user/home">
+          <Link href="/client/home">
             <Button variant="ghost" size="sm" className="p-2">
               <ArrowLeft className="w-4 h-4 text-gray-900" />
             </Button>
@@ -151,14 +151,14 @@ export function UserMyNamecardClient({ user, businessCards }: UserMyNamecardClie
 
           {/* 액션 버튼들 */}
           <div className="space-y-3 flex flex-col gap-1">
-            <Link href="/user/my-qr">
+            <Link href="/client/my-qr">
               <Button className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-semibold">
                 <QrCode className="w-4 h-4 mr-2" />
                 QR 코드 보기
               </Button>
             </Link>
 
-            <Link href="/namecard/edit">
+            <Link href="/client/namecard/edit">
               <Button variant="outline" className="w-full h-12 border-gray-200 hover:bg-white">
                 <Edit className="w-4 h-4 mr-2" />
                 명함 수정하기

@@ -33,18 +33,18 @@ export function UserLayoutClient({ children, user }: UserLayoutClientProps) {
       return
     }
 
-    const isOnboardingRoute = pathname.startsWith('/user/onboarding')
-    const isNamecardEditRoute = pathname.startsWith('/user/namecard/edit') || pathname.startsWith('/namecard/edit')
+    const isOnboardingRoute = pathname.startsWith('/client/onboarding')
+    const isNamecardEditRoute = pathname.startsWith('/client/namecard/edit') || pathname.startsWith('/namecard/edit')
 
     // 프로필이 필요한 경우
     if (needsOnboarding && !isOnboardingRoute && !isNamecardEditRoute) {
-      router.push('/user/onboarding')
+      router.push('/client/onboarding')
       return
     }
 
     // 프로필은 있지만 명함이 필요한 경우
     if (!needsOnboarding && needsBusinessCard && !isNamecardEditRoute && !isOnboardingRoute) {
-      router.push('/user/my-namecard')
+      router.push('/client/my-namecard')
       return
     }
   }, [mounted, initialized, user?.id, profileLoading, cardLoading, needsOnboarding, needsBusinessCard, pathname])

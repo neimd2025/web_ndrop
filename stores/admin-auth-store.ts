@@ -43,6 +43,10 @@ interface AdminAuthState {
 
   // Initialize auth
   initializeAuth: () => Promise<(() => void) | undefined>
+
+  // Debug helpers
+  resetAuth: () => void
+  forceReinitialize: () => Promise<(() => void) | undefined>
 }
 
 export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => ({
@@ -312,22 +316,27 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
 
     // 이미 초기화된 경우 스킵
     if (state.initialized) {
+      console.log('Admin auth already initialized, skipping...')
       return
     }
 
     try {
-      set({ loading: true })
+      console.log('Starting admin auth initialization...')
+      set({ loading: true, initialized: false })
 
       // 현재 세션 가져오기
       const { data: { session } } = await supabase.auth.getSession()
+      console.log('Admin session check:', session?.user?.email)
 
       if (session?.user) {
         // 관리자 권한 확인
         const isAdmin = await get().checkAdminStatus(session.user.id)
+        console.log('Admin status check:', isAdmin)
 
         if (isAdmin) {
           // 관리자 프로필 정보 가져오기
           const profile = await get().fetchAdminProfile(session.user.id)
+          console.log('Admin profile loaded:', profile?.full_name)
 
           set({
             admin: session.user,
@@ -337,8 +346,8 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
             initialized: true
           })
         } else {
-          // 관리자가 아닌 경우 세션 정리
-          await supabase.auth.signOut()
+          // 관리자가 아닌 경우 admin 스토어만 정리 (세션은 유지)
+          console.log('User is not admin, clearing admin state...')
           set({
             admin: null,
             session: null,
@@ -348,6 +357,7 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
           })
         }
       } else {
+        console.log('No session found, setting as unauthed')
         set({
           admin: null,
           session: null,
@@ -381,8 +391,7 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
                 adminProfile: profile,
               })
             } else {
-              // 관리자가 아닌 경우 로그아웃
-              await supabase.auth.signOut()
+              // 관리자가 아닌 경우 admin 스토어만 정리 (세션은 유지)
               set({
                 admin: null,
                 session: null,
@@ -404,10 +413,34 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
     } catch (error) {
       console.error('Admin auth initialization error:', error)
       set({
+        admin: null,
+        session: null,
+        adminProfile: null,
         loading: false,
         initialized: true
       })
     }
+  },
+
+  // Debug helpers
+  resetAuth: () => {
+    console.log('🔄 Resetting admin auth state...')
+    set({
+      admin: null,
+      session: null,
+      adminProfile: null,
+      loading: false,
+      initialized: false
+    })
+  },
+
+  forceReinitialize: async () => {
+    console.log('🔧 Force reinitializing admin auth...')
+    const state = get()
+    // 강제로 초기화 상태 리셋
+    set({ initialized: false })
+    // 다시 초기화 실행
+    return await state.initializeAuth()
   },
 }), {
   name: 'admin-auth-store',

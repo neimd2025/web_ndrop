@@ -78,7 +78,7 @@ export async function getUserAuth(): Promise<UserProfile | null> {
     }
 
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .select('*')
       .eq('id', user.id)
       .single()
@@ -128,6 +128,17 @@ export async function getUserHomeData(): Promise<{
   try {
     const supabase = await createClient()
 
+    // 온보딩 체크: 명함이 없으면 온보딩으로 리다이렉트
+    const { data: existingCards } = await supabase
+      .from('business_cards')
+      .select('id')
+      .eq('user_id', user.id)
+      .limit(1)
+
+    if (!existingCards || existingCards.length === 0) {
+      redirect('/client/onboarding')
+    }
+
     const [eventsResult, notificationsResult, businessCardsResult] = await Promise.all([
       supabase
         .from('events')
@@ -139,7 +150,7 @@ export async function getUserHomeData(): Promise<{
       supabase
         .from('notifications')
         .select('*')
-        .or(`target_type.eq.all,target_ids.cs.{${user.id}}`)
+        .or(`target_type.eq.all,user_id.eq.${user.id}`)
         .order('created_at', { ascending: false })
         .limit(5),
 
@@ -250,7 +261,7 @@ export async function getUserNotificationsData(): Promise<{
     const { data: notifications, error } = await supabase
       .from('notifications')
       .select('*')
-      .or(`target_type.eq.all,target_ids.cs.{${user.id}}`)
+      .or(`target_type.eq.all,user_id.eq.${user.id}`)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -337,8 +348,8 @@ export async function getUserSavedCardsData(): Promise<{
         *,
         business_card:business_cards(*)
       `)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+      .eq('collector_id', user.id)
+      .order('collected_at', { ascending: false })
 
     if (error) {
       console.error('저장된 명함 데이터 가져오기 오류:', error)
@@ -370,7 +381,7 @@ export async function getUserProfileData(profileId?: string): Promise<{
 
     const [profileResult, businessCardsResult] = await Promise.all([
       supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('*')
         .eq('id', targetUserId)
         .single(),

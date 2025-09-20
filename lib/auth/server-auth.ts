@@ -1,5 +1,4 @@
 import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 export interface AuthUser {
@@ -35,7 +34,7 @@ export async function getServerAuth(): Promise<AuthUser | null> {
     }
 
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .select('*')
       .eq('id', user.id)
       .single()
@@ -133,7 +132,7 @@ export async function redirectIfAuthenticated(userType: 'user' | 'admin' = 'user
   } else {
     const user = await getServerAuth()
     if (user) {
-      redirect('/user/home')
+      redirect('/client/home')
     }
   }
 }
@@ -151,7 +150,7 @@ export async function handleLoginPageAuth(searchParams: { type?: string, returnT
   } else {
     const user = await getServerAuth()
     if (user) {
-      const returnTo = searchParams.returnTo || '/user/home'
+      const returnTo = searchParams.returnTo || '/client/home'
       redirect(returnTo)
     }
   }

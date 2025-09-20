@@ -17,7 +17,7 @@ export default function WelcomePage() {
       router.push('/login')
     } else {
       // 인증된 사용자는 바로 홈으로 이동
-      router.push('/home')
+      router.push('/client/home')
     }
   }, [user, router])
 
@@ -49,7 +49,7 @@ export default function WelcomePage() {
           </div>
 
           <div className="space-y-3">
-            <Link href="/home">
+            <Link href="/client/home">
               <Button className="w-full">
                 <Home className="w-4 h-4 mr-2" />
                 홈으로 이동

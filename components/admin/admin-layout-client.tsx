@@ -14,10 +14,13 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!initRef.current && pathname?.startsWith('/admin')) {
       initRef.current = true
-      // 일반 사용자 store와의 충돌 방지를 위해 약간의 지연
-      setTimeout(() => {
-        initializeAuth()
-      }, 100)
+      // 개발 환경에서는 강제로 초기화 상태를 리셋
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Development mode: forcing admin auth re-initialization')
+        useAdminAuthStore.setState({ initialized: false })
+      }
+      // 즉시 초기화 실행
+      initializeAuth()
     }
   }, [initializeAuth, pathname])
 

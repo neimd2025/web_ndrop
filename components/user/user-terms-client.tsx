@@ -80,7 +80,7 @@ Neimd(이하 "회사")는 다음의 목적을 위하여 개인정보를 처리�
       {/* 헤더 */}
       <div className="bg-white border-b border-gray-200 px-5 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/user/my-page">
+          <Link href="/client/my-page">
             <Button variant="ghost" size="sm" className="p-2">
               <ArrowLeft className="w-4 h-4 text-gray-900" />
             </Button>
