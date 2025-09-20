@@ -1,11 +1,12 @@
 "use client"
 
 import { useAdminAuthStore } from '@/stores/admin-auth-store'
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useRef } from 'react'
 
-export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
+export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const { admin, loading: authLoading, initialized: adminInitialized, initializeAuth } = useAdminAuthStore()
   const initRef = useRef(false)
 
