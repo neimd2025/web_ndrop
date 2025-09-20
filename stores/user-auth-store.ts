@@ -146,12 +146,13 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
       }
     }
 
-    // 이메일 중복 확인 - 일반 사용자로 이미 가입된 경우 체크
+    // 이메일 중복 확인 - 일반 사용자(role_id=1)로 이미 가입된 경우 체크
     try {
       const { data: existingUser } = await supabase
         .from('user_profiles')
-        .select('id, email, role')
+        .select('id, email, role_id')
         .eq('email', email)
+        .eq('role_id', 1) // 일반 사용자만 체크
         .single()
 
       if (existingUser) {
@@ -175,7 +176,7 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
         emailRedirectTo: `${getURL()}auth/callback`,
         data: {
           name: name || '',
-          isAdmin: false
+          role_id: 1 // 일반 사용자
         }
       }
     })
@@ -231,15 +232,15 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
     const urlParams = new URLSearchParams(window.location.search)
     let returnTo = urlParams.get('returnTo')
 
-    // 일반 사용자는 admin 페이지에 접근할 수 없으므로 홈으로 리다이렉트
+    // 일반 사용자는 admin 페이지에 접근할 수 없으므로 사용자 홈으로 리다이렉트
     if (!returnTo || returnTo.startsWith('/admin')) {
-      returnTo = '/home'
+      returnTo = '/user/home'
     }
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${getURL()}auth/callback?returnTo=${encodeURIComponent(returnTo)}&adminRequest=false`,
+        redirectTo: `${getURL()}auth/callback?returnTo=${encodeURIComponent(returnTo)}&userRequest=true`,
       }
     })
     return { error }
@@ -270,7 +271,6 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
         .from('user_profiles')
         .select('id, email, full_name, role, role_id, company, contact, profile_image_url')
         .eq('id', userId)
-        .eq('role', 'user')
         .single()
 
       if (error) {
@@ -287,6 +287,12 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
 
   initializeAuth: async () => {
     const supabase = createClient()
+    const state = get()
+
+    // 이미 초기화된 경우 스킵
+    if (state.initialized) {
+      return
+    }
 
     try {
       set({ loading: true })
@@ -303,6 +309,8 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
             user: session.user,
             session,
             userProfile: profile,
+            loading: false,
+            initialized: true
           })
         } else {
           // 프로필이 없거나 일반 사용자가 아닌 경우 세션 정리
@@ -311,6 +319,8 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
             user: null,
             session: null,
             userProfile: null,
+            loading: false,
+            initialized: true
           })
         }
       } else {
@@ -318,13 +328,20 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
           user: null,
           session: null,
           userProfile: null,
+          loading: false,
+          initialized: true
         })
       }
 
-      // onAuthStateChange 구독 - 실시간 상태 변경 감지
+      // onAuthStateChange 구독 - 실시간 상태 변경 감지 (한 번만 구독)
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
           console.log('User auth state change:', event, session?.user?.email)
+
+          // 초기화 완료 후에만 상태 변경 처리
+          if (!get().initialized) {
+            return
+          }
 
           if (session?.user) {
             // 사용자 프로필 정보 다시 가져오기
@@ -352,11 +369,8 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
               userProfile: null,
             })
           }
-          set({ loading: false, initialized: true })
         }
       )
-
-      set({ loading: false, initialized: true })
 
       // Cleanup subscription
       return () => subscription.unsubscribe()

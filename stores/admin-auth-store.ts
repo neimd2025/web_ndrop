@@ -85,31 +85,34 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
 
     // Supabase 에러 코드별 구체적인 메시지 처리
     if (error) {
-      let errorMessage = '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.'
+      // 관리자는 이메일 인증 없이 바로 로그인 가능하므로 Email not confirmed 에러를 무시
+      if (error.message === 'Email not confirmed') {
+        console.log('관리자 이메일 인증 상태 무시하고 계속 진행')
+        // 에러를 무시하고 계속 진행
+      } else {
+        let errorMessage = '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.'
 
-      switch (error.message) {
-        case 'Invalid login credentials':
-        case 'Invalid email or password':
-          errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.'
-          break
-        case 'Email not confirmed':
-          errorMessage = '이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요.'
-          break
-        case 'User not found':
-          errorMessage = '가입되지 않은 이메일입니다. 관리자 회원가입을 먼저 진행해주세요.'
-          break
-        case 'Too many requests':
-          errorMessage = '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.'
-          break
-        default:
-          if (error.message.includes('email')) {
-            errorMessage = '올바른 이메일 형식을 입력해주세요.'
-          } else if (error.message.includes('password')) {
-            errorMessage = '비밀번호를 확인해주세요.'
-          }
+        switch (error.message) {
+          case 'Invalid login credentials':
+          case 'Invalid email or password':
+            errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.'
+            break
+          case 'User not found':
+            errorMessage = '가입되지 않은 이메일입니다. 관리자 회원가입을 먼저 진행해주세요.'
+            break
+          case 'Too many requests':
+            errorMessage = '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.'
+            break
+          default:
+            if (error.message.includes('email')) {
+              errorMessage = '올바른 이메일 형식을 입력해주세요.'
+            } else if (error.message.includes('password')) {
+              errorMessage = '비밀번호를 확인해주세요.'
+            }
+        }
+
+        return { data, error: { ...error, message: errorMessage } }
       }
-
-      return { data, error: { ...error, message: errorMessage } }
     }
 
     // 로그인 성공 시 관리자 권한 확인
@@ -124,6 +127,8 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
         }
       }
 
+      // 관리자는 이메일 인증 없이 바로 로그인 가능
+
       const profile = await get().fetchAdminProfile(data.user.id)
       if (profile) {
         set({ adminProfile: profile })
@@ -134,8 +139,6 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
   },
 
   signUpWithEmail: async (email: string, password: string, name?: string) => {
-    const supabase = createClient()
-
     // 이메일 형식 검증
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
@@ -153,73 +156,61 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
       }
     }
 
-    // 이메일 중복 확인 - 관리자 계정으로 이미 가입된 경우 체크
-    try {
-      const { data: existingAdmin } = await supabase
-        .from('user_profiles')
-        .select('id, email, role_id')
-        .eq('email', email)
-        .eq('role_id', 2)
-        .single()
+    // 이름 검증
+    if (!name || name.length < 2) {
+      return {
+        data: null,
+        error: { message: '이름은 2자 이상이어야 합니다.' }
+      }
+    }
 
-      if (existingAdmin) {
+    try {
+      // 서버 사이드 API를 통해 관리자 계정 생성 (이메일 인증 없이)
+      const response = await fetch('/api/auth/admin-signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          name
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
         return {
           data: null,
-          error: {
-            message: '이미 가입된 관리자 이메일입니다. 로그인을 시도해주세요.',
-            code: 'ADMIN_ALREADY_EXISTS'
-          }
+          error: { message: result.error || '관리자 회원가입에 실패했습니다.' }
         }
       }
-    } catch (error) {
-      // 관리자가 없거나 다른 에러인 경우 계속 진행
-      console.log('관리자 체크 중 에러 (정상적일 수 있음):', error)
-    }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${getURL()}auth/callback`,
+      console.log('✅ 관리자 회원가입 성공:', result)
+
+      // 성공 응답을 Supabase 형식에 맞게 변환
+      return {
         data: {
-          name: name || '',
-          isAdmin: true
-        }
-      }
-    })
-
-    console.log('📧 관리자 회원가입 결과:', {
-      success: !error,
-      admin: data?.user?.email,
-      error: error?.message
-    })
-
-    if (error) {
-      let errorMessage = '관리자 회원가입에 실패했습니다. 다시 시도해주세요.'
-
-      switch (error.message) {
-        case 'User already registered':
-        case 'A user with this email address has already been registered':
-          errorMessage = '이미 가입된 이메일입니다. 로그인을 시도해주세요.'
-          break
-        case 'Password should be at least 6 characters':
-          errorMessage = '비밀번호는 최소 6자 이상이어야 합니다.'
-          break
-        case 'Invalid email':
-          errorMessage = '올바른 이메일 형식을 입력해주세요.'
-          break
-        default:
-          if (error.message.includes('email')) {
-            errorMessage = '올바른 이메일 형식을 입력해주세요.'
-          } else if (error.message.includes('password')) {
-            errorMessage = '비밀번호를 확인해주세요.'
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            user_metadata: {
+              name: result.user.name,
+              role_id: 2
+            }
           }
+        },
+        error: null
       }
 
-      return { data, error: { ...error, message: errorMessage } }
+    } catch (error) {
+      console.error('❌ 관리자 회원가입 API 호출 오류:', error)
+      return {
+        data: null,
+        error: { message: '관리자 회원가입 중 오류가 발생했습니다.' }
+      }
     }
-
-    return { data, error }
   },
 
   signInWithOAuth: async (provider: 'google' | 'kakao' | 'naver', returnTo: string = '/admin/events') => {
@@ -307,6 +298,12 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
 
   initializeAuth: async () => {
     const supabase = createClient()
+    const state = get()
+
+    // 이미 초기화된 경우 스킵
+    if (state.initialized) {
+      return
+    }
 
     try {
       set({ loading: true })
@@ -326,6 +323,8 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
             admin: session.user,
             session,
             adminProfile: profile,
+            loading: false,
+            initialized: true
           })
         } else {
           // 관리자가 아닌 경우 세션 정리
@@ -334,6 +333,8 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
             admin: null,
             session: null,
             adminProfile: null,
+            loading: false,
+            initialized: true
           })
         }
       } else {
@@ -341,13 +342,20 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
           admin: null,
           session: null,
           adminProfile: null,
+          loading: false,
+          initialized: true
         })
       }
 
-      // onAuthStateChange 구독 - 실시간 상태 변경 감지
+      // onAuthStateChange 구독 - 실시간 상태 변경 감지 (한 번만 구독)
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
           console.log('Admin auth state change:', event, session?.user?.email)
+
+          // 초기화 완료 후에만 상태 변경 처리
+          if (!get().initialized) {
+            return
+          }
 
           if (session?.user) {
             // 관리자 권한 확인
@@ -378,11 +386,8 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
               adminProfile: null,
             })
           }
-          set({ loading: false, initialized: true })
         }
       )
-
-      set({ loading: false, initialized: true })
 
       // Cleanup subscription
       return () => subscription.unsubscribe()

@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SocialLoginButton, type SocialProvider } from '@/components/ui/social-login-button'
+import { useAdminAuthStore } from '@/stores/admin-auth-store'
 import { useUserAuthStore } from '@/stores/user-auth-store'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -23,7 +24,16 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
-  const { signInWithEmail, signInWithOAuth, user, loading: authLoading } = useUserAuthStore()
+  const searchParams = useSearchParams()
+  const isAdminLogin = searchParams.get('type') === 'admin'
+
+  const userAuth = useUserAuthStore()
+  const adminAuth = useAdminAuthStore()
+
+  const { signInWithEmail, signInWithOAuth, user, loading: authLoading } = isAdminLogin ?
+    { signInWithEmail: adminAuth.signInWithEmail, signInWithOAuth: adminAuth.signInWithOAuth, user: adminAuth.admin, loading: adminAuth.loading } :
+    { signInWithEmail: userAuth.signInWithEmail, signInWithOAuth: userAuth.signInWithOAuth, user: userAuth.user, loading: userAuth.loading }
+
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -39,20 +49,22 @@ export default function LoginPage() {
   // 이미 로그인된 경우 리다이렉트
   useEffect(() => {
     if (user && !authLoading) {
-      const urlParams = new URLSearchParams(window.location.search)
-      const returnTo = urlParams.get('returnTo')
+      const returnTo = searchParams.get('returnTo')
 
-      // returnTo가 admin 경로인 경우 관리자 권한 확인 후 처리
-      if (returnTo?.startsWith('/admin')) {
-        // 관리자 권한이 없으면 일반 홈으로 리다이렉트
-        const redirectUrl = '/home'
-        window.location.href = redirectUrl
-      } else {
-        const redirectUrl = returnTo || '/home'
-        window.location.href = redirectUrl
-      }
+      // 리다이렉트 전에 잠시 대기하여 상태가 안정화되도록 함
+      const timer = setTimeout(() => {
+        if (isAdminLogin) {
+          const redirectUrl = returnTo || '/admin/dashboard'
+          window.location.href = redirectUrl
+        } else {
+          const redirectUrl = returnTo || '/user/home'
+          window.location.href = redirectUrl
+        }
+      }, 100)
+
+      return () => clearTimeout(timer)
     }
-  }, [user, authLoading])
+  }, [user, authLoading, searchParams, isAdminLogin])
 
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true)
@@ -75,15 +87,16 @@ export default function LoginPage() {
       } else if (result?.user) {
         console.log('✅ 로그인 성공:', result.user.email)
         toast.success('로그인되었습니다!')
-        const urlParams = new URLSearchParams(window.location.search)
-        const returnTo = urlParams.get('returnTo')
+        const returnTo = searchParams.get('returnTo')
 
-        // returnTo가 admin 경로인 경우 홈으로 리다이렉트 (일반 사용자는 admin 접근 불가)
-        if (returnTo?.startsWith('/admin')) {
-          window.location.href = '/home'
-        } else {
-          window.location.href = returnTo || '/home'
-        }
+        // 리다이렉트 전에 잠시 대기하여 상태가 안정화되도록 함
+        setTimeout(() => {
+          if (isAdminLogin) {
+            window.location.href = returnTo || '/admin/dashboard'
+          } else {
+            window.location.href = returnTo || '/user/home'
+          }
+        }, 100)
       } else {
         console.log('⚠️ 로그인 데이터 없음:', result)
         toast.error('로그인에 실패했습니다.')
@@ -135,10 +148,10 @@ export default function LoginPage() {
             {/* 환영 메시지 */}
             <div className="space-y-2">
               <h1 className="text-2xl font-bold text-gray-900">
-                다시 만나서 반가워요!
+                {isAdminLogin ? '관리자 로그인' : '다시 만나서 반가워요!'}
               </h1>
               <p className="text-base text-gray-600 leading-relaxed">
-                모두의 특별함이, 나답게 연결되는 시작
+                {isAdminLogin ? '관리자 계정으로 로그인해주세요' : '모두의 특별함이, 나답게 연결되는 시작'}
               </p>
             </div>
           </div>
@@ -247,10 +260,10 @@ export default function LoginPage() {
                 아직 계정이 없으신가요?
               </p>
               <Link
-                href="/signup"
+                href={`/signup${isAdminLogin ? '?type=admin' : '?type=user'}`}
                 className="text-purple-600 font-medium text-sm hover:text-purple-700"
               >
-                회원가입하기
+                {isAdminLogin ? '관리자 계정 만들기' : '회원가입하기'}
               </Link>
             </div>
           </div>

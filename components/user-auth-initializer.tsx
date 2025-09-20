@@ -1,16 +1,24 @@
-"use client"
+'use client'
 
 import { useUserAuthStore } from '@/stores/user-auth-store'
 import { useEffect } from 'react'
 
-export default function UserAuthInitializer() {
-  const { initializeAuth, initialized } = useUserAuthStore()
+export function UserAuthInitializer() {
+  const { initializeAuth } = useUserAuthStore()
 
   useEffect(() => {
-    if (!initialized) {
-      initializeAuth()
+    let cleanup: (() => void) | undefined
+
+    const setupAuth = async () => {
+      cleanup = await initializeAuth()
     }
-  }, [initializeAuth, initialized])
+
+    setupAuth()
+
+    return () => {
+      if (cleanup) cleanup()
+    }
+  }, [initializeAuth])
 
   return null
 }

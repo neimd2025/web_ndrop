@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, email, name, isAdmin } = await request.json()
+    const { userId, email, name, roleId } = await request.json()
 
-    console.log('API 호출됨:', { userId, email, name, isAdmin })
+    console.log('API 호출됨:', { userId, email, name, roleId })
 
     // 환경 변수 확인
     console.log('환경 변수 확인:')
@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // 관리자 회원가입이거나 관리자 이메일인 경우 admin role 설정
-    const userRole = isAdmin || isAdminEmail(email) ? ROLE_NAMES.ADMIN : ROLE_NAMES.USER
-    const roleId = userRole === ROLE_NAMES.ADMIN ? ROLE_IDS.ADMIN : ROLE_IDS.USER
+    // roleId에 따라 역할 결정
+    const finalRoleId = roleId || (isAdminEmail(email) ? ROLE_IDS.ADMIN : ROLE_IDS.USER)
+    const userRole = finalRoleId === ROLE_IDS.ADMIN ? ROLE_NAMES.ADMIN : ROLE_NAMES.USER
 
     // 사용자 프로필 생성
     const { error: profileError } = await supabase
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
         contact: '',
         company: '',
         role: userRole,
-        role_id: roleId,
+        role_id: finalRoleId,
         introduction: '',
         mbti: '',
         keywords: [],
@@ -73,9 +73,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '비즈니스 카드 생성 실패', details: cardError }, { status: 500 })
     }
 
+    // 관리자는 이메일 인증 없이 바로 사용 가능
+
     return NextResponse.json({
       success: true,
-      message: '프로필과 비즈니스 카드가 생성되었습니다.',
+      message: finalRoleId === ROLE_IDS.ADMIN ? '관리자 프로필이 생성되었습니다.' : '프로필과 비즈니스 카드가 생성되었습니다.',
       role: userRole
     })
 

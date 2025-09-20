@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAdminAuthStore } from "@/stores/admin-auth-store"
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Check, Eye, EyeOff, Lock, Mail, User, X, ArrowUpCircle } from "lucide-react"
+import { Eye, EyeOff, Lock, Mail, User } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useForm } from 'react-hook-form'
 import { toast } from "sonner"
 import { z } from 'zod'
@@ -26,137 +26,37 @@ const adminSignupSchema = z.object({
 
 type AdminSignupFormData = z.infer<typeof adminSignupSchema>
 
-type EmailStatus = 'idle' | 'checking' | 'new_admin' | 'can_upgrade' | 'already_admin'
-
 export default function AdminSignupPage() {
   const router = useRouter()
   const { signUpWithEmail, signInWithOAuth } = useAdminAuthStore()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [emailStatus, setEmailStatus] = useState<EmailStatus>('idle')
-  const [emailMessage, setEmailMessage] = useState('')
-  const [requiresPassword, setRequiresPassword] = useState(true)
 
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors }
   } = useForm<AdminSignupFormData>({
     resolver: zodResolver(adminSignupSchema)
   })
 
-  const watchedEmail = watch('email')
-
-  // 이메일 상태 확인
-  const checkEmailStatus = async (email: string) => {
-    if (!email || !email.includes('@')) return
-
-    setEmailStatus('checking')
-    setEmailMessage('')
-
-    try {
-      const response = await fetch('/api/auth/admin-upgrade', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, method: 'check' })
-      })
-
-      const data = await response.json()
-
-      if (data.status === 'new_admin') {
-        setEmailStatus('new_admin')
-        setEmailMessage('새로운 관리자 계정을 생성할 수 있습니다.')
-        setRequiresPassword(true)
-      } else if (data.status === 'can_upgrade') {
-        setEmailStatus('can_upgrade')
-        setEmailMessage('기존 계정을 관리자로 업그레이드할 수 있습니다.')
-        setRequiresPassword(false)
-      } else if (data.status === 'already_admin') {
-        setEmailStatus('already_admin')
-        setEmailMessage('이미 관리자 계정입니다.')
-        setRequiresPassword(false)
-      }
-    } catch (error) {
-      console.error('이메일 확인 오류:', error)
-      setEmailStatus('idle')
-      setEmailMessage('이메일 확인 중 오류가 발생했습니다.')
-    }
-  }
-
-  // 이메일 변경 시 상태 확인
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (watchedEmail && watchedEmail.includes('@')) {
-        checkEmailStatus(watchedEmail)
-      } else {
-        setEmailStatus('idle')
-        setEmailMessage('')
-        setRequiresPassword(true)
-      }
-    }, 500)
-
-    return () => clearTimeout(timeoutId)
-  }, [watchedEmail])
-
   const onSubmit = async (data: AdminSignupFormData) => {
-    if (emailStatus === 'already_admin') {
-      toast.error('이미 관리자 계정입니다.')
-      return
-    }
-
     setIsSubmitting(true)
 
     try {
-      if (emailStatus === 'can_upgrade') {
-        // 기존 계정을 관리자로 업그레이드
-        const response = await fetch('/api/auth/admin-upgrade', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: data.email,
-            method: 'upgrade'
-          })
+      const { data: result, error } = await signUpWithEmail(data.email, data.password, data.name)
+
+      if (error) {
+        toast.error(error.message || '관리자 회원가입에 실패했습니다. 다시 시도해주세요.')
+        return
+      }
+
+      if (result?.user) {
+        toast.success('관리자 계정이 성공적으로 생성되었습니다!', {
+          description: '💡 바로 로그인하실 수 있습니다.'
         })
-
-        const result = await response.json()
-
-        if (!response.ok) {
-          toast.error(result.error || '업그레이드에 실패했습니다.')
-          return
-        }
-
-        toast.success('성공적으로 관리자로 업그레이드되었습니다!')
         router.push('/admin/login')
-      } else if (emailStatus === 'new_admin') {
-        // 새 관리자 계정 생성
-        const { data: result, error } = await signUpWithEmail(data.email, data.password, data.name)
-
-        if (error) {
-          if (error.code === 'USER_EXISTS_CAN_UPGRADE') {
-            // 업그레이드 가능한 경우 자동으로 상태 변경
-            setEmailStatus('can_upgrade')
-            setEmailMessage('기존 계정을 관리자로 업그레이드할 수 있습니다.')
-            setRequiresPassword(false)
-            toast.info('기존 계정을 발견했습니다. 업그레이드 버튼을 클릭해주세요.')
-            return
-          } else {
-            toast.error(error.message || '회원가입에 실패했습니다. 다시 시도해주세요.')
-            return
-          }
-        }
-
-        if (result?.user) {
-          toast.success('관리자 계정이 성공적으로 생성되었습니다! 이메일 인증을 완료해주세요.', {
-            description: '💡 이메일 인증 링크를 클릭한 후 로그인해주세요.'
-          })
-          router.push('/admin/login')
-        }
       }
     } catch (error) {
       console.error('회원가입 오류:', error)
@@ -178,63 +78,6 @@ export default function AdminSignupPage() {
     }
   }
 
-  const getStatusIcon = () => {
-    switch (emailStatus) {
-      case 'checking':
-        return <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
-      case 'new_admin':
-        return <Check className="h-4 w-4 text-green-500" />
-      case 'can_upgrade':
-        return <ArrowUpCircle className="h-4 w-4 text-blue-500" />
-      case 'already_admin':
-        return <X className="h-4 w-4 text-red-500" />
-      default:
-        return null
-    }
-  }
-
-  const getStatusColor = () => {
-    switch (emailStatus) {
-      case 'new_admin':
-        return 'border-green-500'
-      case 'can_upgrade':
-        return 'border-blue-500'
-      case 'already_admin':
-        return 'border-red-500'
-      default:
-        return ''
-    }
-  }
-
-  const getMessageColor = () => {
-    switch (emailStatus) {
-      case 'new_admin':
-        return 'text-green-600'
-      case 'can_upgrade':
-        return 'text-blue-600'
-      case 'already_admin':
-        return 'text-red-600'
-      default:
-        return 'text-gray-600'
-    }
-  }
-
-  const getButtonText = () => {
-    if (isSubmitting) {
-      return emailStatus === 'can_upgrade' ? '업그레이드 중...' : '회원가입 중...'
-    }
-    if (emailStatus === 'already_admin') {
-      return '이미 관리자임'
-    }
-    if (emailStatus === 'checking') {
-      return '이메일 확인 중...'
-    }
-    if (emailStatus === 'can_upgrade') {
-      return '관리자로 업그레이드'
-    }
-    return '관리자 회원가입'
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -243,10 +86,10 @@ export default function AdminSignupPage() {
             <User className="h-6 w-6 text-white" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            관리자 계정
+            관리자 계정 생성
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            관리자 계정을 생성하거나 기존 계정을 업그레이드하세요
+            새로운 관리자 계정을 생성하세요
           </p>
         </div>
 
@@ -308,89 +151,75 @@ export default function AdminSignupPage() {
                   type="email"
                   autoComplete="email"
                   placeholder="admin@neimd.com"
-                  className={`pl-10 pr-10 ${errors.email ? 'border-red-500' : ''} ${getStatusColor()}`}
+                  className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
                 />
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  {getStatusIcon()}
-                </div>
               </div>
               {errors.email && (
                 <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
               )}
-              {emailMessage && (
-                <p className={`text-sm mt-1 ${getMessageColor()}`}>
-                  {emailMessage}
-                </p>
+            </div>
+
+            <div>
+              <Label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                비밀번호
+              </Label>
+              <div className="mt-1 relative">
+                <Input
+                  {...register('password')}
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="비밀번호를 입력하세요"
+                  className={`pl-10 pr-10 ${errors.password ? 'border-red-500' : ''}`}
+                />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
               )}
             </div>
 
-            {requiresPassword && emailStatus !== 'already_admin' && (
-              <>
-                <div>
-                  <Label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                    비밀번호
-                  </Label>
-                  <div className="mt-1 relative">
-                    <Input
-                      {...register('password')}
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      placeholder="비밀번호를 입력하세요"
-                      className={`pl-10 pr-10 ${errors.password ? 'border-red-500' : ''}`}
-                    />
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {errors.password && (
-                    <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                    비밀번호 확인
-                  </Label>
-                  <div className="mt-1 relative">
-                    <Input
-                      {...register('confirmPassword')}
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      placeholder="비밀번호를 다시 입력하세요"
-                      className={`pl-10 pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
-                    />
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {errors.confirmPassword && (
-                    <p className="text-red-500 text-sm mt-1">{errors.confirmPassword.message}</p>
-                  )}
-                </div>
-              </>
-            )}
+            <div>
+              <Label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                비밀번호 확인
+              </Label>
+              <div className="mt-1 relative">
+                <Input
+                  {...register('confirmPassword')}
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="비밀번호를 다시 입력하세요"
+                  className={`pl-10 pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="text-red-500 text-sm mt-1">{errors.confirmPassword.message}</p>
+              )}
+            </div>
           </div>
 
           <div>
             <Button
               type="submit"
-              className={`w-full ${
-                emailStatus === 'can_upgrade' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'
-              }`}
-              disabled={isSubmitting || emailStatus === 'already_admin' || emailStatus === 'checking'}
+              className="w-full bg-purple-600 hover:bg-purple-700"
+              disabled={isSubmitting}
             >
-              {getButtonText()}
+              {isSubmitting ? '회원가입 중...' : '관리자 회원가입'}
             </Button>
           </div>
 

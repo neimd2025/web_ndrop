@@ -22,33 +22,36 @@ export const useProfile = () => {
       if (!user) {
         setProfile(null)
         setLoading(false)
+        setNeedsOnboarding(false)
         return
       }
 
       setLoading(true)
       try {
         const userProfile = await userProfileAPI.getUserProfile(user.id)
-        
+
         if (!userProfile) {
           setNeedsOnboarding(true)
+          setProfile(null)
         } else {
           setProfile(userProfile)
           // 프로필이 불완전한 경우 온보딩 필요
-          const hasBasicInfo = userProfile.full_name && 
-                              userProfile.personality_keywords && 
+          const hasBasicInfo = userProfile.full_name &&
+                              userProfile.personality_keywords &&
                               userProfile.personality_keywords.length > 0
           setNeedsOnboarding(!hasBasicInfo)
         }
       } catch (error) {
         console.error('프로필 가져오기 실패:', error)
         setNeedsOnboarding(true)
+        setProfile(null)
       } finally {
         setLoading(false)
       }
     }
 
     fetchProfile()
-  }, [user])
+  }, [user?.id]) // user 객체 대신 user.id만 의존성으로 사용
 
   return {
     profile,
