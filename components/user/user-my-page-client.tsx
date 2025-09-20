@@ -133,7 +133,7 @@ export function UserMyPageClient({
 
         {/* 메뉴 */}
         <div className="space-y-4 flex flex-col gap-1">
-          <Link href="/namecard/edit">
+          <Link href="/client/namecard/edit">
             <Card className="cursor-pointer hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -145,7 +145,7 @@ export function UserMyPageClient({
           </Link>
 
           {/* 약관 보기 버튼 */}
-          <Link href="/terms">
+          <Link href="/client/terms">
             <div className="w-full justify-start cursor-pointer hover:bg-gray-50 p-4 rounded-lg
             flex items-center border border-gray-200">
               <FileText className="w-5 h-5 mr-3 text-gray-500" />

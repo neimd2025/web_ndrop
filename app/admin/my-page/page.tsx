@@ -30,7 +30,7 @@ export default function AdminMyPage() {
   }
 
   const handleSwitchToUser = () => {
-    router.push("/home")
+    router.push("/client/home")
   }
 
   const handleDeleteAccount = () => {

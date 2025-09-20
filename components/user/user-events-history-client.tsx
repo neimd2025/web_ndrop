@@ -107,7 +107,7 @@ export function UserEventsHistoryClient({
               <p className="text-gray-600 mb-6">
                 새로운 이벤트에 참가해보세요!
               </p>
-              <Link href="/user/events/join">
+              <Link href="/client/events/join">
                 <Button className="bg-purple-600 hover:bg-purple-700">
                   이벤트 참가하기
                 </Button>
@@ -156,7 +156,7 @@ export function UserEventsHistoryClient({
                 </div>
 
                 <div className="flex gap-2">
-                  <Link href={`/user/events/${event.id}`} className="flex-1">
+                  <Link href={`/client/events/${event.id}`} className="flex-1">
                     <Button variant="outline" className="w-full">
                       상세보기
                     </Button>

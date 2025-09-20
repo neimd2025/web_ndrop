@@ -116,7 +116,7 @@ export function UserSavedCardsClient({ user, savedCards }: UserSavedCardsClientP
                 {showFavorites ? '명함을 즐겨찾기에 추가해보세요' : 'QR 코드를 스캔해서 명함을 수집해보세요'}
               </p>
               {!showFavorites && (
-                <Link href="/user/scan-card">
+                <Link href="/client/scan-card">
                   <Button className="bg-purple-600 hover:bg-purple-700">
                     명함 스캔하기
                   </Button>
@@ -174,7 +174,7 @@ export function UserSavedCardsClient({ user, savedCards }: UserSavedCardsClientP
 
                       {/* 액션 버튼 */}
                       <div className="flex flex-col space-y-1">
-                        <Link href={`/user/saved-cards/${card.id}`}>
+                        <Link href={`/client/saved-cards/${card.id}`}>
                           <Button variant="outline" size="sm">
                             <Edit className="h-3 w-3 mr-1" />
                             상세
