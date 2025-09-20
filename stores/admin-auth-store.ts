@@ -258,6 +258,11 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
         .single()
 
       if (error) {
+        // PGRST116 에러 (no rows)는 정상적인 경우로 처리
+        if (error.code === 'PGRST116') {
+          console.log('관리자 프로필이 존재하지 않습니다:', userId)
+          return null
+        }
         console.error('관리자 프로필 조회 오류:', error)
         return null
       }
@@ -284,6 +289,11 @@ export const useAdminAuthStore = create<AdminAuthState>()(persist((set, get) => 
         .single()
 
       if (error) {
+        // PGRST116 에러 (no rows)는 정상적인 경우로 처리
+        if (error.code === 'PGRST116') {
+          console.log('사용자 프로필이 존재하지 않습니다:', userId)
+          return false
+        }
         console.error('관리자 권한 확인 오류:', error)
         return false
       }

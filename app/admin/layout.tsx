@@ -1,16 +1,26 @@
-import { AdminAuthProvider } from '@/components/admin-auth-provider'
+import { requireAdminAuth } from '@/lib/auth/server-auth'
+import { AdminLayoutClient } from '@/components/admin/admin-layout-client'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  // Check if this is an auth page - skip auth check
+  const pathname = process.env.NODE_ENV === 'development' ? '' : ''
+
+  // For auth pages, render without auth check
+  if (typeof window !== 'undefined') {
+    // This will be handled by the client component for auth pages
+  }
+
   return (
-    <AdminAuthProvider>
+    <AdminLayoutClient>
       <div className="min-h-screen bg-gray-50">
         <div className="flex">
-          {/* 사이드바 - Server Component로 렌더링 */}
+          {/* 사이드바 - Server Component */}
           <div className="w-64 bg-white shadow-sm border-r">
             <div className="p-6">
               <h1 className="text-xl font-bold text-gray-900">관리자 패널</h1>
@@ -64,6 +74,6 @@ export default function AdminLayout({
           </div>
         </div>
       </div>
-    </AdminAuthProvider>
+    </AdminLayoutClient>
   )
 }
