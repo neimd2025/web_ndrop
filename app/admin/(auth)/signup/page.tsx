@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useAuthStore } from "@/stores/auth-store"
+import { useAdminAuthStore } from "@/stores/admin-auth-store"
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Check, Eye, EyeOff, Lock, Mail, User, X, ArrowUpCircle } from "lucide-react"
 import Link from "next/link"
@@ -30,7 +30,7 @@ type EmailStatus = 'idle' | 'checking' | 'new_admin' | 'can_upgrade' | 'already_
 
 export default function AdminSignupPage() {
   const router = useRouter()
-  const { signUpWithEmail, signInWithOAuth } = useAuthStore()
+  const { signUpWithEmail, signInWithOAuth } = useAdminAuthStore()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -135,11 +135,20 @@ export default function AdminSignupPage() {
         router.push('/admin/login')
       } else if (emailStatus === 'new_admin') {
         // 새 관리자 계정 생성
-        const { data: result, error } = await signUpWithEmail(data.email, data.password, data.name, true)
+        const { data: result, error } = await signUpWithEmail(data.email, data.password, data.name)
 
         if (error) {
-          toast.error(error.message || '회원가입에 실패했습니다. 다시 시도해주세요.')
-          return
+          if (error.code === 'USER_EXISTS_CAN_UPGRADE') {
+            // 업그레이드 가능한 경우 자동으로 상태 변경
+            setEmailStatus('can_upgrade')
+            setEmailMessage('기존 계정을 관리자로 업그레이드할 수 있습니다.')
+            setRequiresPassword(false)
+            toast.info('기존 계정을 발견했습니다. 업그레이드 버튼을 클릭해주세요.')
+            return
+          } else {
+            toast.error(error.message || '회원가입에 실패했습니다. 다시 시도해주세요.')
+            return
+          }
         }
 
         if (result?.user) {

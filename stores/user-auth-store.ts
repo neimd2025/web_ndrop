@@ -9,25 +9,20 @@ interface UserProfile {
   id: string
   email: string
   full_name: string | null
-  role: 'admin' | 'user'
+  role: 'user'
   role_id: number
   company: string | null
   contact: string | null
   profile_image_url: string | null
 }
 
-interface AuthState {
-  // 기본 사용자 상태
+interface UserAuthState {
+  // 사용자 상태
   user: User | null
   session: Session | null
   userProfile: UserProfile | null
   loading: boolean
   initialized: boolean
-
-  // 관리자 관련 상태
-  isAdmin: boolean
-  adminLoading: boolean
-  adminInitialized: boolean
 
   // Actions
   setUser: (user: User | null) => void
@@ -35,51 +30,36 @@ interface AuthState {
   setUserProfile: (profile: UserProfile | null) => void
   setLoading: (loading: boolean) => void
   setInitialized: (initialized: boolean) => void
-  setIsAdmin: (isAdmin: boolean) => void
 
   // Auth methods
   signInWithEmail: (email: string, password: string) => Promise<{ data: any; error: any }>
-  signUpWithEmail: (email: string, password: string, name?: string, isAdmin?: boolean) => Promise<{ data: any; error: any }>
+  signUpWithEmail: (email: string, password: string, name?: string) => Promise<{ data: any; error: any }>
   signInWithOAuth: (provider: 'google' | 'kakao' | 'naver') => Promise<{ error: any }>
   signOut: () => Promise<{ error: any }>
 
   // Profile methods
   fetchUserProfile: (userId: string) => Promise<UserProfile | null>
-  checkAdminStatus: (userId: string) => Promise<boolean>
 
   // Initialize auth
   initializeAuth: () => Promise<(() => void) | undefined>
-
-  // Admin user getter (backward compatibility)
-  adminUser: User | null
 
   // Password reset methods
   setPasswordResetInProgress: (inProgress: boolean, email?: string) => void
   clearPasswordResetState: () => void
 }
 
-export const useAuthStore = create<AuthState>()(persist((set, get) => ({
+export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
   user: null,
   session: null,
   userProfile: null,
   loading: true,
   initialized: false,
-  isAdmin: false,
-  adminLoading: true,
-  adminInitialized: false,
 
   setUser: (user) => set({ user }),
   setSession: (session) => set({ session }),
   setUserProfile: (profile) => set({ userProfile: profile }),
   setLoading: (loading) => set({ loading }),
   setInitialized: (initialized) => set({ initialized }),
-  setIsAdmin: (isAdmin) => set({ isAdmin }),
-
-  // Backward compatibility getter
-  get adminUser() {
-    const state = get()
-    return state.isAdmin ? state.user : null
-  },
 
   signInWithEmail: async (email: string, password: string) => {
     const supabase = createClient()
@@ -135,18 +115,18 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
       return { data, error: { ...error, message: errorMessage } }
     }
 
-    // 로그인 성공 시 프로필 정보 가져오기
+    // 로그인 성공 시 사용자 프로필 정보 가져오기
     if (data?.user) {
       const profile = await get().fetchUserProfile(data.user.id)
       if (profile) {
-        set({ userProfile: profile, isAdmin: profile.role === 'admin' })
+        set({ userProfile: profile })
       }
     }
 
     return { data, error }
   },
 
-  signUpWithEmail: async (email: string, password: string, name?: string, isAdmin?: boolean) => {
+  signUpWithEmail: async (email: string, password: string, name?: string) => {
     const supabase = createClient()
 
     // 이메일 형식 검증
@@ -166,7 +146,7 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
       }
     }
 
-    // 이메일 중복 확인 - auth.users 테이블 체크
+    // 이메일 중복 확인 - 일반 사용자로 이미 가입된 경우 체크
     try {
       const { data: existingUser } = await supabase
         .from('user_profiles')
@@ -175,24 +155,11 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
         .single()
 
       if (existingUser) {
-        // 이미 가입된 사용자인 경우
-        if (isAdmin && existingUser.role !== 'admin') {
-          // 관리자 회원가입 시도이지만 이미 일반 사용자로 가입된 경우
-          return {
-            data: null,
-            error: {
-              message: '이미 가입된 이메일입니다. 기존 계정을 관리자로 업그레이드하려면 업그레이드 기능을 사용해주세요.',
-              code: 'USER_EXISTS_CAN_UPGRADE'
-            }
-          }
-        } else {
-          // 일반적인 중복 가입 시도
-          return {
-            data: null,
-            error: {
-              message: '이미 가입된 이메일입니다. 로그인을 시도해주세요.',
-              code: 'USER_ALREADY_EXISTS'
-            }
+        return {
+          data: null,
+          error: {
+            message: '이미 가입된 이메일입니다. 로그인을 시도해주세요.',
+            code: 'USER_ALREADY_EXISTS'
           }
         }
       }
@@ -208,7 +175,7 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
         emailRedirectTo: `${getURL()}auth/callback`,
         data: {
           name: name || '',
-          isAdmin: isAdmin || false
+          isAdmin: false
         }
       }
     })
@@ -264,22 +231,15 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
     const urlParams = new URLSearchParams(window.location.search)
     let returnTo = urlParams.get('returnTo')
 
-    // 관리자 페이지에서 로그인하는 경우 관리자 대시보드로 이동
-    if (!returnTo) {
-      if (window.location.pathname.startsWith('/admin')) {
-        returnTo = '/admin/events'
-      } else {
-        returnTo = '/home'
-      }
+    // 일반 사용자는 admin 페이지에 접근할 수 없으므로 홈으로 리다이렉트
+    if (!returnTo || returnTo.startsWith('/admin')) {
+      returnTo = '/home'
     }
-
-    // admin 경로 요청 시 별도 표시
-    const isAdminRequest = returnTo.startsWith('/admin')
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${getURL()}auth/callback?returnTo=${encodeURIComponent(returnTo)}&adminRequest=${isAdminRequest}`,
+        redirectTo: `${getURL()}auth/callback?returnTo=${encodeURIComponent(returnTo)}&adminRequest=false`,
       }
     })
     return { error }
@@ -294,9 +254,8 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
         user: null,
         session: null,
         userProfile: null,
-        isAdmin: false,
-        adminLoading: false,
-        adminInitialized: false
+        loading: false,
+        initialized: false
       })
     }
 
@@ -311,39 +270,18 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
         .from('user_profiles')
         .select('id, email, full_name, role, role_id, company, contact, profile_image_url')
         .eq('id', userId)
+        .eq('role', 'user')
         .single()
 
       if (error) {
-        console.error('프로필 조회 오류:', error)
+        console.error('사용자 프로필 조회 오류:', error)
         return null
       }
 
       return data as UserProfile
     } catch (error) {
-      console.error('프로필 조회 중 예외 발생:', error)
+      console.error('사용자 프로필 조회 중 예외 발생:', error)
       return null
-    }
-  },
-
-  checkAdminStatus: async (userId: string): Promise<boolean> => {
-    const supabase = createClient()
-
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('id', userId)
-        .single()
-
-      if (error) {
-        console.error('관리자 권한 확인 오류:', error)
-        return false
-      }
-
-      return data?.role === 'admin'
-    } catch (error) {
-      console.error('관리자 권한 확인 중 예외 발생:', error)
-      return false
     }
   },
 
@@ -351,7 +289,7 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
     const supabase = createClient()
 
     try {
-      set({ loading: true, adminLoading: true })
+      set({ loading: true })
 
       // 현재 세션 가져오기
       const { data: { session } } = await supabase.auth.getSession()
@@ -359,53 +297,59 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
       if (session?.user) {
         // 사용자 프로필 정보 가져오기
         const profile = await get().fetchUserProfile(session.user.id)
-        const isAdmin = profile?.role === 'admin' || false
 
-        set({
-          user: session.user,
-          session,
-          userProfile: profile,
-          isAdmin,
-          adminLoading: false,
-          adminInitialized: true
-        })
+        if (profile) {
+          set({
+            user: session.user,
+            session,
+            userProfile: profile,
+          })
+        } else {
+          // 프로필이 없거나 일반 사용자가 아닌 경우 세션 정리
+          await supabase.auth.signOut()
+          set({
+            user: null,
+            session: null,
+            userProfile: null,
+          })
+        }
       } else {
         set({
           user: null,
           session: null,
           userProfile: null,
-          isAdmin: false,
-          adminLoading: false,
-          adminInitialized: true
         })
       }
 
       // onAuthStateChange 구독 - 실시간 상태 변경 감지
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
-          console.log('Auth state change:', event, session?.user?.email)
+          console.log('User auth state change:', event, session?.user?.email)
 
           if (session?.user) {
-            // 프로필 정보 다시 가져오기
+            // 사용자 프로필 정보 다시 가져오기
             const profile = await get().fetchUserProfile(session.user.id)
-            const isAdmin = profile?.role === 'admin' || false
 
-            set({
-              user: session.user,
-              session,
-              userProfile: profile,
-              isAdmin,
-              adminLoading: false,
-              adminInitialized: true
-            })
+            if (profile) {
+              set({
+                user: session.user,
+                session,
+                userProfile: profile,
+              })
+            } else {
+              // 일반 사용자가 아닌 경우 로그아웃
+              await supabase.auth.signOut()
+              set({
+                user: null,
+                session: null,
+                userProfile: null,
+              })
+            }
           } else {
             set({
               user: null,
               session: null,
               userProfile: null,
-              isAdmin: false,
-              adminLoading: false,
-              adminInitialized: true
             })
           }
           set({ loading: false, initialized: true })
@@ -417,12 +361,10 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
       // Cleanup subscription
       return () => subscription.unsubscribe()
     } catch (error) {
-      console.error('Auth initialization error:', error)
+      console.error('User auth initialization error:', error)
       set({
         loading: false,
-        initialized: true,
-        adminLoading: false,
-        adminInitialized: true
+        initialized: true
       })
     }
   },
@@ -437,13 +379,11 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
     console.log('Password reset state cleared')
   },
 }), {
-  name: 'auth-store',
+  name: 'user-auth-store',
   partialize: (state) => ({
     user: state.user,
     session: state.session,
     userProfile: state.userProfile,
-    isAdmin: state.isAdmin,
-    initialized: state.initialized,
-    adminInitialized: state.adminInitialized
+    initialized: state.initialized
   })
 }))

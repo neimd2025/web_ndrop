@@ -6,15 +6,15 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useAuthStore } from "@/stores/auth-store"
+import { useAdminAuthStore } from "@/stores/admin-auth-store"
 import { ArrowLeft, Eye, EyeOff, Save, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 export default function AdminProfilePage() {
   const router = useRouter()
-  const { adminUser } = useAuthStore()
-  const { signOut } = useAuthStore()
+  const { admin } = useAdminAuthStore()
+  const { signOut } = useAdminAuthStore()
   const [showPassword, setShowPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -22,8 +22,8 @@ export default function AdminProfilePage() {
   const [messageType, setMessageType] = useState<"success" | "error" | "">("")
 
   const [formData, setFormData] = useState({
-    name: adminUser?.user_metadata?.full_name || "",
-    email: adminUser?.email || "",
+    name: admin?.user_metadata?.full_name || "",
+    email: admin?.email || "",
     company: "",
     currentPassword: "",
     newPassword: "",
@@ -94,7 +94,7 @@ export default function AdminProfilePage() {
     router.push('/admin/login')
   }
 
-  if (!adminUser) {
+  if (!admin) {
     router.push('/admin/login')
     return null
   }
@@ -133,11 +133,11 @@ export default function AdminProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">이름</Label>
-                  <p className="text-gray-900 font-medium">{adminUser.user_metadata?.full_name}</p>
+                  <p className="text-gray-900 font-medium">{admin.user_metadata?.full_name}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">이메일</Label>
-                  <p className="text-gray-900 font-medium">{adminUser.email}</p>
+                  <p className="text-gray-900 font-medium">{admin.email}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">회사/조직</Label>

@@ -1,10 +1,10 @@
 "use client"
 
-import { useUserAuthStore } from '@/stores/user-auth-store'
+import { useAdminAuthStore } from '@/stores/admin-auth-store'
 import { useEffect } from 'react'
 
-export default function AuthInitializer() {
-  const { initializeAuth, initialized } = useUserAuthStore()
+export default function AdminAuthInitializer() {
+  const { initializeAuth, initialized } = useAdminAuthStore()
 
   useEffect(() => {
     if (!initialized) {

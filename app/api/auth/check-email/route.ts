@@ -27,24 +27,34 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    // auth.users 테이블에서 이메일 존재 여부 확인
+    const { data: authUsers } = await supabase
+      .from('auth.users')
+      .select('id, email')
+      .eq('email', email)
+      .limit(1)
+
     // user_profiles 테이블에서 이메일 존재 여부 확인
-    const { data: existingProfile, error } = await supabase
+    const { data: existingProfile } = await supabase
       .from('user_profiles')
-      .select('email, role_id')
+      .select('email, role, role_id')
       .eq('email', email)
       .single()
+
+    // auth.users에는 있지만 user_profiles에 없는 경우 (SSO 가입 후 프로필 생성 실패)
+    if (authUsers && authUsers.length > 0 && !existingProfile) {
+      return NextResponse.json({
+        isTaken: true,
+        hasAuthRecord: true,
+        hasProfile: false,
+        message: '이미 가입된 이메일입니다. 로그인을 시도해주세요.'
+      })
+    }
 
     if (existingProfile) {
       // 관리자 회원가입인 경우 기존 사용자의 역할 확인
       if (isAdmin) {
-        // roles 테이블에서 관리자 역할 ID 확인
-        const { data: adminRole } = await supabase
-          .from('roles')
-          .select('id')
-          .eq('name', 'admin')
-          .single()
-
-        if (adminRole && existingProfile.role_id === adminRole.id) {
+        if (existingProfile.role === 'admin') {
           return NextResponse.json({
             isTaken: true,
             message: '이미 관리자로 가입된 이메일입니다.'

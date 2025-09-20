@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SocialLoginButton, type SocialProvider } from '@/components/ui/social-login-button'
-import { useAuthStore } from '@/stores/auth-store'
+import { useUserAuthStore } from '@/stores/user-auth-store'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
@@ -23,7 +23,7 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
-  const { signInWithEmail, signInWithOAuth, user, loading: authLoading } = useAuthStore()
+  const { signInWithEmail, signInWithOAuth, user, loading: authLoading } = useUserAuthStore()
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -40,8 +40,17 @@ export default function LoginPage() {
   useEffect(() => {
     if (user && !authLoading) {
       const urlParams = new URLSearchParams(window.location.search)
-      const returnTo = urlParams.get('returnTo') || '/home'
-      window.location.href = returnTo
+      const returnTo = urlParams.get('returnTo')
+
+      // returnTo가 admin 경로인 경우 관리자 권한 확인 후 처리
+      if (returnTo?.startsWith('/admin')) {
+        // 관리자 권한이 없으면 일반 홈으로 리다이렉트
+        const redirectUrl = '/home'
+        window.location.href = redirectUrl
+      } else {
+        const redirectUrl = returnTo || '/home'
+        window.location.href = redirectUrl
+      }
     }
   }, [user, authLoading])
 
@@ -67,8 +76,14 @@ export default function LoginPage() {
         console.log('✅ 로그인 성공:', result.user.email)
         toast.success('로그인되었습니다!')
         const urlParams = new URLSearchParams(window.location.search)
-        const returnTo = urlParams.get('returnTo') || '/home'
-        window.location.href = returnTo
+        const returnTo = urlParams.get('returnTo')
+
+        // returnTo가 admin 경로인 경우 홈으로 리다이렉트 (일반 사용자는 admin 접근 불가)
+        if (returnTo?.startsWith('/admin')) {
+          window.location.href = '/home'
+        } else {
+          window.location.href = returnTo || '/home'
+        }
       } else {
         console.log('⚠️ 로그인 데이터 없음:', result)
         toast.error('로그인에 실패했습니다.')
@@ -132,7 +147,7 @@ export default function LoginPage() {
         {/* 로그인 섹션 */}
         <div className="px-5 pb-8">
           {/* 이메일/비밀번호 입력 폼 */}
-          <div className="space-y-4 mb-8">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mb-8">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium text-gray-900">이메일</Label>
               <div className="relative">
@@ -173,16 +188,16 @@ export default function LoginPage() {
                 <p className="text-red-500 text-sm">{errors.password.message}</p>
               )}
             </div>
-          </div>
 
-          {/* 이메일 로그인 버튼 */}
-          <Button
-            onClick={handleSubmit(onSubmit)}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 rounded-xl mb-7"
-            disabled={loading || isSubmitting}
-          >
-            {loading ? '로그인 중...' : '로그인'}
-          </Button>
+            {/* 이메일 로그인 버튼 */}
+            <Button
+              type="submit"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 rounded-xl mb-7"
+              disabled={loading || isSubmitting}
+            >
+              {loading ? '로그인 중...' : '로그인'}
+            </Button>
+          </form>
 
           {/* 구분선 */}
           <div className="flex items-center mb-7">

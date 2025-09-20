@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useAuthStore } from '@/stores/auth-store'
+import { useUserAuthStore } from '@/stores/user-auth-store'
 import { createClient } from "@/utils/supabase/client"
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, CheckCircle, Eye, EyeOff, Lock } from "lucide-react"
@@ -32,7 +32,7 @@ export default function ResetPasswordPage() {
   const [isValidToken, setIsValidToken] = useState(false)
   const [isCheckingToken, setIsCheckingToken] = useState(true)
   const [currentUser, setCurrentUser] = useState<string | null>(null)
-  const { setPasswordResetInProgress, clearPasswordResetState } = useAuthStore()
+  const { setPasswordResetInProgress, clearPasswordResetState } = useUserAuthStore()
 
   const router = useRouter()
   const searchParams = useSearchParams()
