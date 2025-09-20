@@ -40,65 +40,34 @@ export function SimpleUserLayout({ children }: { children: React.ReactNode }) {
       return
     }
 
-    let mounted = true
-    let timeoutId: NodeJS.Timeout
-
-    const checkAuth = async () => {
+    // Middleware에서 이미 인증 처리하므로 여기서는 단순히 사용자 정보만 가져옴
+    const getUserInfo = async () => {
       try {
         const supabase = createClient()
         const { data: { session } } = await supabase.auth.getSession()
 
-        if (!mounted) return
+        if (session?.user) {
+          // 사용자 프로필 확인
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('id, email, full_name, role_id')
+            .eq('id', session.user.id)
+            .single()
 
-        if (!session?.user) {
-          timeoutId = setTimeout(() => {
-            if (mounted) router.push('/login?type=user&returnTo=' + pathname)
-          }, 100)
-          return
-        }
-
-        // 사용자 프로필 확인
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('id, email, full_name, role_id')
-          .eq('id', session.user.id)
-          .single()
-
-        if (!mounted) return
-
-        if (!profile) {
-          await supabase.auth.signOut()
-          timeoutId = setTimeout(() => {
-            if (mounted) router.push('/login?type=user&error=profile_not_found')
-          }, 100)
-          return
-        }
-
-        if (mounted) {
-          setUser(profile)
+          if (profile) {
+            console.log('=== 클라이언트 로그인 상태 ===')
+            console.log('클라이언트 계정:', profile)
+            setUser(profile)
+          }
         }
       } catch (error) {
-        console.error('Auth check failed:', error)
-        if (mounted) {
-          timeoutId = setTimeout(() => {
-            if (mounted) router.push('/login?type=user&error=auth_failed')
-          }, 100)
-        }
+        console.error('사용자 정보 가져오기 실패:', error)
       } finally {
-        if (mounted) {
-          setLoading(false)
-        }
+        setLoading(false)
       }
     }
 
-    checkAuth()
-
-    return () => {
-      mounted = false
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
-    }
+    getUserInfo()
   }, [pathname, isAuthPage])
 
   // 인증 페이지는 바로 렌더링

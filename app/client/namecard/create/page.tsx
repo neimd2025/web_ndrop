@@ -6,10 +6,12 @@ import { Input } from '@/components/ui/input'
 import { useUserProfile } from '@/hooks/use-user-profile'
 import { useBusinessCards } from '@/hooks/use-business-cards'
 import { useAuth } from '@/hooks/use-auth'
+import { createClient } from '@/utils/supabase/client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { Camera, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -39,8 +41,16 @@ type ProfileFormData = z.infer<typeof profileSchema>
 export default function CreateNamecardPage() {
   const router = useRouter()
   const { user } = useAuth()
-  const { createProfile } = useUserProfile()
+  const { profile, createProfile } = useUserProfile()
   const { createBusinessCard } = useBusinessCards()
+
+  // 이미 프로필이 존재하면 홈으로 리다이렉트
+  useEffect(() => {
+    if (profile) {
+      console.log('프로필이 이미 존재합니다. 홈으로 리다이렉트')
+      router.push('/client/home')
+    }
+  }, [profile, router])
 
   const {
     register,
@@ -85,6 +95,10 @@ export default function CreateNamecardPage() {
   ]
 
   const onSubmit = async (data: ProfileFormData) => {
+    console.log('=== 명함 생성 시작 ===')
+    console.log('로그인된 사용자:', user)
+    console.log('사용자 ID:', user?.id)
+    console.log('사용자 이메일:', user?.email)
     try {
       // 빈 문자열들을 null로 변환
       const cleanedData = {
@@ -105,7 +119,7 @@ export default function CreateNamecardPage() {
         profile_image_url: null,
         nickname: data.full_name,
         qr_code_url: null,
-        role_id: null,
+        role_id: 1, // 클라이언트 사용자
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }

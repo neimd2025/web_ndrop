@@ -9,7 +9,6 @@ interface UserProfile {
   id: string
   email: string
   full_name: string | null
-  role: 'user'
   role_id: number
   company: string | null
   contact: string | null
@@ -42,6 +41,9 @@ interface UserAuthState {
 
   // Initialize auth
   initializeAuth: () => Promise<(() => void) | undefined>
+
+  // Clear auth cache
+  clearAuthCache: () => void
 
   // Password reset methods
   setPasswordResetInProgress: (inProgress: boolean, email?: string) => void
@@ -266,12 +268,17 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
   fetchUserProfile: async (userId: string): Promise<UserProfile | null> => {
     const supabase = createClient()
 
+    console.log('=== fetchUserProfile 호출됨 ===')
+    console.log('사용자 ID:', userId)
+
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('id, email, full_name, role, role_id, company, contact, profile_image_url')
+        .select('id, email, full_name, role_id, company, contact, profile_image_url')
         .eq('id', userId)
         .single()
+
+      console.log('프로필 조회 결과:', { data, error })
 
       if (error) {
         // PGRST116 에러 (no rows)는 정상적인 경우로 처리
@@ -283,6 +290,7 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
         return null
       }
 
+      console.log('프로필 데이터 반환:', data)
       return data as UserProfile
     } catch (error) {
       console.error('사용자 프로필 조회 중 예외 발생:', error)
@@ -294,22 +302,31 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
     const supabase = createClient()
     const state = get()
 
-    // 이미 초기화된 경우 스킵
-    if (state.initialized) {
+    console.log('=== initializeAuth 호출됨 ===')
+    console.log('이미 초기화됨:', state.initialized)
+
+    // 이미 초기화되었지만 사용자가 없는 경우 다시 초기화
+    if (state.initialized && state.user) {
+      console.log('이미 초기화되어 스킵')
       return
     }
+
+    console.log('초기화 진행 (사용자 없음 또는 미초기화)')
 
     try {
       set({ loading: true })
 
       // 현재 세션 가져오기
       const { data: { session } } = await supabase.auth.getSession()
+      console.log('세션 조회 결과:', session?.user?.email)
 
       if (session?.user) {
+        console.log('세션 사용자 발견, 프로필 조회 시작')
         // 사용자 프로필 정보 가져오기
         const profile = await get().fetchUserProfile(session.user.id)
 
         if (profile) {
+          console.log('프로필 발견, 상태 설정')
           set({
             user: session.user,
             session,
@@ -318,6 +335,7 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
             initialized: true
           })
         } else {
+          console.log('프로필 없음, 세션 정리')
           // 프로필이 없거나 일반 사용자가 아닌 경우 세션 정리
           await supabase.auth.signOut()
           set({
@@ -329,6 +347,7 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
           })
         }
       } else {
+        console.log('세션 없음')
         set({
           user: null,
           session: null,
@@ -396,6 +415,14 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
   clearPasswordResetState: () => {
     // 이 함수는 현재 구현되지 않았지만, 인터페이스 호환성을 위해 추가
     console.log('Password reset state cleared')
+  },
+
+  clearAuthCache: () => {
+    // 로컬스토리지에서 auth 관련 데이터 삭제
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user-auth-store')
+      window.location.reload()
+    }
   },
 }), {
   name: 'user-auth-store',

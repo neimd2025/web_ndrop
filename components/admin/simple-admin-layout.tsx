@@ -74,6 +74,11 @@ export function SimpleAdminLayout({ children }: { children: React.ReactNode }) {
         }
 
         if (mounted) {
+          console.log('=== 관리자 로그인 상태 ===')
+          console.log('관리자 계정:', profile)
+          console.log('관리자 ID:', profile.id)
+          console.log('관리자 이메일:', profile.email)
+          console.log('역할 ID:', profile.role_id)
           setAdmin(profile)
         }
       } catch (error) {

@@ -125,13 +125,19 @@ export async function getUserHomeData(): Promise<{
 }> {
   const user = await requireUserAuth()
 
-  // 온보딩 체크: 필수 정보가 없으면 온보딩으로 리다이렉트
-  if (!user.full_name || !user.company || !user.role) {
-    redirect('/client/onboarding')
-  }
-
   try {
     const supabase = await createClient()
+
+    // 온보딩 체크: 명함이 없으면 온보딩으로 리다이렉트
+    const { data: existingCards } = await supabase
+      .from('business_cards')
+      .select('id')
+      .eq('user_id', user.id)
+      .limit(1)
+
+    if (!existingCards || existingCards.length === 0) {
+      redirect('/client/onboarding')
+    }
 
     const [eventsResult, notificationsResult, businessCardsResult] = await Promise.all([
       supabase
