@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TermsConsentModal } from '@/components/ui/terms-consent-modal'
-import { useAuthStore } from '@/stores/auth-store'
+import { useUserAuthStore } from '@/stores/user-auth-store'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CheckCircle, Eye, EyeOff, Lock, Mail, User, XCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -31,7 +31,7 @@ const signupSchema = z.object({
 type SignupFormData = z.infer<typeof signupSchema>
 
 export default function SignupPage() {
-  const { signUpWithEmail, user, loading: authLoading } = useAuthStore()
+  const { signUpWithEmail, user, loading: authLoading } = useUserAuthStore()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -141,7 +141,7 @@ export default function SignupPage() {
     try {
       console.log('🔍 회원가입 시도:', { email: data.email, name: data.name })
 
-      const { data: result, error } = await signUpWithEmail(data.email, data.password, data.name, false)
+      const { data: result, error } = await signUpWithEmail(data.email, data.password, data.name)
 
       if (error) {
         console.error('❌ 회원가입 실패:', error)

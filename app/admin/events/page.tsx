@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useUserProfile } from "@/hooks/use-user-profile"
 import { calculateEventStatus } from "@/lib/supabase/database"
 import { logError } from "@/lib/utils"
-import { useAuthStore } from "@/stores/auth-store"
+import { useAdminAuthStore } from "@/stores/admin-auth-store"
 import { createClient } from "@/utils/supabase/client"
 import { AnimatePresence, motion } from "framer-motion"
 import { Bell, Calendar, Copy, Eye, FileText, MapPin, MoreVertical, Plus, Save, Share, Users, X } from "lucide-react"
@@ -49,7 +49,7 @@ interface Participant {
 
 export default function AdminEventsPage() {
   const router = useRouter()
-  const { adminUser, adminLoading } = useAuthStore()
+  const { admin, loading: adminLoading } = useAdminAuthStore()
   const { profile } = useUserProfile()
   const [filter, setFilter] = useState<"all" | "upcoming" | "ongoing" | "completed">("ongoing")
   const [events, setEvents] = useState<Event[]>([])
@@ -64,7 +64,7 @@ export default function AdminEventsPage() {
   // 이벤트 데이터 가져오기
   useEffect(() => {
     // 인증 로딩이 완료된 후에만 이벤트 데이터 로드
-    if (!adminLoading && adminUser) {
+    if (!adminLoading && admin) {
       const fetchEvents = async () => {
         try {
           setLoading(true)
@@ -92,12 +92,12 @@ export default function AdminEventsPage() {
       }
 
       fetchEvents()
-    } else if (!adminLoading && !adminUser) {
+    } else if (!adminLoading && !admin) {
       // 인증이 완료되었지만 관리자가 아닌 경우
       setLoading(false)
       router.push('/login')
     }
-  }, [adminLoading, adminUser, router]) // supabase 의존성 제거
+  }, [adminLoading, admin, router]) // supabase 의존성 제거
 
   // 참여자 데이터 가져오기
   const fetchParticipants = async (eventId: string) => {
@@ -177,7 +177,7 @@ export default function AdminEventsPage() {
   })
 
     const handleSendNotice = async () => {
-    if (!selectedEvent || !noticeTitle || !noticeMessage || !adminUser) {
+    if (!selectedEvent || !noticeTitle || !noticeMessage || !admin) {
       toast.error('제목과 메시지를 모두 입력해주세요.')
       return
     }
@@ -216,7 +216,7 @@ export default function AdminEventsPage() {
           target_type: 'event_participants',
           target_event_id: selectedEvent.id,
           user_id: participant.user_id,
-          sent_by: adminUser.id
+          sent_by: admin.id
         }));
 
         const { error: batchError } = await supabase
@@ -301,7 +301,7 @@ export default function AdminEventsPage() {
   }
 
   // 관리자가 아닌 경우
-  if (!adminUser) {
+  if (!admin) {
     router.push('/admin/login')
     return null
   }

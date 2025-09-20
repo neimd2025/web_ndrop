@@ -3,7 +3,7 @@
 import { useUserAuthStore } from '@/stores/user-auth-store'
 import { useEffect } from 'react'
 
-export default function AuthInitializer() {
+export default function UserAuthInitializer() {
   const { initializeAuth, initialized } = useUserAuthStore()
 
   useEffect(() => {

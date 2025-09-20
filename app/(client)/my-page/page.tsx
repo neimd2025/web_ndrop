@@ -8,18 +8,17 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
 import { useBusinessCards } from '@/hooks/use-business-cards'
 import { useUserProfile } from '@/hooks/use-user-profile'
-import { FileText, LogOut, Settings, Shield, Trash2, User, UserCheck } from 'lucide-react'
+import { FileText, LogOut, Settings, Trash2, User } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 export default function MyPage() {
-  const { user, signOut, adminUser, isAdmin } = useAuth()
+  const { user, signOut } = useAuth()
   const { profile } = useUserProfile()
   const { userCard } = useBusinessCards()
   const { isLoading } = useLoading()
   const router = useRouter()
-  const pathname = usePathname()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   useEffect(() => {
@@ -33,20 +32,9 @@ export default function MyPage() {
     router.push("/login")
   }
 
-  const handleSwitchToAdmin = () => {
-    router.push("/admin")
-  }
-
-  const handleSwitchToUser = () => {
-    router.push("/home")
-  }
-
   const handleDeleteAccount = () => {
     setShowDeleteModal(true)
   }
-
-  // 현재 관리자 페이지에 있는지 확인
-  const isInAdminPage = pathname?.startsWith('/admin')
 
   // 사용자 표시 이름 가져오기
   const getUserDisplayName = () => {
@@ -171,14 +159,6 @@ export default function MyPage() {
               {getUserAge() && <p>{getUserAge()}</p>}
               {getUserCompanyInfo() && <p>{getUserCompanyInfo()}</p>}
               {getUserMbti() && <p>MBTI: {getUserMbti()}</p>}
-              {isAdmin && (
-                <div className="flex items-center justify-center gap-2 mt-3">
-                  <Shield className="w-4 h-4 text-purple-600" />
-                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                    관리자
-                  </Badge>
-                </div>
-              )}
             </div>
           </div>
 
@@ -234,35 +214,7 @@ export default function MyPage() {
             </Card>
           </Link>
 
-          {/* 관리자 페이지로 전환 버튼 */}
-          {isAdmin && !isInAdminPage && (
-            <div
-              onClick={handleSwitchToAdmin}
-              className="w-full justify-start cursor-pointer hover:bg-purple-50 p-4 rounded-lg
-              flex items-center border border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50"
-            >
-              <Shield className="w-5 h-5 mr-3 text-purple-600" />
-              <div className="flex flex-col">
-                <span className="font-medium text-purple-700">관리자 페이지로</span>
-                <span className="text-xs text-purple-500">관리자 모드로 전환하여 이벤트 관리</span>
-              </div>
-            </div>
-          )}
 
-          {/* 일반 사용자 페이지로 전환 버튼 */}
-          {isInAdminPage && (
-            <div
-              onClick={handleSwitchToUser}
-              className="w-full justify-start cursor-pointer hover:bg-blue-50 p-4 rounded-lg
-              flex items-center border border-blue-200 bg-gradient-to-r from-blue-50 to-purple-50"
-            >
-              <UserCheck className="w-5 h-5 mr-3 text-blue-600" />
-              <div className="flex flex-col">
-                <span className="font-medium text-blue-700">일반 사용자 페이지로</span>
-                <span className="text-xs text-blue-500">홈 화면으로 이동하여 일반 사용자 모드로 전환</span>
-              </div>
-            </div>
-          )}
 
           {/* 약관 보기 버튼 */}
           <Link href="/terms">

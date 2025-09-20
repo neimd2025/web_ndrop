@@ -88,6 +88,7 @@ export default function AuthCallbackPage() {
           // returnTo 파라미터 확인
           const urlParams = new URLSearchParams(window.location.search)
           let returnTo = urlParams.get('returnTo') || '/home'
+          const adminRequest = urlParams.get('adminRequest') === 'true'
 
           // 상대 경로로 만드기 (전체 URL이면 경로만 추출)
           if (returnTo.startsWith('http')) {
@@ -105,8 +106,27 @@ export default function AuthCallbackPage() {
             returnTo = '/' + returnTo
           }
 
+          // 관리자 페이지 요청인 경우 권한 확인
+          if (adminRequest || returnTo.startsWith('/admin')) {
+            const { data: userProfile } = await supabase
+              .from('user_profiles')
+              .select('role')
+              .eq('id', data.session.user.id)
+              .single()
+
+            if (userProfile?.role !== 'admin') {
+              console.log('❌ 관리자 권한 없음 - 홈으로 리다이렉트')
+              toast.warning('관리자 권한이 없습니다. 홈으로 이동합니다.')
+              returnTo = '/home'
+            } else {
+              console.log('✅ 관리자 로그인 성공')
+              toast.success('관리자로 로그인되었습니다!')
+            }
+          } else {
+            toast.success('로그인되었습니다!')
+          }
+
           console.log('🔄 리다이렉트 위치:', returnTo)
-          toast.success('로그인되었습니다!')
 
           // Next.js 라우터로 리다이렉트 (안전하고 현재 도메인 유지)
           router.push(returnTo)

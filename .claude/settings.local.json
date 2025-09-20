@@ -25,7 +25,13 @@
       "Bash(ls:*)",
       "mcp__supabase-neimd__get_advisors",
       "Bash(export:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_screenshot",
+      "mcp__playwright__browser_fill",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_click_text"
     ],
     "deny": []
   },

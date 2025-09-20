@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { calculateEventStatus } from "@/lib/supabase/database"
-import { useAuthStore } from "@/stores/auth-store"
+import { useAdminAuthStore } from "@/stores/admin-auth-store"
 import { createClient } from "@/utils/supabase/client"
 import { Calendar, Plus, Users } from "lucide-react"
 import Link from "next/link"
@@ -24,7 +24,7 @@ interface Event {
 }
 
 export default function AdminDashboard() {
-  const { adminUser } = useAuthStore()
+  const { admin } = useAdminAuthStore()
   const [activeTab, setActiveTab] = useState("진행중")
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)

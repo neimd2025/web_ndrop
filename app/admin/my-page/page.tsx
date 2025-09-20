@@ -4,7 +4,7 @@ import DeleteAccountModal from '@/components/delete-account-modal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useAuth } from '@/hooks/use-auth'
+import { useAdminAuth } from '@/hooks/use-admin-auth'
 import { useUserProfile } from '@/hooks/use-user-profile'
 import { LogOut, Settings, Shield, Trash2, User, UserCheck } from 'lucide-react'
 import Link from 'next/link'
@@ -12,21 +12,21 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 export default function AdminMyPage() {
-  const { user, signOut, adminUser, isAdmin } = useAuth()
+  const { admin, signOut } = useAdminAuth()
   const { profile, loading } = useUserProfile()
   const router = useRouter()
   const pathname = usePathname()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   useEffect(() => {
-    if (!user) {
-      router.push("/login")
+    if (!admin) {
+      router.push("/admin/login")
     }
-  }, [user, router])
+  }, [admin, router])
 
   const handleLogout = async () => {
     await signOut()
-    router.push("/login")
+    router.push("/admin/login")
   }
 
   const handleSwitchToUser = () => {
@@ -40,7 +40,7 @@ export default function AdminMyPage() {
   // 현재 관리자 페이지에 있는지 확인
   const isInAdminPage = pathname?.startsWith('/admin')
 
-  if (!user) {
+  if (!admin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -73,7 +73,7 @@ export default function AdminMyPage() {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-gray-600">이메일</span>
-              <span className="font-medium">{user.email}</span>
+              <span className="font-medium">{admin.email}</span>
             </div>
             {profile && (
               <>
@@ -90,10 +90,10 @@ export default function AdminMyPage() {
             <div className="flex items-center justify-between">
               <span className="text-gray-600">가입일</span>
               <span className="font-medium">
-                {new Date(user.created_at).toLocaleDateString('ko-KR')}
+                {new Date(admin.created_at).toLocaleDateString('ko-KR')}
               </span>
             </div>
-            {isAdmin && (
+            {/* 관리자 배지 */ (
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4 text-purple-600" />
                 <Badge variant="secondary" className="bg-purple-100 text-purple-800">

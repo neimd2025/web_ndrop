@@ -3,14 +3,14 @@
 import { useUserAuthStore } from '@/stores/user-auth-store'
 import { useEffect } from 'react'
 
-export const useAuth = () => {
+export const useUserAuth = () => {
   const store = useUserAuthStore()
 
   useEffect(() => {
     // 5초 후에도 로딩 중이면 강제 초기화
     const timeout = setTimeout(() => {
       if (store.loading && !store.initialized) {
-        console.warn('Auth loading timeout - forcing initialization')
+        console.warn('User auth loading timeout - forcing initialization')
         store.setLoading(false)
         store.setInitialized(true)
       }

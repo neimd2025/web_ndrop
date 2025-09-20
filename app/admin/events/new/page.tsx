@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useAuthStore } from "@/stores/auth-store"
+import { useAdminAuthStore } from "@/stores/admin-auth-store"
 import { createClient } from "@/utils/supabase/client"
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, Calendar, Clock, Upload, User } from "lucide-react"
@@ -42,7 +42,7 @@ type EventFormData = z.infer<typeof eventSchema>
 
 export default function NewEventPage() {
   const router = useRouter()
-  const { adminUser } = useAuthStore()
+  const { admin } = useAdminAuthStore()
   const [isLoading, setIsLoading] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -56,7 +56,7 @@ export default function NewEventPage() {
   })
 
   // 관리자 권한 확인
-  if (!adminUser) {
+  if (!admin) {
     router.push('/admin/login')
     return null
   }
@@ -136,11 +136,11 @@ export default function NewEventPage() {
           max_participants: parseInt(data.maxParticipants),
           event_code: eventCode,
           image_url: imageUrl,
-          organizer_name: adminUser.user_metadata?.full_name || adminUser.email?.split('@')[0] || '관리자',
-          organizer_email: adminUser.email || 'support@neimed.com',
-          organizer_phone: adminUser.user_metadata?.phone || '02-1234-5678',
-          organizer_kakao: adminUser.user_metadata?.kakao || '@neimed_official',
-          created_by: adminUser.id,
+          organizer_name: admin.user_metadata?.full_name || admin.email?.split('@')[0] || '관리자',
+          organizer_email: admin.email || 'support@neimed.com',
+          organizer_phone: admin.user_metadata?.phone || '02-1234-5678',
+          organizer_kakao: admin.user_metadata?.kakao || '@neimed_official',
+          created_by: admin.id,
           status: 'upcoming',
           current_participants: 0
         })
@@ -362,11 +362,11 @@ export default function NewEventPage() {
                 </div>
               </div>
               <div className="space-y-2 text-sm text-blue-800">
-                <p><strong>이름:</strong> {adminUser.user_metadata?.full_name || adminUser.email?.split('@')[0] || '관리자'}</p>
-                <p><strong>이메일:</strong> {adminUser.email || 'support@neimed.com'}</p>
-                <p><strong>연락처:</strong> {adminUser.user_metadata?.phone || '02-1234-5678'}</p>
-                {adminUser.user_metadata?.kakao && (
-                  <p><strong>카카오톡:</strong> {adminUser.user_metadata.kakao}</p>
+                <p><strong>이름:</strong> {admin.user_metadata?.full_name || admin.email?.split('@')[0] || '관리자'}</p>
+                <p><strong>이메일:</strong> {admin.email || 'support@neimed.com'}</p>
+                <p><strong>연락처:</strong> {admin.user_metadata?.phone || '02-1234-5678'}</p>
+                {admin.user_metadata?.kakao && (
+                  <p><strong>카카오톡:</strong> {admin.user_metadata.kakao}</p>
                 )}
               </div>
             </CardContent>

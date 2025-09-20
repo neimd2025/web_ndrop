@@ -1,7 +1,7 @@
 "use client"
 
 import { userProfileAPI } from '@/lib/supabase/database'
-import { useAuthStore } from '@/stores/auth-store'
+import { useUserAuthStore } from '@/stores/user-auth-store'
 import { useEffect, useState } from 'react'
 
 interface UserProfile {
@@ -12,7 +12,7 @@ interface UserProfile {
 }
 
 export const useProfile = () => {
-  const { user } = useAuthStore()
+  const { user } = useUserAuthStore()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [needsOnboarding, setNeedsOnboarding] = useState(false)

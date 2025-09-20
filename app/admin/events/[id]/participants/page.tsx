@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useAuthStore } from "@/stores/auth-store"
+import { useAdminAuthStore } from "@/stores/admin-auth-store"
 import { createClient } from "@/utils/supabase/client"
 import { ArrowLeft, Download, Mail, QrCode, Search, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -22,7 +22,7 @@ interface Participant {
 
 export default function EventParticipantsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
-  const { adminUser } = useAuthStore()
+  const { admin } = useAdminAuthStore()
   const [searchTerm, setSearchTerm] = useState("")
   const [filter, setFilter] = useState<"all" | "confirmed" | "pending" | "cancelled">("all")
   const [eventId, setEventId] = useState<string>("")
@@ -152,7 +152,7 @@ export default function EventParticipantsPage({ params }: { params: Promise<{ id
     alert('알림 전송 기능은 별도 페이지에서 구현됩니다.')
   }
 
-  if (!adminUser) {
+  if (!admin) {
             router.push('/admin/login')
     return null
   }

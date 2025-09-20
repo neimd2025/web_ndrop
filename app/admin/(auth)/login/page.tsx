@@ -3,11 +3,11 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useAuthStore } from "@/stores/auth-store"
+import { useAdminAuthStore } from "@/stores/admin-auth-store"
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff, Lock, LogOut, Mail } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useForm } from 'react-hook-form'
 import { toast } from "sonner"
@@ -22,9 +22,12 @@ type AdminLoginFormData = z.infer<typeof adminLoginSchema>
 
 export default function AdminLoginPage() {
   const router = useRouter()
-  const { user, loading: authLoading, isAdmin, adminLoading, signInWithEmail, signInWithOAuth, signOut } = useAuthStore()
+  const searchParams = useSearchParams()
+  const { admin, loading: authLoading, signInWithEmail, signInWithOAuth, signOut, checkAdminStatus } = useAdminAuthStore()
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const returnTo = searchParams.get('returnTo') || '/admin/events'
 
   const {
     register,
@@ -35,21 +38,22 @@ export default function AdminLoginPage() {
   })
 
   useEffect(() => {
-    if (!authLoading && !adminLoading && isAdmin) {
-      router.push('/admin/events')
+    if (!authLoading && admin) {
+      router.push(returnTo)
     }
-  }, [isAdmin, authLoading, adminLoading, router])
+  }, [admin, authLoading, router, returnTo])
 
   const onSubmit = async (data: AdminLoginFormData) => {
     setIsSubmitting(true)
     try {
       const { data: result, error } = await signInWithEmail(data.email, data.password)
       if (error) {
-        toast.error('로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.')
+        toast.error(error.message || '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.')
         return
       }
       if (result?.user) {
-        toast.success('로그인되었습니다.')
+        toast.success('관리자로 로그인되었습니다.')
+        router.push(returnTo)
       }
     } catch (error) {
       console.error('로그인 오류:', error)
@@ -61,11 +65,8 @@ export default function AdminLoginPage() {
 
   const handleGoogleLogin = async () => {
     try {
-      // 관리자 로그인 페이지에서 Google 로그인 시 관리자 페이지로 리다이렉트
-      const currentUrl = new URL(window.location.href)
-      currentUrl.searchParams.set('returnTo', '/admin/events')
-
-      const { error } = await signInWithOAuth('google')
+      // 관리자 로그인 페이지에서 Google 로그인 시 현재 returnTo 파라미터 사용
+      const { error } = await signInWithOAuth('google', returnTo)
       if (error) {
         toast.error('Google 로그인에 실패했습니다.')
       }
@@ -76,55 +77,12 @@ export default function AdminLoginPage() {
   }
 
   // 로딩 상태 렌더링
-  if (authLoading || adminLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">로딩 중...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // 일반 사용자 로그인 상태 렌더링
-  if (user && !isAdmin && !authLoading && !adminLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div>
-            <div className="mx-auto h-12 w-12 bg-red-600 rounded-lg flex items-center justify-center">
-              <Lock className="h-6 w-6 text-white" />
-            </div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-              관리자 권한 필요
-            </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
-              현재 일반 사용자로 로그인되어 있습니다
-            </p>
-            <p className="mt-2 text-center text-sm text-gray-500">
-              {user.email}
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <Button
-              onClick={async () => {
-                await signOut()
-                toast.success('로그아웃되었습니다.')
-              }}
-              className="w-full bg-red-600 hover:bg-red-700"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              로그아웃
-            </Button>
-
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                관리자 계정으로 다시 로그인하세요
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     )
