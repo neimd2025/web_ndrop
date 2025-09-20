@@ -322,6 +322,39 @@ export async function getUserMyPageData(): Promise<{
   }
 }
 
+export async function getUserSavedCardsData(): Promise<{
+  user: UserProfile
+  savedCards: any[]
+}> {
+  const user = await requireUserAuth()
+
+  try {
+    const supabase = await createClient()
+
+    const { data: savedCards, error } = await supabase
+      .from('collected_cards')
+      .select(`
+        *,
+        business_card:business_cards(*)
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('저장된 명함 데이터 가져오기 오류:', error)
+      throw new Error('저장된 명함 데이터를 불러올 수 없습니다.')
+    }
+
+    return {
+      user,
+      savedCards: savedCards || []
+    }
+  } catch (error) {
+    console.error('저장된 명함 데이터 가져오기 오류:', error)
+    throw new Error('저장된 명함 데이터를 불러올 수 없습니다.')
+  }
+}
+
 export async function getUserProfileData(profileId?: string): Promise<{
   user: UserProfile
   profile: UserProfile

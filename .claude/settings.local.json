@@ -36,7 +36,8 @@
       "mcp__supabase-neimd__get_cost",
       "mcp__supabase-neimd__confirm_cost",
       "mcp__supabase-neimd__create_project",
-      "mcp__supabase-neimd__apply_migration"
+      "mcp__supabase-neimd__apply_migration",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   },
