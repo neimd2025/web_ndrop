@@ -50,13 +50,15 @@ export default function AuthCallbackPage() {
                            data.session.user.email?.split('@')[0] ||
                            '사용자'
 
-            // returnTo 파라미터로 관리자 여부 판단
+            // URL 파라미터에서 관리자/사용자 요청 확인
             const urlParams = new URLSearchParams(window.location.search)
-            const returnTo = urlParams.get('returnTo') || '/home'
-            const isAdminLogin = returnTo.startsWith('/admin')
+            const returnTo = urlParams.get('returnTo') || '/user/home'
+            const adminRequest = urlParams.get('adminRequest') === 'true'
+            const userRequest = urlParams.get('userRequest') === 'true'
 
-            // 관리자 여부 확인
-            const isAdmin = data.session.user.user_metadata?.isAdmin === true || isAdminLogin
+            // 관리자 여부 판단
+            const isAdmin = adminRequest || returnTo.startsWith('/admin')
+            const roleId = isAdmin ? 2 : 1
 
             try {
               const profileResponse = await fetch('/api/auth/create-profile', {
@@ -68,7 +70,7 @@ export default function AuthCallbackPage() {
                   userId: data.session.user.id,
                   email: data.session.user.email,
                   name: fullName,
-                  isAdmin
+                  roleId
                 })
               })
 
@@ -78,6 +80,11 @@ export default function AuthCallbackPage() {
               } else {
                 console.log('✅ 프로필 생성 성공')
                 toast.success('프로필이 생성되었습니다!')
+
+                // OAuth로 생성된 관리자 계정에 대한 자동 인증은 create-profile API에서 처리
+                if (isAdmin) {
+                  console.log('🔍 OAuth 관리자 계정 생성 완료 - 자동 인증은 프로필 생성에서 처리')
+                }
               }
             } catch (error) {
               console.error('❌ 프로필 생성 오류:', error)
@@ -87,8 +94,9 @@ export default function AuthCallbackPage() {
 
           // returnTo 파라미터 확인
           const urlParams = new URLSearchParams(window.location.search)
-          let returnTo = urlParams.get('returnTo') || '/home'
+          let returnTo = urlParams.get('returnTo') || '/user/home'
           const adminRequest = urlParams.get('adminRequest') === 'true'
+          const userRequest = urlParams.get('userRequest') === 'true'
 
           // 상대 경로로 만드기 (전체 URL이면 경로만 추출)
           if (returnTo.startsWith('http')) {
@@ -97,7 +105,7 @@ export default function AuthCallbackPage() {
               returnTo = url.pathname + url.search + url.hash
             } catch (e) {
               console.error('잘못된 returnTo URL:', returnTo)
-              returnTo = '/home'
+              returnTo = '/user/home'
             }
           }
 
@@ -110,17 +118,32 @@ export default function AuthCallbackPage() {
           if (adminRequest || returnTo.startsWith('/admin')) {
             const { data: userProfile } = await supabase
               .from('user_profiles')
-              .select('role')
+              .select('role_id')
               .eq('id', data.session.user.id)
               .single()
 
-            if (userProfile?.role !== 'admin') {
-              console.log('❌ 관리자 권한 없음 - 홈으로 리다이렉트')
-              toast.warning('관리자 권한이 없습니다. 홈으로 이동합니다.')
-              returnTo = '/home'
+            if (userProfile?.role_id !== 2) {
+              console.log('❌ 관리자 권한 없음 - 사용자 홈으로 리다이렉트')
+              toast.warning('관리자 권한이 없습니다. 사용자 홈으로 이동합니다.')
+              returnTo = '/user/home'
             } else {
               console.log('✅ 관리자 로그인 성공')
               toast.success('관리자로 로그인되었습니다!')
+            }
+          } else if (userRequest || returnTo.startsWith('/user')) {
+            const { data: userProfile } = await supabase
+              .from('user_profiles')
+              .select('role_id')
+              .eq('id', data.session.user.id)
+              .single()
+
+            if (userProfile?.role_id !== 1) {
+              console.log('❌ 사용자 권한 없음 - 관리자 대시보드로 리다이렉트')
+              toast.warning('사용자 권한이 없습니다. 관리자 대시보드로 이동합니다.')
+              returnTo = '/admin/dashboard'
+            } else {
+              console.log('✅ 사용자 로그인 성공')
+              toast.success('로그인되었습니다!')
             }
           } else {
             toast.success('로그인되었습니다!')

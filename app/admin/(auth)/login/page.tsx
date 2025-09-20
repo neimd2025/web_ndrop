@@ -76,17 +76,7 @@ export default function AdminLoginPage() {
     }
   }
 
-  // 로딩 상태 렌더링
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">로딩 중...</p>
-        </div>
-      </div>
-    )
-  }
+  // 로딩 상태는 layout에서 처리하므로 제거
 
   // 관리자 로그인 폼 렌더링
   return (

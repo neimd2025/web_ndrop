@@ -31,7 +31,12 @@
       "mcp__playwright__browser_fill",
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_evaluate",
-      "mcp__playwright__browser_click_text"
+      "mcp__playwright__browser_click_text",
+      "mcp__supabase-neimd__list_organizations",
+      "mcp__supabase-neimd__get_cost",
+      "mcp__supabase-neimd__confirm_cost",
+      "mcp__supabase-neimd__create_project",
+      "mcp__supabase-neimd__apply_migration"
     ],
     "deny": []
   },

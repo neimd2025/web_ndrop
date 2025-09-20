@@ -11,7 +11,7 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getSession()
 
   // 인증이 필요한 페이지들
-  const protectedRoutes = ['/home', '/my-page', '/namecard', '/events', '/saved-cards', '/scan-card', '/my-namecard', '/my-qr', '/notifications', '/business-card', '/onboarding']
+  const protectedRoutes = ['/user', '/home', '/my-page', '/namecard', '/events', '/saved-cards', '/scan-card', '/my-namecard', '/my-qr', '/notifications', '/business-card', '/onboarding']
   const isProtectedRoute = protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route))
 
   // 인증 페이지들
@@ -50,7 +50,7 @@ export async function middleware(req: NextRequest) {
   // 이미 로그인된 사용자가 인증 페이지 접근 시
   if (isAuthRoute && session) {
     const returnToUrl = req.nextUrl.searchParams.get('returnTo')
-    return NextResponse.redirect(new URL(returnToUrl || '/home', req.url))
+    return NextResponse.redirect(new URL(returnToUrl || '/user/home', req.url))
   }
 
   return supabaseResponse
