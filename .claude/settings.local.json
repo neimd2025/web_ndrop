@@ -42,7 +42,8 @@
       "Bash(kill:*)",
       "Bash(curl:*)",
       "mcp__supabase-neimd__get_logs",
-      "mcp__supabase-neimd__list_migrations"
+      "mcp__supabase-neimd__list_migrations",
+      "Bash(find:*)"
     ],
     "deny": []
   },

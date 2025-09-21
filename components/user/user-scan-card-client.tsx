@@ -2,9 +2,11 @@
 
 import { Button } from '@/components/ui/button'
 import { UserProfile } from '@/lib/supabase/user-server-actions'
+import { createClient } from '@/utils/supabase/client'
 import jsQR from 'jsqr'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Webcam from 'react-webcam'
 
@@ -13,6 +15,7 @@ interface UserScanCardClientProps {
 }
 
 export function UserScanCardClient({ user }: UserScanCardClientProps) {
+  const router = useRouter()
   const [isFlashOn, setIsFlashOn] = useState(false)
   const [isCameraActive, setIsCameraActive] = useState(false)
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
@@ -27,35 +30,149 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
   }, [])
 
   // QR 코드 감지 시 처리
-  const handleQRCodeDetected = useCallback((qrData: string) => {
+  const handleQRCodeDetected = useCallback(async (qrData: string) => {
     setIsScanning(false)
     console.log('QR 코드 데이터:', qrData)
 
-    // 여기서 QR 코드 데이터를 파싱하여 명함 정보 추출
     try {
-      const cardData = JSON.parse(qrData)
-      // 명함 데이터 처리 및 저장
-      console.log('명함 데이터:', cardData)
+      // named.link 형식의 URL에서 카드 ID 추출
+      let cardId = null
 
-      // 성공 메시지 표시 후 명함 상세 페이지로 이동
-      alert('명함이 성공적으로 스캔되었습니다!')
-      // 실제로는 여기서 명함 데이터를 저장하고 상세 페이지로 이동
-      // router.push(`/client/saved-cards/${cardData.id}`)
-    } catch (error) {
-      console.error('QR 코드 파싱 오류:', error)
-
-      // QR 코드가 JSON이 아닌 경우 다른 형식으로 처리
-      if (qrData.startsWith('named.link/')) {
-        // 공유 링크 형식인 경우
-        const cardId = qrData.split('/').pop()
-        console.log('명함 링크 감지:', cardId)
-        alert('명함 링크가 감지되었습니다!')
-        // router.push(`/client/business-card/${cardId}`)
-      } else {
-        alert('유효하지 않은 QR 코드입니다.')
+      if (qrData.includes('business-card/')) {
+        cardId = qrData.split('business-card/')[1]
+      } else if (qrData.startsWith('named.link/')) {
+        cardId = qrData.split('/').pop()
       }
+
+      if (cardId) {
+        // 명함 데이터 가져오기
+        const supabase = createClient()
+        const { data: businessCard, error } = await supabase
+          .from('business_cards')
+          .select('*')
+          .eq('id', cardId)
+          .eq('is_public', true)
+          .single()
+
+        if (error || !businessCard) {
+          alert('유효하지 않은 QR 코드이거나 공개되지 않은 명함입니다.')
+          setIsScanning(true)
+          return
+        }
+
+        // 이미 저장된 명함인지 확인
+        const { data: existingCard } = await supabase
+          .from('collected_cards')
+          .select('id')
+          .eq('collector_id', user.id)
+          .eq('business_card_id', cardId)
+          .single()
+
+        if (existingCard) {
+          alert('이미 저장된 명함입니다!')
+          router.push(`/client/saved-cards/${existingCard.id}`)
+          return
+        }
+
+        // 명함 저장
+        const { data: savedCard, error: saveError } = await supabase
+          .from('collected_cards')
+          .insert({
+            collector_id: user.id,
+            business_card_id: cardId,
+            collected_at: new Date().toISOString()
+          })
+          .select()
+          .single()
+
+        if (saveError) {
+          console.error('명함 저장 오류:', saveError)
+          alert('명함 저장에 실패했습니다.')
+          setIsScanning(true)
+          return
+        }
+
+        alert('명함이 성공적으로 저장되었습니다!')
+        router.push(`/client/saved-cards/${savedCard.id}`)
+      } else {
+        // 이벤트 코드인지 확인 (6자리 문자열)
+        if (qrData.length === 6 && /^[A-Z0-9]+$/.test(qrData)) {
+          // 이벤트 코드로 이벤트 찾기
+          const { data: event, error: eventError } = await supabase
+            .from('events')
+            .select('*')
+            .eq('event_code', qrData)
+            .single()
+
+          if (event && !eventError) {
+            // 이미 참가했는지 확인
+            const { data: existingParticipation } = await supabase
+              .from('event_participants')
+              .select('id')
+              .eq('event_id', event.id)
+              .eq('user_id', user.id)
+              .single()
+
+            if (existingParticipation) {
+              alert('이미 참가한 이벤트입니다!')
+              router.push(`/client/events/${event.id}`)
+              return
+            }
+
+            // 이벤트 참가 확인
+            const confirmed = confirm(`${event.title} 이벤트에 참가하시겠습니까?`)
+            if (confirmed) {
+              // 이벤트 참가
+              const { error: joinError } = await supabase
+                .from('event_participants')
+                .insert({
+                  event_id: event.id,
+                  user_id: user.id,
+                  status: 'confirmed'
+                })
+
+              if (joinError) {
+                console.error('이벤트 참가 오류:', joinError)
+                alert('이벤트 참가에 실패했습니다.')
+                setIsScanning(true)
+                return
+              }
+
+              // 참가자 수 업데이트
+              const { error: updateError } = await supabase.rpc('increment_event_participants', {
+                event_id: event.id
+              })
+
+              if (updateError) {
+                console.warn('참가자 수 업데이트 실패:', updateError)
+              }
+
+              alert('이벤트에 참가했습니다!')
+              router.push(`/client/events/${event.id}`)
+            } else {
+              setIsScanning(true)
+            }
+            return
+          }
+        }
+
+        // JSON 형식으로 파싱 시도
+        try {
+          const cardData = JSON.parse(qrData)
+          console.log('명함 데이터:', cardData)
+          alert('명함 데이터가 감지되었습니다!')
+          // 추가적인 처리 필요시 여기에 구현
+        } catch (parseError) {
+          alert('유효하지 않은 QR 코드입니다.')
+        }
+      }
+    } catch (error) {
+      console.error('QR 코드 처리 오류:', error)
+      alert('QR 코드 처리 중 오류가 발생했습니다.')
     }
-  }, [])
+
+    setIsScanning(true)
+  }, [user.id, router])
 
   // QR 코드 스캔
   const scanQRCode = useCallback(() => {
