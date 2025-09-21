@@ -35,6 +35,9 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
     console.log('QR 코드 데이터:', qrData)
 
     try {
+      // Supabase 클라이언트 생성
+      const supabase = createClient()
+
       // named.link 형식의 URL에서 카드 ID 추출
       let cardId = null
 
@@ -46,7 +49,6 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
 
       if (cardId) {
         // 명함 데이터 가져오기
-        const supabase = createClient()
         const { data: businessCard, error } = await supabase
           .from('business_cards')
           .select('*')

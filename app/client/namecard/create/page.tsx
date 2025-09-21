@@ -10,7 +10,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { Camera, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -91,6 +90,14 @@ export default function CreateNamecardPage() {
     console.log('로그인된 사용자:', user)
     console.log('사용자 ID:', user?.id)
     console.log('사용자 이메일:', user?.email)
+
+    // 사용자가 로그인되어 있지 않은 경우 처리
+    if (!user) {
+      toast.error('로그인이 필요합니다.')
+      router.push('/login?type=user')
+      return
+    }
+
     try {
       // 빈 문자열들을 null로 변환
       const cleanedData = {
@@ -105,7 +112,7 @@ export default function CreateNamecardPage() {
         interest_keywords: data.interest_keywords.length > 0 ? data.interest_keywords : null,
         introduction: data.introduction || null,
         external_link: data.external_link || null,
-        email: user?.email || '',
+        email: user.email || '',
         company: data.affiliation_type === '소속' ? (data.affiliation || null) : null,
         keywords: data.personality_keywords.length > 0 ? data.personality_keywords : null,
         profile_image_url: null,
