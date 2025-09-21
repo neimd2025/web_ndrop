@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { UserProfile } from '@/lib/supabase/user-server-actions'
+import { createClient } from '@/utils/supabase/client'
 import { Edit, Search, Star, User, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -39,9 +40,28 @@ export function UserSavedCardsClient({ user, savedCards }: UserSavedCardsClientP
   })
 
   const handleToggleFavorite = async (cardId: string) => {
-    // 클라이언트에서는 로컬 상태만 업데이트
-    // 실제 API 호출은 별도로 구현 필요
-    console.log('Toggle favorite for card:', cardId)
+    try {
+      const supabase = createClient()
+      const card = savedCards.find(c => c.id === cardId)
+      if (!card) return
+
+      const { error } = await supabase
+        .from('collected_cards')
+        .update({ is_favorite: !card.is_favorite })
+        .eq('id', cardId)
+
+      if (error) {
+        console.error('즐겨찾기 업데이트 오류:', error)
+        alert('즐겨찾기 상태 변경에 실패했습니다.')
+        return
+      }
+
+      // 로컬 상태 업데이트
+      card.is_favorite = !card.is_favorite
+    } catch (error) {
+      console.error('즐겨찾기 오류:', error)
+      alert('오류가 발생했습니다.')
+    }
   }
 
   const getInitial = (name: string) => {

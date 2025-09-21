@@ -4,7 +4,7 @@ import React from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { UserProfile } from '@/lib/supabase/user-server-actions'
-import { BarChart3, ChevronLeft, ChevronRight, Link as LinkIcon, Smartphone, Users } from "lucide-react"
+import { BarChart3, ChevronLeft, ChevronRight, Heart, Link as LinkIcon, Smartphone, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -18,28 +18,34 @@ export function UserOnboardingClient({ user }: UserOnboardingClientProps) {
 
   const slides = [
     {
-      icon: Smartphone,
+      icon: Heart,
       iconColor: "text-purple-600",
-      title: "명함을 디지털로",
-      description: "종이 명함은 이제 그만! 디지털 명함으로 더 스마트하게 네트워크하세요. 언제 어디서든지 쉽게 공유할 수 있습니다.",
+      title: "Neimed에 오신 것을 환영합니다!",
+      description: "디지털 명함과 네트워킹의 새로운 세상에 오신 것을 환영합니다. 더 스마트하고 효율적인 비즈니스 연결을 경험해보세요.",
     },
     {
-      icon: LinkIcon,
-      iconColor: "text-green-600",
-      title: "QR 코드로 간편하게",
-      description: "스캔 한 번으로 연결 QR 코드를 스캔하면 바로 명함을 주고받을 수 있어요. 번거로운 과정은 필요 없습니다.",
+      icon: Smartphone,
+      iconColor: "text-blue-600",
+      title: "디지털 명함으로 네트워킹하세요",
+      description: "종이 명함은 이제 그만! QR 코드 하나로 언제 어디서든 명함을 공유하세요. 분실 걱정도 없고 항상 최신 정보를 유지할 수 있어요.",
     },
     {
       icon: Users,
-      iconColor: "text-orange-600",
-      title: "이벤트에서 만나요",
-      description: "네트워크 확장 이벤트 참여 다양한 이벤트에 참여하고 새로운 사람들과 연결하세요. 더 넓은 네트워크를 만들어보세요.",
+      iconColor: "text-green-600",
+      title: "이벤트에서 쉽게 명함을 교환하세요",
+      description: "네트워킹 이벤트나 컨퍼런스에서 QR 코드를 스캔해 명함을 주고받으세요. 번거로운 타이핑 없이 즉시 연락처가 저장됩니다.",
     },
     {
       icon: BarChart3,
+      iconColor: "text-orange-600",
+      title: "수집한 명함을 관리하세요",
+      description: "받은 명함들을 체계적으로 정리하고 관리하세요. 검색 기능으로 필요한 연락처를 빠르게 찾고, 즐겨찾기로 중요한 인맥을 관리할 수 있어요.",
+    },
+    {
+      icon: LinkIcon,
       iconColor: "text-red-600",
-      title: "분석하고 성장하기",
-      description: "명함 조회 분석 내 명함이 얼마나 조회되었는지 확인하고, 어떤 부분이 인기 있는지 알아보세요. 더 나은 명함으로 업그레이드!",
+      title: "이제 나만의 명함을 만들어보세요!",
+      description: "모든 준비가 끝났습니다! 나만의 디지털 명함을 만들어 전문적인 첫인상을 남겨보세요. 프로필, 연락처, 소개글까지 모두 담을 수 있어요.",
     }
   ]
 
@@ -124,15 +130,17 @@ export function UserOnboardingClient({ user }: UserOnboardingClientProps) {
           </CardContent>
         </Card>
 
-        {/* 시작하기 버튼 */}
-        <div className="max-w-md mx-auto w-full mt-8">
-          <Button
-            onClick={handleGetStarted}
-            className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
-          >
-            명함 만들기
-          </Button>
-        </div>
+        {/* 시작하기 버튼 - 마지막 슬라이드에서만 표시 */}
+        {currentSlide === slides.length - 1 && (
+          <div className="max-w-md mx-auto w-full mt-8">
+            <Button
+              onClick={handleGetStarted}
+              className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+            >
+              명함 생성하기
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

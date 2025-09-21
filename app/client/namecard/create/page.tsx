@@ -3,15 +3,13 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useUserProfile } from '@/hooks/use-user-profile'
-import { useBusinessCards } from '@/hooks/use-business-cards'
 import { useAuth } from '@/hooks/use-auth'
+import { userProfileAPI } from '@/lib/supabase/database'
 import { createClient } from '@/utils/supabase/client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { Camera, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -41,16 +39,9 @@ type ProfileFormData = z.infer<typeof profileSchema>
 export default function CreateNamecardPage() {
   const router = useRouter()
   const { user } = useAuth()
-  const { profile, createProfile } = useUserProfile()
-  const { createBusinessCard } = useBusinessCards()
 
-  // 이미 프로필이 존재하면 홈으로 리다이렉트
-  useEffect(() => {
-    if (profile) {
-      console.log('프로필이 이미 존재합니다. 홈으로 리다이렉트')
-      router.push('/client/home')
-    }
-  }, [profile, router])
+  // SimpleUserLayout에서 이미 명함 체크를 했으므로 여기 도달했다면 명함 생성이 필요한 상태
+  // useUserProfile 훅 사용하지 않음 (중복 쿼리 방지)
 
   const {
     register,
@@ -99,6 +90,14 @@ export default function CreateNamecardPage() {
     console.log('로그인된 사용자:', user)
     console.log('사용자 ID:', user?.id)
     console.log('사용자 이메일:', user?.email)
+
+    // 사용자가 로그인되어 있지 않은 경우 처리
+    if (!user) {
+      toast.error('로그인이 필요합니다.')
+      router.push('/login?type=user')
+      return
+    }
+
     try {
       // 빈 문자열들을 null로 변환
       const cleanedData = {
@@ -113,7 +112,7 @@ export default function CreateNamecardPage() {
         interest_keywords: data.interest_keywords.length > 0 ? data.interest_keywords : null,
         introduction: data.introduction || null,
         external_link: data.external_link || null,
-        email: user?.email || '',
+        email: user.email || '',
         company: data.affiliation_type === '소속' ? (data.affiliation || null) : null,
         keywords: data.personality_keywords.length > 0 ? data.personality_keywords : null,
         profile_image_url: null,
@@ -124,14 +123,16 @@ export default function CreateNamecardPage() {
         updated_at: new Date().toISOString()
       }
 
-      // 프로필 생성
-      const createdProfile = await createProfile(cleanedData)
+      // 프로필 업데이트 (이미 기본 프로필이 존재하므로)
+      const createdProfile = await userProfileAPI.updateUserProfile(user.id, cleanedData)
       toast.success('명함이 성공적으로 생성되었습니다!')
 
       // 명함 생성
       if (createdProfile) {
         try {
+          const supabase = createClient()
           const businessCardData = {
+            user_id: user.id,
             full_name: createdProfile.full_name || '이름 없음',
             introduction: createdProfile.introduction || '안녕하세요!',
             company: createdProfile.affiliation,
@@ -143,7 +144,17 @@ export default function CreateNamecardPage() {
             is_public: true
           }
 
-          await createBusinessCard(businessCardData)
+          const { data: businessCard, error } = await supabase
+            .from('business_cards')
+            .insert(businessCardData)
+            .select()
+            .single()
+
+          if (error) {
+            throw error
+          }
+
+          console.log('명함 생성 성공:', businessCard)
         } catch (cardError) {
           console.error('명함 생성 오류:', cardError)
           toast.error('일부 정보 저장에 실패했습니다.')

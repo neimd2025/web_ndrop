@@ -128,16 +128,7 @@ export async function getUserHomeData(): Promise<{
   try {
     const supabase = await createClient()
 
-    // 온보딩 체크: 명함이 없으면 온보딩으로 리다이렉트
-    const { data: existingCards } = await supabase
-      .from('business_cards')
-      .select('id')
-      .eq('user_id', user.id)
-      .limit(1)
-
-    if (!existingCards || existingCards.length === 0) {
-      redirect('/client/onboarding')
-    }
+    // 온보딩 체크는 클라이언트 레이아웃에서 처리하므로 여기서는 제거
 
     const [eventsResult, notificationsResult, businessCardsResult] = await Promise.all([
       supabase

@@ -4,10 +4,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { UserProfile, UserEvent, UserNotification } from '@/lib/supabase/user-server-actions'
-import { calculateEventStatus, filterEventsByStatus } from '@/lib/supabase/database'
+import { businessCardAPI, collectedCardAPI, eventAPI, userProfileAPI } from '@/lib/supabase/database'
 import { Calendar, Camera, Star } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface UserHomeClientProps {
   user: UserProfile
@@ -22,12 +22,47 @@ interface UserHomeClientProps {
 
 export function UserHomeClient({
   user,
-  upcomingEvents,
+  upcomingEvents: initialEvents,
   recentNotifications,
   businessCardStats
 }: UserHomeClientProps) {
+  const [events, setEvents] = useState<any[]>(initialEvents || [])
+  const [userCard, setUserCard] = useState<any>(null)
+  const [collectedCards, setCollectedCards] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'진행중' | '예정' | '종료'>('진행중')
 
+  // 데이터 로딩 함수들
+  const loadUserCard = async () => {
+    if (!user?.id) return
+    try {
+      const cardData = await businessCardAPI.getUserBusinessCard(user.id)
+      setUserCard(cardData)
+    } catch (error) {
+      console.error('Error loading user card:', error)
+    }
+  }
+
+  const loadCollectedCards = async () => {
+    if (!user?.id) return
+    try {
+      const cardsData = await collectedCardAPI.getUserCollectedCards(user.id)
+      setCollectedCards(cardsData)
+    } catch (error) {
+      console.error('Error loading collected cards:', error)
+    }
+  }
+
+  const loadEvents = async () => {
+    try {
+      const eventsData = await eventAPI.getAllEvents()
+      setEvents(eventsData || [])
+    } catch (error) {
+      console.error('Error loading events:', error)
+    }
+  }
+
+  // 유틸리티 함수들
   const getDisplayName = () => {
     return user?.full_name || user?.email || '사용자'
   }
@@ -37,25 +72,25 @@ export function UserHomeClient({
     return name.charAt(0).toUpperCase()
   }
 
-  // 이벤트 필터링 - 현재 시간 기준으로 상태 계산
-  const ongoingEvents = filterEventsByStatus(upcomingEvents, 'ongoing')
-  const upcomingEventsFiltered = filterEventsByStatus(upcomingEvents, 'upcoming')
-  const completedEvents = filterEventsByStatus(upcomingEvents, 'completed')
+  // 이벤트 필터링
+  const ongoingEvents = events.filter(event => event.status === 'ongoing')
+  const upcomingEventsFiltered = events.filter(event => event.status === 'upcoming')
+  const completedEvents = events.filter(event => event.status === 'completed')
 
-  // 상태 배지 함수
-  const getStatusBadge = (event: UserEvent) => {
-    const status = calculateEventStatus(event)
-    switch (status) {
-      case 'ongoing':
-        return <Badge className="bg-green-100 text-green-800">진행중</Badge>
-      case 'upcoming':
-        return <Badge className="bg-blue-100 text-blue-800">예정</Badge>
-      case 'completed':
-        return <Badge className="bg-gray-100 text-gray-800">종료</Badge>
-      default:
-        return <Badge className="bg-gray-100 text-gray-800">{status}</Badge>
+  useEffect(() => {
+    if (user?.id) {
+      const loadAllData = async () => {
+        setLoading(true)
+        await Promise.all([
+          loadUserCard(),
+          loadCollectedCards(),
+          loadEvents()
+        ])
+        setLoading(false)
+      }
+      loadAllData()
     }
-  }
+  }, [user?.id])
 
   return (
     <div className="min-h-screen">
@@ -117,7 +152,7 @@ export function UserHomeClient({
             <CardContent className="p-4 flex justify-between items-center">
               <div>
                 <p className="text-2xl font-bold text-gray-900">
-                  {upcomingEvents.length}
+                  {events.length}
                 </p>
                 <p className="text-sm text-gray-600">참가 행사</p>
               </div>
@@ -138,14 +173,14 @@ export function UserHomeClient({
               </Link>
             </div>
             <Link href="/client/my-namecard">
-              <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-200">
+              <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                   <span className="text-gray-600 font-bold text-lg">{getInitial()}</span>
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">{getDisplayName()}</h3>
                   <p className="text-sm text-gray-600">
-                    {`${user?.role || '직책'} / ${user?.company || '회사'}`}
+                    {`${userCard?.role || '직책'} / ${userCard?.company || '회사'}`}
                   </p>
                 </div>
               </div>
@@ -187,7 +222,7 @@ export function UserHomeClient({
             {/* 이벤트 목록 */}
             <div className="space-y-4">
               {(() => {
-                let filteredEvents: UserEvent[] = []
+                let filteredEvents: any[] = []
 
                 if (activeTab === '진행중') {
                   filteredEvents = ongoingEvents
@@ -202,31 +237,24 @@ export function UserHomeClient({
                     <div key={event.id} className="border border-gray-200 rounded-lg p-5">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-semibold text-gray-900 text-sm">{event.title}</h4>
-                        {getStatusBadge(event)}
+                        <Badge className="bg-orange-100 text-orange-800 text-xs">
+                          {activeTab}
+                        </Badge>
                       </div>
 
                       <div className="space-y-2 mb-4">
                         <p className="text-sm text-gray-600">
-                          이벤트 일시: {new Date(event.start_date).toLocaleString('ko-KR', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            timeZone: 'Asia/Seoul'
-                          })}
+                          이벤트 일시: {new Date(event.start_date).toLocaleDateString()}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {new Date(event.start_date).toLocaleDateString('ko-KR', {
-                            timeZone: 'Asia/Seoul'
-                          })} 참가 신청
+                          {new Date(event.start_date).toLocaleDateString()} 참가 신청
                         </p>
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="text-center py-8 text-gray-500 text-sm">
-                    {activeTab} 참가 이벤트가 없습니다
+                    {activeTab} 이벤트가 없습니다
                   </div>
                 )
               })()}
