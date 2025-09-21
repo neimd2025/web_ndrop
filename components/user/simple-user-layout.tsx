@@ -11,12 +11,12 @@ interface UserProfile {
   role_id: number
 }
 
-
 export function SimpleUserLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [hasCheckedBusinessCard, setHasCheckedBusinessCard] = useState(false)
 
   const handleLogout = async () => {
     try {
@@ -40,24 +40,33 @@ export function SimpleUserLayout({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // Middleware에서 이미 인증 처리하므로 여기서는 단순히 사용자 정보만 가져옴
+    // 사용자 정보 가져오기 + 명함 체크 (한 번만)
     const getUserInfo = async () => {
       try {
         const supabase = createClient()
         const { data: { session } } = await supabase.auth.getSession()
 
         if (session?.user) {
-          // 사용자 프로필 확인
+          // 사용자 프로필 확인 (has_business_card 포함)
           const { data: profile } = await supabase
             .from('user_profiles')
-            .select('id, email, full_name, role_id')
+            .select('id, email, full_name, role_id, has_business_card')
             .eq('id', session.user.id)
             .single()
 
           if (profile) {
-            console.log('=== 클라이언트 로그인 상태 ===')
-            console.log('클라이언트 계정:', profile)
             setUser(profile)
+
+            // 명함 체크를 아직 안 했고, 명함이 없고, 온보딩/명함생성 페이지가 아닌 경우만 리다이렉트
+            const isOnboardingFlow = pathname.startsWith('/client/onboarding') ||
+                                    pathname.startsWith('/client/namecard')
+
+            if (!hasCheckedBusinessCard && !profile.has_business_card && !isOnboardingFlow) {
+              console.log('명함이 없어서 온보딩으로 리다이렉트')
+              setHasCheckedBusinessCard(true) // 체크 완료 표시
+              router.push('/client/onboarding')
+              return
+            }
           }
         }
       } catch (error) {
@@ -68,7 +77,8 @@ export function SimpleUserLayout({ children }: { children: React.ReactNode }) {
     }
 
     getUserInfo()
-  }, [pathname, isAuthPage])
+  }, [pathname, isAuthPage, router, hasCheckedBusinessCard])
+
 
   // 인증 페이지는 바로 렌더링
   if (isAuthPage) {

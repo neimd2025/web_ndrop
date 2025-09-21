@@ -40,7 +40,9 @@
       "Bash(git checkout:*)",
       "Bash(lsof:*)",
       "Bash(kill:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "mcp__supabase-neimd__get_logs",
+      "mcp__supabase-neimd__list_migrations"
     ],
     "deny": []
   },

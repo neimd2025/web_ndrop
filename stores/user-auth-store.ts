@@ -150,14 +150,13 @@ export const useUserAuthStore = create<UserAuthState>()(persist((set, get) => ({
 
     // 이메일 중복 확인 - 일반 사용자(role_id=1)로 이미 가입된 경우 체크
     try {
-      const { data: existingUser } = await supabase
+      const { data: existingUsers } = await supabase
         .from('user_profiles')
         .select('id, email, role_id')
         .eq('email', email)
         .eq('role_id', 1) // 일반 사용자만 체크
-        .single()
 
-      if (existingUser) {
+      if (existingUsers && existingUsers.length > 0) {
         return {
           data: null,
           error: {

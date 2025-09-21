@@ -27,31 +27,34 @@ export async function middleware(req: NextRequest) {
   // 현재 접근하려는 URL을 쿼리 파라미터로 저장
   const returnTo = req.nextUrl.pathname + req.nextUrl.search
 
-  // 사용자 역할 확인 함수
-  async function getUserRole(userId: string) {
+  // 사용자 정보 확인 함수 (역할 + 명함 여부)
+  async function getUserInfo(userId: string) {
     try {
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('role_id')
+        .select('role_id, has_business_card')
         .eq('id', userId)
         .single()
 
-      return profile?.role_id || null
+      return {
+        roleId: profile?.role_id || null,
+        hasBusinessCard: profile?.has_business_card || false
+      }
     } catch (error) {
-      return null
+      return { roleId: null, hasBusinessCard: false }
     }
   }
 
   // 루트 경로 처리 - 역할에 따른 리다이렉트
   if (req.nextUrl.pathname === '/') {
     if (session) {
-      const roleId = await getUserRole(session.user.id)
+      const { roleId } = await getUserInfo(session.user.id)
 
       if (roleId === 2) {
         // 관리자인 경우
         return NextResponse.redirect(new URL('/admin/dashboard', req.url))
       } else {
-        // 일반 사용자인 경우 (role_id가 null이거나 2가 아닌 경우)
+        // 일반 사용자인 경우 - 홈으로 리다이렉트 (명함 체크는 레이아웃에서)
         return NextResponse.redirect(new URL('/client/home', req.url))
       }
     } else {
@@ -69,7 +72,7 @@ export async function middleware(req: NextRequest) {
     }
 
     // 세션은 있지만 관리자 권한 확인
-    const roleId = await getUserRole(session.user.id)
+    const { roleId } = await getUserInfo(session.user.id)
     if (roleId !== 2) {
       const redirectUrl = new URL('/admin/login', req.url)
       redirectUrl.searchParams.set('returnTo', returnTo)
@@ -79,7 +82,7 @@ export async function middleware(req: NextRequest) {
 
   // Admin 인증 페이지에서 이미 로그인된 사용자 처리
   if (isAdminAuthRoute && session) {
-    const roleId = await getUserRole(session.user.id)
+    const { roleId } = await getUserInfo(session.user.id)
     if (roleId === 2) {
       const returnToUrl = req.nextUrl.searchParams.get('returnTo')
       return NextResponse.redirect(new URL(returnToUrl || '/admin/dashboard', req.url))
@@ -87,7 +90,12 @@ export async function middleware(req: NextRequest) {
     // 관리자가 아닌 경우 관리자 로그인 페이지에 그대로 유지
   }
 
-  // 일반 사용자 인증 처리
+  // 일반 사용자 인증 처리 (명함 체크는 레이아웃에서 처리)
+  if (isProtectedRoute && session) {
+    // 관리자가 아닌 사용자의 클라이언트 페이지 접근은 허용
+    // 명함 체크는 클라이언트 레이아웃에서 처리
+  }
+
   if (isProtectedRoute && !session) {
     const redirectUrl = new URL('/login', req.url)
     redirectUrl.searchParams.set('returnTo', returnTo)
@@ -96,14 +104,14 @@ export async function middleware(req: NextRequest) {
 
   // 이미 로그인된 사용자가 인증 페이지 접근 시
   if (isAuthRoute && session) {
-    const roleId = await getUserRole(session.user.id)
+    const { roleId } = await getUserInfo(session.user.id)
     const returnToUrl = req.nextUrl.searchParams.get('returnTo')
 
     if (roleId === 2) {
       // 관리자인 경우
       return NextResponse.redirect(new URL(returnToUrl || '/admin/dashboard', req.url))
     } else {
-      // 일반 사용자인 경우
+      // 일반 사용자인 경우 - 홈으로 리다이렉트 (명함 체크는 레이아웃에서)
       return NextResponse.redirect(new URL(returnToUrl || '/client/home', req.url))
     }
   }
