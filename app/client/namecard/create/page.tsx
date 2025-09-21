@@ -116,11 +116,8 @@ export default function CreateNamecardPage() {
         updated_at: new Date().toISOString()
       }
 
-      // 프로필 생성 (직접 API 호출)
-      const createdProfile = await userProfileAPI.createUserProfile({
-        id: user.id,
-        ...cleanedData
-      })
+      // 프로필 업데이트 (이미 기본 프로필이 존재하므로)
+      const createdProfile = await userProfileAPI.updateUserProfile(user.id, cleanedData)
       toast.success('명함이 성공적으로 생성되었습니다!')
 
       // 명함 생성
