@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from '@/components/ui/button'
-import { useUserAuthStore } from '@/stores/user-auth-store'
+import { useAuth } from '@/hooks/use-auth'
 import { useProfile } from '@/hooks/use-profile'
 import { useBusinessCard } from '@/hooks/use-business-card'
 import { UserProfile } from '@/lib/supabase/user-server-actions'
@@ -15,7 +15,7 @@ interface UserLayoutClientProps {
 }
 
 export function UserLayoutClient({ children, user }: UserLayoutClientProps) {
-  const { loading, initialized } = useUserAuthStore()
+  const { loading, initialized } = useAuth('user')
   const { profile, loading: profileLoading, needsOnboarding } = useProfile()
   const { businessCard, loading: cardLoading, needsBusinessCard } = useBusinessCard()
   const [mounted, setMounted] = useState(false)

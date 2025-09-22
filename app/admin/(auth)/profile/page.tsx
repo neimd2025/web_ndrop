@@ -6,15 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useAdminAuthStore } from "@/stores/admin-auth-store"
+import { useAuth } from "@/hooks/use-auth"
 import { ArrowLeft, Eye, EyeOff, Save, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 export default function AdminProfilePage() {
   const router = useRouter()
-  const { admin } = useAdminAuthStore()
-  const { signOut } = useAdminAuthStore()
+  const { user: admin, signOut } = useAuth('admin')
   const [showPassword, setShowPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)

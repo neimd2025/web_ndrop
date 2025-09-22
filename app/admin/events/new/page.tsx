@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useAdminAuthStore } from "@/stores/admin-auth-store"
+import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/utils/supabase/client"
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, Calendar, Clock, Upload, User } from "lucide-react"
@@ -42,7 +42,7 @@ type EventFormData = z.infer<typeof eventSchema>
 
 export default function NewEventPage() {
   const router = useRouter()
-  const { admin } = useAdminAuthStore()
+  const { user: admin } = useAuth('admin')
   const [isLoading, setIsLoading] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)

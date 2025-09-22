@@ -1,4 +1,4 @@
-import AuthInitializer from "@/components/auth-initializer"
+import AuthProvider from "@/components/auth-provider"
 import ClientOnly from "@/components/client-only"
 import { LoadingProvider } from "@/components/loading-provider"
 import MobileBottomNav from "@/components/mobile-bottom-nav"
@@ -40,12 +40,13 @@ export default function RootLayout({
       <body className={`${inter.className}`} suppressHydrationWarning>
         {/* 전체 앱 컨테이너 */}
         <div className="min-h-screen max-w-md mx-auto bg-white shadow-xl relative">
-          <AuthInitializer />
-          <ClientOnly>
-            <LoadingProvider>
-              <main className="pb-20">{children}</main>
-            </LoadingProvider>
-          </ClientOnly>
+          <AuthProvider>
+            <ClientOnly>
+              <LoadingProvider>
+                <main className="pb-20">{children}</main>
+              </LoadingProvider>
+            </ClientOnly>
+          </AuthProvider>
         </div>
         {/* 네비게이션바는 컨테이너 밖에서 하단 고정 */}
         <MobileBottomNav />

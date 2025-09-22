@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SocialLoginButton, type SocialProvider } from '@/components/ui/social-login-button'
-import { useAdminAuthStore } from '@/stores/admin-auth-store'
-import { useUserAuthStore } from '@/stores/user-auth-store'
+import { useAuth } from '@/hooks/use-auth'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
@@ -27,12 +26,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams()
   const isAdminLogin = searchParams.get('type') === 'admin'
 
-  const userAuth = useUserAuthStore()
-  const adminAuth = useAdminAuthStore()
-
-  const { signInWithEmail, signInWithOAuth, user, loading: authLoading } = isAdminLogin ?
-    { signInWithEmail: adminAuth.signInWithEmail, signInWithOAuth: adminAuth.signInWithOAuth, user: adminAuth.admin, loading: adminAuth.loading } :
-    { signInWithEmail: userAuth.signInWithEmail, signInWithOAuth: userAuth.signInWithOAuth, user: userAuth.user, loading: userAuth.loading }
+  const { signInWithEmail, signInWithOAuth, user, loading: authLoading } = useAuth(isAdminLogin ? 'admin' : 'user')
 
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)

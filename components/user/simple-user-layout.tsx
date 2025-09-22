@@ -47,21 +47,28 @@ export function SimpleUserLayout({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession()
 
         if (session?.user) {
-          // 사용자 프로필 확인 (has_business_card 포함)
+          // 사용자 프로필 확인
           const { data: profile } = await supabase
             .from('user_profiles')
-            .select('id, email, full_name, role_id, has_business_card')
+            .select('id, email, full_name, role_id')
             .eq('id', session.user.id)
             .single()
 
           if (profile) {
             setUser(profile)
 
+            // 비즈니스 카드 존재 여부 확인
+            const { data: businessCard } = await supabase
+              .from('business_cards')
+              .select('id')
+              .eq('user_id', session.user.id)
+              .single()
+
             // 명함 체크를 아직 안 했고, 명함이 없고, 온보딩/명함생성 페이지가 아닌 경우만 리다이렉트
             const isOnboardingFlow = pathname.startsWith('/client/onboarding') ||
                                     pathname.startsWith('/client/namecard')
 
-            if (!hasCheckedBusinessCard && !profile.has_business_card && !isOnboardingFlow) {
+            if (!hasCheckedBusinessCard && !businessCard && !isOnboardingFlow) {
               console.log('명함이 없어서 온보딩으로 리다이렉트')
               setHasCheckedBusinessCard(true) // 체크 완료 표시
               router.push('/client/onboarding')

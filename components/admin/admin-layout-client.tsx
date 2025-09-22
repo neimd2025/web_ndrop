@@ -1,28 +1,12 @@
 "use client"
 
-import { useAdminAuthStore } from '@/stores/admin-auth-store'
+import { useAuth } from '@/hooks/use-auth'
 import { usePathname, useRouter } from "next/navigation"
-import { useEffect, useRef } from 'react'
 
 export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { admin, loading: authLoading, initialized: adminInitialized, initializeAuth } = useAdminAuthStore()
-  const initRef = useRef(false)
-
-  // Admin auth 초기화 (한 번만) - admin 페이지에서만
-  useEffect(() => {
-    if (!initRef.current && pathname?.startsWith('/admin')) {
-      initRef.current = true
-      // 개발 환경에서는 강제로 초기화 상태를 리셋
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Development mode: forcing admin auth re-initialization')
-        useAdminAuthStore.setState({ initialized: false })
-      }
-      // 즉시 초기화 실행
-      initializeAuth()
-    }
-  }, [initializeAuth, pathname])
+  const { user: admin, loading: authLoading, initialized: adminInitialized } = useAuth('admin')
 
   // admin 인증 페이지들은 인증 체크 완전 제외
   if (pathname === '/admin/login' || pathname === '/admin/signup') {
