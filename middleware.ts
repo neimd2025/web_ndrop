@@ -26,10 +26,17 @@ export async function middleware(req: NextRequest) {
   const isAdminRoute = adminRoutes.some(route => req.nextUrl.pathname.startsWith(route))
   const isAdminAuthRoute = adminAuthRoutes.some(route => req.nextUrl.pathname === route)
 
-  const returnTo = req.nextUrl.pathname + req.nextUrl.search
+  const returnTo = req.nextUrl.pathname
 
-  // 사용자 역할 확인 함수 (한 번만 호출)
+  // 사용자 역할 확인 함수 (캐시 추가)
+  const roleCache = new Map<string, number | null>()
+
   async function getUserRole(userId: string): Promise<number | null> {
+    // 캐시에서 먼저 확인
+    if (roleCache.has(userId)) {
+      return roleCache.get(userId)
+    }
+
     try {
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -37,7 +44,12 @@ export async function middleware(req: NextRequest) {
         .eq('id', userId)
         .single()
 
-      return profile?.role_id || null
+      const roleId = profile?.role_id || null
+      // 캐시에 저장 (5분간 유효)
+      roleCache.set(userId, roleId)
+      setTimeout(() => roleCache.delete(userId), 5 * 60 * 1000)
+
+      return roleId
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
         console.error('getUserRole error:', error)
@@ -46,9 +58,9 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // 세션이 있는 경우 역할 정보 미리 조회 (한 번만)
+  // 세션이 있는 경우에만 역할 정보 조회
   let userRole: number | null = null
-  if (session) {
+  if (session?.user?.id) {
     userRole = await getUserRole(session.user.id)
   }
 
@@ -65,19 +77,48 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // 2. Admin 경로 접근 제어
+  // 2. Admin 경로 접근 제어 (JWT 토큰 기반)
   if (isAdminRoute && !isAdminAuthRoute) {
-    if (!session || userRole !== 2) {
+    // JWT 토큰 확인
+    const adminToken = req.cookies.get('admin_token')?.value
+    const adminUser = req.cookies.get('admin_user')?.value
+
+    if (!adminToken || !adminUser) {
+      const redirectUrl = new URL('/admin/login', req.url)
+      redirectUrl.searchParams.set('returnTo', returnTo)
+      return NextResponse.redirect(redirectUrl)
+    }
+
+    try {
+      const userData = JSON.parse(adminUser)
+      if (userData.role_id !== 2) {
+        const redirectUrl = new URL('/admin/login', req.url)
+        redirectUrl.searchParams.set('returnTo', returnTo)
+        return NextResponse.redirect(redirectUrl)
+      }
+    } catch (error) {
       const redirectUrl = new URL('/admin/login', req.url)
       redirectUrl.searchParams.set('returnTo', returnTo)
       return NextResponse.redirect(redirectUrl)
     }
   }
 
-  // 3. 로그인된 관리자가 Admin 인증 페이지 접근 시
-  if (isAdminAuthRoute && session && userRole === 2) {
-    const returnToUrl = req.nextUrl.searchParams.get('returnTo')
-    return NextResponse.redirect(new URL(returnToUrl || '/admin/dashboard', req.url))
+  // 3. 로그인된 관리자가 Admin 인증 페이지 접근 시 (JWT 토큰 기반)
+  if (isAdminAuthRoute) {
+    const adminToken = req.cookies.get('admin_token')?.value
+    const adminUser = req.cookies.get('admin_user')?.value
+
+    if (adminToken && adminUser) {
+      try {
+        const userData = JSON.parse(adminUser)
+        if (userData.role_id === 2) {
+          const returnToUrl = req.nextUrl.searchParams.get('returnTo')
+          return NextResponse.redirect(new URL(returnToUrl || '/admin/dashboard', req.url))
+        }
+      } catch (error) {
+        // 토큰 파싱 오류 시 무시하고 로그인 페이지로
+      }
+    }
   }
 
   // 4. 보호된 경로 접근 제어

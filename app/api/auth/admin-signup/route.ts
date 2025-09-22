@@ -1,65 +1,69 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/utils/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name } = await request.json()
+    const { username, password, name } = await request.json()
 
-    console.log('관리자 회원가입 요청:', { email, name })
+    console.log('관리자 회원가입 요청:', { username, name })
 
-    if (!email || !password || !name) {
+    if (!username || !password || !name) {
       return NextResponse.json(
-        { error: '이메일, 비밀번호, 이름이 모두 필요합니다.' },
+        { error: '사용자명, 비밀번호, 이름이 모두 필요합니다.' },
         { status: 400 }
       )
     }
 
-    // 서버 사이드에서 직접 Supabase 클라이언트 생성 (Service Role Key 사용)
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    // 사용자명 형식 검증 (영문, 숫자, 언더스코어만 허용)
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/
+    if (!usernameRegex.test(username)) {
+      return NextResponse.json(
+        { error: '사용자명은 영문, 숫자, 언더스코어만 사용 가능하며 3-20자여야 합니다.' },
+        { status: 400 }
+      )
+    }
 
-    // Auth 사용자 중복 확인
-    const { data: authUsers } = await supabase.auth.admin.listUsers()
-    const existingAuthUser = authUsers.users.find(user => user.email === email)
+    // 비밀번호 길이 검증
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: '비밀번호는 최소 6자 이상이어야 합니다.' },
+        { status: 400 }
+      )
+    }
 
-    if (existingAuthUser) {
-      // user_profiles에서 역할 확인
-      const { data: existingProfile } = await supabase
-        .from('user_profiles')
-        .select('role_id, role')
-        .eq('id', existingAuthUser.id)
-        .single()
+    const supabase = await createClient()
 
-      if (existingProfile) {
-        if (existingProfile.role_id === 2) {
-          return NextResponse.json(
-            { error: '이미 가입된 관리자 이메일입니다. 로그인을 시도해주세요.' },
-            { status: 400 }
-          )
-        } else {
-          return NextResponse.json(
-            { error: '이미 가입된 사용자 이메일입니다. 다른 이메일을 사용하거나 기존 계정으로 로그인해주세요.' },
-            { status: 400 }
-          )
-        }
+    // 기존 사용자명 확인 (유효한 이메일로 검색)
+    const { data: existingProfile } = await supabase
+      .from('user_profiles')
+      .select('email, role_id')
+      .eq('email', `${username}@example.com`)
+      .single()
+
+    if (existingProfile) {
+      if (existingProfile.role_id === 2) {
+        return NextResponse.json(
+          { error: '이미 가입된 관리자 사용자명입니다. 로그인을 시도해주세요.' },
+          { status: 400 }
+        )
       } else {
         return NextResponse.json(
-          { error: '이미 가입된 이메일입니다. 로그인을 시도해주세요.' },
+          { error: '이미 가입된 사용자명입니다. 다른 사용자명을 사용하거나 기존 계정으로 로그인해주세요.' },
           { status: 400 }
         )
       }
     }
 
-    // 관리자 계정 생성 (이메일 인증 없이)
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
+    // 관리자 계정 생성 (유효한 이메일 형식 사용)
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: `${username}@example.com`, // 유효한 이메일 형식 사용
       password,
-      email_confirm: true, // 이메일 인증을 자동으로 완료
-      user_metadata: {
-        name: name,
-        role_id: 2 // 관리자
+      options: {
+        data: {
+          name: name,
+          role_id: 2, // 관리자
+          username: username // 실제 사용자명 저장
+        }
       }
     })
 
@@ -81,42 +85,41 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Auth 사용자 생성 성공:', authData.user.id)
 
-    // 기존 create-profile API를 사용하여 프로필 생성
+    // 관리자 이메일 인증은 일반 사용자와 동일하게 처리
+
+    // 관리자 프로필 직접 생성
     try {
-      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/create-profile`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: authData.user.id,
-          email: email,
-          name: name,
-          roleId: 2 // 관리자
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: authData.user.id,
+          email: `${username}@example.com`, // 유효한 이메일 형식
+          full_name: name,
+          role_id: 2, // 관리자
+          role: 'admin',
+          contact: '',
+          company: '',
+          introduction: '',
+          mbti: '',
+          keywords: [],
+          profile_image_url: null,
+          qr_code_url: null
         })
-      })
 
-      if (!profileResponse.ok) {
-        const profileError = await profileResponse.text()
-        console.error('프로필 생성 실패:', profileError)
-
-        // Auth 사용자 삭제
-        await supabase.auth.admin.deleteUser(authData.user.id)
-
+      if (profileError) {
+        console.error('관리자 프로필 생성 오류:', profileError)
         return NextResponse.json(
-          { error: '프로필 생성에 실패했습니다.', details: profileError },
+          { error: '관리자 프로필 생성에 실패했습니다.', details: profileError.message },
           { status: 500 }
         )
       }
 
-      const profileResult = await profileResponse.json()
-      console.log('✅ 프로필 생성 성공:', profileResult)
+      console.log('✅ 관리자 프로필 생성 성공')
 
     } catch (profileError) {
       console.error('프로필 생성 중 오류:', profileError)
 
-      // Auth 사용자 삭제
-      await supabase.auth.admin.deleteUser(authData.user.id)
+      // Auth 사용자 삭제는 하지 않음 (일반 signUp이므로)
 
       return NextResponse.json(
         { error: '프로필 생성 중 오류가 발생했습니다.' },
@@ -126,16 +129,16 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ 관리자 계정 생성 성공:', {
       userId: authData.user.id,
-      email: email,
+      username: username,
       name: name
     })
 
     return NextResponse.json({
       success: true,
-      message: '관리자 계정이 성공적으로 생성되었습니다.',
+      message: '관리자 계정이 성공적으로 생성되었습니다. 바로 로그인하실 수 있습니다.',
       user: {
         id: authData.user.id,
-        email: email,
+        username: username,
         name: name
       }
     })

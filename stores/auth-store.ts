@@ -53,6 +53,7 @@ interface AuthState {
   signOut: (type: AuthType) => Promise<{ error: any }>
 
   // Profile methods
+  fetchProfile: (userId: string) => Promise<{ userProfile: UserProfile | null; adminProfile: AdminProfile | null }>
   fetchUserProfile: (userId: string) => Promise<UserProfile | null>
   fetchAdminProfile: (userId: string) => Promise<AdminProfile | null>
 
@@ -287,7 +288,26 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
     return { error }
   },
 
-  fetchUserProfile: async (userId: string): Promise<UserProfile | null> => {
+  // 토큰 만료 에러 처리 함수 (강제 리다이렉트 제거)
+  handleTokenExpired: () => {
+    console.warn('🔄 토큰이 만료되었습니다. 인증 상태를 초기화합니다.')
+
+    // 모든 인증 상태 초기화
+    set({
+      user: null,
+      userSession: null,
+      userProfile: null,
+      admin: null,
+      adminSession: null,
+      adminProfile: null,
+    })
+
+    // 강제 리다이렉트 제거 - 사용자가 직접 로그인 페이지로 이동하도록 함
+    // 필요시 router.push('/login') 사용
+  },
+
+  // 통합된 프로필 조회 함수
+  fetchProfile: async (userId: string): Promise<{ userProfile: UserProfile | null; adminProfile: AdminProfile | null }> => {
     const supabase = createClient()
 
     try {
@@ -295,48 +315,38 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
         .from('user_profiles')
         .select('id, email, full_name, role_id, company, contact, profile_image_url')
         .eq('id', userId)
-        .eq('role_id', 1)
         .single()
 
       if (error) {
         if (error.code === 'PGRST116') {
-          return null
+          return { userProfile: null, adminProfile: null }
         }
-        console.error('사용자 프로필 조회 오류:', error)
-        return null
+        console.error('프로필 조회 오류:', error)
+        return { userProfile: null, adminProfile: null }
       }
 
-      return data as UserProfile
+      // role_id에 따라 적절한 프로필 반환
+      if (data.role_id === 1) {
+        return { userProfile: data as UserProfile, adminProfile: null }
+      } else if (data.role_id === 2) {
+        return { userProfile: null, adminProfile: { ...data, role: 'admin' } as AdminProfile }
+      }
+
+      return { userProfile: null, adminProfile: null }
     } catch (error) {
-      console.error('사용자 프로필 조회 중 예외 발생:', error)
-      return null
+      console.error('프로필 조회 중 예외 발생:', error)
+      return { userProfile: null, adminProfile: null }
     }
   },
 
+  fetchUserProfile: async (userId: string): Promise<UserProfile | null> => {
+    const { userProfile } = await get().fetchProfile(userId)
+    return userProfile
+  },
+
   fetchAdminProfile: async (userId: string): Promise<AdminProfile | null> => {
-    const supabase = createClient()
-
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('id, email, full_name, role_id, company, contact, profile_image_url')
-        .eq('id', userId)
-        .eq('role_id', 2)
-        .single()
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return null
-        }
-        console.error('관리자 프로필 조회 오류:', error)
-        return null
-      }
-
-      return { ...data, role: 'admin' } as AdminProfile
-    } catch (error) {
-      console.error('관리자 프로필 조회 중 예외 발생:', error)
-      return null
-    }
+    const { adminProfile } = await get().fetchProfile(userId)
+    return adminProfile
   },
 
   initializeAuth: async (type?: AuthType) => {
@@ -361,13 +371,15 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
       const { data: { session } } = await supabase.auth.getSession()
 
       if (session?.user) {
+        // 한 번의 쿼리로 사용자와 관리자 프로필 모두 조회
+        const { userProfile, adminProfile } = await get().fetchProfile(session.user.id)
+
         if (type === 'user' || !type) {
-          const profile = await get().fetchUserProfile(session.user.id)
-          if (profile) {
+          if (userProfile) {
             set({
               user: session.user,
               userSession: session,
-              userProfile: profile,
+              userProfile: userProfile,
               userLoading: false,
               userInitialized: true
             })
@@ -383,12 +395,11 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
         }
 
         if (type === 'admin' || !type) {
-          const profile = await get().fetchAdminProfile(session.user.id)
-          if (profile) {
+          if (adminProfile) {
             set({
               admin: session.user,
               adminSession: session,
-              adminProfile: profile,
+              adminProfile: adminProfile,
               adminLoading: false,
               adminInitialized: true
             })
@@ -427,15 +438,58 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
         async (event, session) => {
           const currentState = get()
 
+          // 토큰 갱신 실패 시에만 상태 초기화 (리다이렉트 제거)
+          if (event === 'TOKEN_REFRESHED' && !session) {
+            console.warn('⚠️ 토큰 갱신 실패 - 세션이 만료되었습니다')
+            // 상태만 초기화하고 리다이렉트는 하지 않음
+            if (type === 'user' || !type) {
+              set({
+                user: null,
+                userSession: null,
+                userProfile: null,
+              })
+            }
+            if (type === 'admin' || !type) {
+              set({
+                admin: null,
+                adminSession: null,
+                adminProfile: null,
+              })
+            }
+            return
+          }
+
+          // SIGNED_OUT 이벤트 처리 (자연스러운 로그아웃만)
+          if (event === 'SIGNED_OUT') {
+            console.log('🔄 사용자가 로그아웃되었습니다')
+            if (type === 'user' || !type) {
+              set({
+                user: null,
+                userSession: null,
+                userProfile: null,
+              })
+            }
+            if (type === 'admin' || !type) {
+              set({
+                admin: null,
+                adminSession: null,
+                adminProfile: null,
+              })
+            }
+            return
+          }
+
           if (session?.user) {
+            // 한 번의 쿼리로 사용자와 관리자 프로필 모두 조회
+            const { userProfile, adminProfile } = await get().fetchProfile(session.user.id)
+
             if (type === 'user' || !type) {
               if (currentState.userInitialized) {
-                const profile = await get().fetchUserProfile(session.user.id)
-                if (profile) {
+                if (userProfile) {
                   set({
                     user: session.user,
                     userSession: session,
-                    userProfile: profile,
+                    userProfile: userProfile,
                   })
                 } else {
                   set({
@@ -449,12 +503,11 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
 
             if (type === 'admin' || !type) {
               if (currentState.adminInitialized) {
-                const profile = await get().fetchAdminProfile(session.user.id)
-                if (profile) {
+                if (adminProfile) {
                   set({
                     admin: session.user,
                     adminSession: session,
-                    adminProfile: profile,
+                    adminProfile: adminProfile,
                   })
                 } else {
                   set({
