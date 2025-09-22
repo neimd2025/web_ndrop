@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TermsConsentModal } from '@/components/ui/terms-consent-modal'
-import { useAdminAuthStore } from '@/stores/admin-auth-store'
-import { useUserAuthStore } from '@/stores/user-auth-store'
+import { useAuth } from '@/hooks/use-auth'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CheckCircle, Eye, EyeOff, Lock, Mail, User, XCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -35,12 +34,7 @@ export default function SignupPage() {
   const searchParams = useSearchParams()
   const isAdminSignup = searchParams.get('type') === 'admin'
 
-  const userAuth = useUserAuthStore()
-  const adminAuth = useAdminAuthStore()
-
-  const { signUpWithEmail, user, loading: authLoading } = isAdminSignup ?
-    { signUpWithEmail: adminAuth.signUpWithEmail, user: adminAuth.admin, loading: adminAuth.loading } :
-    { signUpWithEmail: userAuth.signUpWithEmail, user: userAuth.user, loading: userAuth.loading }
+  const { signUpWithEmail, user, loading: authLoading } = useAuth(isAdminSignup ? 'admin' : 'user')
 
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)

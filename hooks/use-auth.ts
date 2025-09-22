@@ -1,50 +1,56 @@
 "use client"
 
-import { useUserAuthStore } from '@/stores/user-auth-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { useEffect, useRef } from 'react'
 
-export const useAuth = () => {
-  const store = useUserAuthStore()
+type AuthType = 'user' | 'admin'
+
+export const useAuth = (type: AuthType = 'user') => {
+  const store = useAuthStore()
   const initializeRef = useRef(false)
-  const cacheClearedRef = useRef(false)
 
-  console.log('=== useAuth 훅 호출됨 ===')
-  console.log('사용자:', store.user)
-  console.log('로딩:', store.loading)
-  console.log('초기화됨:', store.initialized)
-
-  // 한 번만 캐시 클리어 (개발 중에만)
-  useEffect(() => {
-    if (!cacheClearedRef.current && typeof window !== 'undefined') {
-      const shouldClear = localStorage.getItem('auth-cache-cleared') !== 'true'
-      if (shouldClear) {
-        console.log('캐시 클리어 중...')
-        localStorage.setItem('auth-cache-cleared', 'true')
-        store.clearAuthCache()
-        cacheClearedRef.current = true
-      }
-    }
-  }, [])
+  const isUser = type === 'user'
+  const currentUser = isUser ? store.user : store.admin
+  const currentSession = isUser ? store.userSession : store.adminSession
+  const currentProfile = isUser ? store.userProfile : store.adminProfile
+  const currentLoading = isUser ? store.userLoading : store.adminLoading
+  const currentInitialized = isUser ? store.userInitialized : store.adminInitialized
 
   useEffect(() => {
-    // 이미 초기화를 시도했다면 스킵
     if (initializeRef.current) return
 
-    // 초기화되지 않았으면 강제 초기화
-    if (!store.initialized) {
-      console.log('강제 auth 초기화 실행')
+    if (!currentInitialized) {
       initializeRef.current = true
-      store.initializeAuth()
+      store.initializeAuth(type)
     }
-  }, [store.initialized, store.initializeAuth])
+  }, [currentInitialized, store, type])
 
   useEffect(() => {
-    // 사용자가 있는데 로딩 중이면 로딩 상태 해제
-    if (store.user && store.loading) {
-      console.log('사용자 있음, 로딩 상태 해제')
-      store.setLoading(false)
-    }
-  }, [store.user, store.loading, store.setLoading])
+    const timeout = setTimeout(() => {
+      if (currentLoading && !currentInitialized) {
+        console.warn(`${type} auth loading timeout - forcing initialization`)
+        if (isUser) {
+          store.setUserState({ userLoading: false, userInitialized: true })
+        } else {
+          store.setAdminState({ adminLoading: false, adminInitialized: true })
+        }
+      }
+    }, 5000)
 
-  return store
+    return () => clearTimeout(timeout)
+  }, [currentLoading, currentInitialized, store, type, isUser])
+
+  return {
+    user: currentUser,
+    session: currentSession,
+    profile: currentProfile,
+    loading: currentLoading,
+    initialized: currentInitialized,
+    signInWithEmail: (email: string, password: string) => store.signInWithEmail(email, password, type),
+    signUpWithEmail: (email: string, password: string, name?: string) => store.signUpWithEmail(email, password, name, type),
+    signInWithOAuth: (provider: 'google' | 'kakao' | 'naver', returnTo?: string) => store.signInWithOAuth(provider, type, returnTo),
+    signOut: () => store.signOut(type),
+    clearAuthCache: store.clearAuthCache,
+    resetAuth: () => store.resetAuth(type),
+  }
 }

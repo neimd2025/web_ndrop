@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useUserProfile } from "@/hooks/use-user-profile"
 import { calculateEventStatus } from "@/lib/supabase/database"
 import { logError } from "@/lib/utils"
-import { useAdminAuthStore } from "@/stores/admin-auth-store"
+import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/utils/supabase/client"
 import { AdminEvent } from "@/lib/supabase/admin-server-actions"
 import { AnimatePresence, motion } from "framer-motion"
@@ -33,7 +33,7 @@ interface AdminEventsClientProps {
 }
 
 export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
-  const { admin } = useAdminAuthStore()
+  const { user: admin } = useAuth('admin')
   const { profile } = useUserProfile()
   const [filter, setFilter] = useState<"all" | "upcoming" | "ongoing" | "completed">("ongoing")
   const [showNoticeModal, setShowNoticeModal] = useState(false)

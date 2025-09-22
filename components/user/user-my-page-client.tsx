@@ -4,7 +4,7 @@ import DeleteAccountModal from '@/components/delete-account-modal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { useUserAuthStore } from '@/stores/user-auth-store'
+import { useAuth } from '@/hooks/use-auth'
 import { UserProfile, UserBusinessCard, UserEventParticipation } from '@/lib/supabase/user-server-actions'
 import { FileText, LogOut, Settings, Trash2, User } from 'lucide-react'
 import Link from 'next/link'
@@ -28,7 +28,7 @@ export function UserMyPageClient({
   participatedEvents,
   stats
 }: UserMyPageClientProps) {
-  const { signOut } = useUserAuthStore()
+  const { signOut } = useAuth('user')
   const router = useRouter()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 

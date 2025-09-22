@@ -1,7 +1,7 @@
 "use client"
 
 import { businessCardAPI } from '@/lib/supabase/database'
-import { useUserAuthStore } from '@/stores/user-auth-store'
+import { useAuth } from '@/hooks/use-auth'
 import { useEffect, useState } from 'react'
 
 interface BusinessCard {
@@ -11,7 +11,7 @@ interface BusinessCard {
 }
 
 export const useBusinessCard = () => {
-  const { user } = useUserAuthStore()
+  const { user } = useAuth('user')
   const [businessCard, setBusinessCard] = useState<BusinessCard | null>(null)
   const [loading, setLoading] = useState(true)
   const [needsBusinessCard, setNeedsBusinessCard] = useState(false)

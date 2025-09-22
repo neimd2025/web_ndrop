@@ -3,7 +3,7 @@
 import AdminHeader from "@/components/admin/admin-header"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { useAdminAuthStore } from "@/stores/admin-auth-store"
+import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/utils/supabase/client"
 import { Calendar, MessageSquare, Star } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -27,7 +27,7 @@ interface Feedback {
 export default function AdminFeedbackPage() {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([])
   const [loading, setLoading] = useState(true)
-  const { admin } = useAdminAuthStore()
+  const { user: admin } = useAuth('admin')
   const supabase = createClient()
 
   useEffect(() => {
