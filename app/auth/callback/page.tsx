@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 export default function AuthCallbackPage() {
@@ -13,21 +13,19 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       console.log('🔄 OAuth 콜백 처리 시작')
-      
+
       try {
         const supabase = createClient()
-        
+
         // 세션 확인
         const { data, error } = await supabase.auth.getSession()
 
         if (error) {
           console.error('❌ OAuth 콜백 실패:', error)
           setError(error.message)
-          toast.error('로그인 처리 중 오류가 발생했습니다.')
-          
-          setTimeout(() => {
-            router.push('/login')
-          }, 3000)
+          toast.error('로그인 처리 중 오류가 발생했습니다. 다시 시도해주세요.')
+
+          // 자동 리다이렉트 제거 - 사용자가 직접 로그인 페이지로 이동
           return
         }
 

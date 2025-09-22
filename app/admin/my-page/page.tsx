@@ -4,29 +4,26 @@ import DeleteAccountModal from '@/components/delete-account-modal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useAdminAuth } from '@/hooks/use-admin-auth'
-import { useUserProfile } from '@/hooks/use-user-profile'
 import { LogOut, Settings, Shield, Trash2, User, UserCheck } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useAdminAuth } from '../../../hooks/use-admin-auth'
 
 export default function AdminMyPage() {
-  const { admin, signOut } = useAdminAuth()
-  const { profile, loading } = useUserProfile()
+  const { admin, loading: authLoading, signOut } = useAdminAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   useEffect(() => {
-    if (!admin) {
+    if (!authLoading && !admin) {
       router.push("/admin/login")
     }
-  }, [admin, router])
+  }, [admin, authLoading, router])
 
   const handleLogout = async () => {
     await signOut()
-    router.push("/admin/login")
   }
 
   const handleSwitchToUser = () => {
@@ -40,14 +37,26 @@ export default function AdminMyPage() {
   // 현재 관리자 페이지에 있는지 확인
   const isInAdminPage = pathname?.startsWith('/admin')
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-purple-600 mx-auto"></div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">인증 상태 확인 중...</h2>
+          <p className="text-gray-600">잠시만 기다려 주세요.</p>
+        </div>
+      </div>
+    )
+  }
+
   if (!admin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">로그인이 필요합니다</h2>
           <p className="text-gray-600 mb-4">마이페이지를 보려면 로그인해주세요.</p>
-          <Link href="/login">
-            <Button>로그인하기</Button>
+          <Link href="/admin/login">
+            <Button>관리자 로그인하기</Button>
           </Link>
         </div>
       </div>
@@ -72,35 +81,24 @@ export default function AdminMyPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-gray-600">이메일</span>
-              <span className="font-medium">{admin.email}</span>
+              <span className="text-gray-600">사용자명</span>
+              <span className="font-medium">{admin.username}</span>
             </div>
-            {profile && (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">이름</span>
-                  <span className="font-medium">{profile.full_name}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">닉네임</span>
-                  <span className="font-medium">{profile.nickname}</span>
-                </div>
-              </>
-            )}
             <div className="flex items-center justify-between">
-              <span className="text-gray-600">가입일</span>
-              <span className="font-medium">
-                {new Date(admin.created_at).toLocaleDateString('ko-KR')}
-              </span>
+              <span className="text-gray-600">이름</span>
+              <span className="font-medium">{admin.name}</span>
             </div>
-            {/* 관리자 배지 */ (
-              <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-purple-600" />
-                <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                  관리자
-                </Badge>
-              </div>
-            )}
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">역할</span>
+              <span className="font-medium">{admin.role}</span>
+            </div>
+            {/* 관리자 배지 */}
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-purple-600" />
+              <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                관리자
+              </Badge>
+            </div>
           </CardContent>
         </Card>
 

@@ -41,32 +41,23 @@ export function SimpleAdminLayout({ children }: { children: React.ReactNode }) {
     let mounted = true
     let timeoutId: NodeJS.Timeout
 
-    const checkAuth = async () => {
+    const checkAuth = () => {
       try {
-        const supabase = createClient()
-        const { data: { session } } = await supabase.auth.getSession()
-
+        // JWT 토큰 기반 인증 확인
+        const adminToken = localStorage.getItem('admin_token')
+        const adminUser = localStorage.getItem('admin_user')
+        
         if (!mounted) return
 
-        if (!session?.user) {
+        if (!adminToken || !adminUser) {
           timeoutId = setTimeout(() => {
             if (mounted) router.push('/admin/login')
           }, 100)
           return
         }
 
-        // 관리자 권한 확인
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('id, email, role_id')
-          .eq('id', session.user.id)
-          .eq('role_id', 2)
-          .single()
-
-        if (!mounted) return
-
-        if (!profile) {
-          await supabase.auth.signOut()
+        const userData = JSON.parse(adminUser)
+        if (userData.role_id !== 2) {
           timeoutId = setTimeout(() => {
             if (mounted) router.push('/admin/login?error=unauthorized')
           }, 100)
@@ -74,15 +65,15 @@ export function SimpleAdminLayout({ children }: { children: React.ReactNode }) {
         }
 
         if (mounted) {
-          console.log('=== 관리자 로그인 상태 ===')
-          console.log('관리자 계정:', profile)
-          console.log('관리자 ID:', profile.id)
-          console.log('관리자 이메일:', profile.email)
-          console.log('역할 ID:', profile.role_id)
-          setAdmin(profile)
+          console.log('=== 관리자 로그인 상태 (JWT) ===')
+          console.log('관리자 계정:', userData)
+          console.log('관리자 ID:', userData.id)
+          console.log('관리자 사용자명:', userData.username)
+          console.log('역할 ID:', userData.role_id)
+          setAdmin(userData)
         }
       } catch (error) {
-        console.error('Auth check failed:', error)
+        console.error('JWT Auth check failed:', error)
         if (mounted) {
           timeoutId = setTimeout(() => {
             if (mounted) router.push('/admin/login?error=auth_failed')
