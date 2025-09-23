@@ -37,6 +37,10 @@ const eventSchema = z.object({
     const num = parseInt(val)
     return !isNaN(num) && num > 0 && num <= 1000
   }, '최대 참가자 수는 1명 이상 1000명 이하여야 합니다'),
+  // 새로운 필드들
+  overviewPoints: z.string().optional(),
+  targetAudience: z.string().optional(),
+  specialBenefits: z.string().optional(),
 
 }).refine((data) => {
   const startDateTime = new Date(`${data.startDate}T${data.startTime}`)
@@ -179,7 +183,11 @@ export default function NewEventPage() {
           imageUrl: imageUrl,
           adminId: admin.id,
           adminName: admin.name,
-          adminUsername: admin.username
+          adminUsername: admin.username,
+          // 새로운 필드들 - 줄바꿈으로 구분된 문자열을 배열로 변환
+          overviewPoints: data.overviewPoints ? data.overviewPoints.split('\n').filter(line => line.trim()) : [],
+          targetAudience: data.targetAudience ? data.targetAudience.split('\n').filter(line => line.trim()) : [],
+          specialBenefits: data.specialBenefits ? data.specialBenefits.split('\n').filter(line => line.trim()) : []
         })
       })
 
@@ -329,6 +337,39 @@ export default function NewEventPage() {
                 {errors.maxParticipants && (
                   <p className="text-red-500 text-sm">{errors.maxParticipants.message}</p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="overviewPoints">이벤트 개요 (선택사항)</Label>
+                <Textarea
+                  {...register('overviewPoints')}
+                  placeholder="각 줄에 하나씩 입력하세요&#10;예:&#10;디지털 명함을 통한 새로운 네트워킹 경험&#10;다양한 분야 전문가들과의 만남&#10;실시간 명함 교환 및 피드백"
+                  rows={4}
+                  className={`border-2 border-gray-200 focus:border-purple-500 rounded-xl ${errors.overviewPoints ? 'border-red-500' : ''}`}
+                />
+                <p className="text-sm text-gray-500">각 줄에 하나씩 입력하세요</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="targetAudience">참가 대상 (선택사항)</Label>
+                <Textarea
+                  {...register('targetAudience')}
+                  placeholder="각 줄에 하나씩 입력하세요&#10;예:&#10;IT/스타트업 관계자 - 디지털 트랜스포메이션에 관심 있는 분&#10;새로운 네트워킹 방식을 경험하고 싶은 분"
+                  rows={3}
+                  className={`border-2 border-gray-200 focus:border-purple-500 rounded-xl ${errors.targetAudience ? 'border-red-500' : ''}`}
+                />
+                <p className="text-sm text-gray-500">각 줄에 하나씩 입력하세요</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="specialBenefits">특별 혜택 (선택사항)</Label>
+                <Textarea
+                  {...register('specialBenefits')}
+                  placeholder="각 줄에 하나씩 입력하세요&#10;예:&#10;Neimed 앱 사용법 가이드 제공&#10;네트워킹 노하우 공유 세션&#10;참가자 전용 커뮤니티 초대"
+                  rows={3}
+                  className={`border-2 border-gray-200 focus:border-purple-500 rounded-xl ${errors.specialBenefits ? 'border-red-500' : ''}`}
+                />
+                <p className="text-sm text-gray-500">각 줄에 하나씩 입력하세요</p>
               </div>
 
 

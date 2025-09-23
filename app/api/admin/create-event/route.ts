@@ -35,7 +35,10 @@ export async function POST(request: NextRequest) {
       imageUrl,
       adminId,
       adminName,
-      adminUsername
+      adminUsername,
+      overviewPoints,
+      targetAudience,
+      specialBenefits
     } = body
 
     if (!title || !description || !startDate || !startTime || !endDate || !endTime || !location || !maxParticipants) {
@@ -48,9 +51,9 @@ export async function POST(request: NextRequest) {
     // 이벤트 코드 자동 생성
     const eventCode = Math.random().toString(36).substring(2, 8).toUpperCase()
 
-    // 한국 시간으로 저장 (UTC 변환 없이)
-    const startDateTime = `${startDate}T${startTime}:00+09:00`
-    const endDateTime = `${endDate}T${endTime}:00+09:00`
+    // 한국 시간으로 저장 (명시적으로 한국 시간대 설정)
+    const startDateTime = new Date(`${startDate}T${startTime}:00+09:00`).toISOString()
+    const endDateTime = new Date(`${endDate}T${endTime}:00+09:00`).toISOString()
 
     // JWT 토큰에서 관리자 ID 가져오기
     const adminAccountId = decoded.adminId // admin_accounts의 ID
@@ -82,7 +85,11 @@ export async function POST(request: NextRequest) {
         organizer_kakao: '@neimed_official',
         created_by: adminProfileId, // 관리자 프로필 ID 설정 (없으면 null)
         status: 'upcoming',
-        current_participants: 0
+        current_participants: 0,
+        // 새로운 필드들
+        overview_points: overviewPoints || [],
+        target_audience: targetAudience || [],
+        special_benefits: specialBenefits || []
       })
       .select()
       .single()

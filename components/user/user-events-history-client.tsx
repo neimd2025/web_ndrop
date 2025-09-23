@@ -3,8 +3,8 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { UserProfile, UserEvent, UserEventParticipation } from '@/lib/supabase/user-server-actions'
 import { calculateEventStatus, filterEventsByStatus } from '@/lib/supabase/database'
+import { UserEvent, UserEventParticipation, UserProfile } from '@/lib/supabase/user-server-actions'
 import { ArrowLeft, Calendar, MapPin, Users } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -119,7 +119,11 @@ export function UserEventsHistoryClient({
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{event.title}</h3>
+                      <Link href={`/client/events/${event.id}`}>
+                        <h3 className="text-lg font-semibold text-gray-900 hover:text-purple-600 transition-colors cursor-pointer">
+                          {event.title}
+                        </h3>
+                      </Link>
                       {getStatusBadge(event)}
                     </div>
                     <p className="text-gray-600 text-sm mb-3 line-clamp-2">{event.description}</p>

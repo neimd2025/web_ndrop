@@ -403,7 +403,11 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                     {/* 이벤트 정보 */}
                     <div className="p-6">
                       <div className="mb-4">
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">{event.title}</h3>
+                        <Link href={`/admin/events/${event.id}`}>
+                          <h3 className="text-lg font-bold text-gray-900 mb-2 hover:text-purple-600 transition-colors cursor-pointer">
+                            {event.title}
+                          </h3>
+                        </Link>
                         <div className="flex items-center gap-4 text-sm text-gray-600">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
