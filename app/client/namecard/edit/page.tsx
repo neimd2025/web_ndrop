@@ -253,7 +253,7 @@ export default function EditNamecardPage() {
         }
       }
 
-      router.push('/home')
+      router.push('/client/home')
     } catch (error) {
       console.error('프로필 처리 오류:', error)
       toast.error('프로필 처리에 실패했습니다.')
