@@ -4,19 +4,20 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { UserProfile, UserEvent } from '@/lib/supabase/user-server-actions'
+import { UserEvent, UserEventParticipation, UserProfile } from '@/lib/supabase/user-server-actions'
 import { createClient } from '@/utils/supabase/client'
-import { ArrowLeft, Calendar, MapPin, Users, Search, QrCode } from 'lucide-react'
+import { ArrowLeft, Calendar, MapPin, QrCode, Search, Users } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 interface UserEventsJoinClientProps {
   user: UserProfile
   events: UserEvent[]
+  userParticipations: UserEventParticipation[]
 }
 
-export function UserEventsJoinClient({ user, events: initialEvents }: UserEventsJoinClientProps) {
+export function UserEventsJoinClient({ user, events: initialEvents, userParticipations }: UserEventsJoinClientProps) {
   const router = useRouter()
   const [events, setEvents] = useState<UserEvent[]>(initialEvents)
   const [filteredEvents, setFilteredEvents] = useState<UserEvent[]>(initialEvents)
@@ -138,10 +139,17 @@ export function UserEventsJoinClient({ user, events: initialEvents }: UserEvents
     }
   }
 
+  // 이미 참여한 이벤트인지 확인
+  const isParticipatedEvent = (eventId: string) => {
+    return userParticipations.some(participation =>
+      participation.event_id === eventId && participation.status === 'confirmed'
+    )
+  }
+
   // 참가 가능 여부 확인
   const canJoinEvent = (event: UserEvent) => {
     const status = calculateEventStatus(event)
-    return status === 'upcoming' || status === 'ongoing'
+    return (status === 'upcoming' || status === 'ongoing') && !isParticipatedEvent(event.id)
   }
 
   // 이벤트 코드 입력 처리
@@ -509,7 +517,11 @@ export function UserEventsJoinClient({ user, events: initialEvents }: UserEvents
                         </Button>
                       </Link>
 
-                      {canJoinEvent(event) ? (
+                      {isParticipatedEvent(event.id) ? (
+                        <Button disabled className="bg-green-600 text-white">
+                          참가완료
+                        </Button>
+                      ) : canJoinEvent(event) ? (
                         <Button
                           onClick={() => handleJoinEvent(event.id)}
                           disabled={joiningEventId === event.id || (event.current_participants >= event.max_participants)}

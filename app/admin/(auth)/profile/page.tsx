@@ -63,12 +63,37 @@ export default function AdminProfilePage() {
     setIsLoading(true)
 
     try {
-      // 실제로는 Supabase에 프로필 업데이트를 해야 함
-      await new Promise(resolve => setTimeout(resolve, 1000)) // 시뮬레이션
+      // JWT 토큰 가져오기
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        setMessage("인증 토큰이 없습니다. 다시 로그인해주세요.")
+        setMessageType("error")
+        return
+      }
 
-      console.log('관리자 프로필 업데이트:', formData)
+      // 관리자 프로필 업데이트 API 호출
+      const response = await fetch('/api/admin/update-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          currentPassword: formData.currentPassword || undefined,
+          newPassword: formData.newPassword || undefined
+        })
+      })
 
-      setMessage("프로필이 성공적으로 업데이트되었습니다.")
+      const result = await response.json()
+
+      if (!response.ok) {
+        setMessage(result.error || "프로필 업데이트 중 오류가 발생했습니다.")
+        setMessageType("error")
+        return
+      }
+
+      setMessage(result.message || "프로필이 성공적으로 업데이트되었습니다.")
       setMessageType("success")
 
       // 비밀번호 필드 초기화
@@ -78,6 +103,14 @@ export default function AdminProfilePage() {
         newPassword: "",
         confirmNewPassword: ""
       }))
+
+      // 로컬 스토리지의 관리자 정보도 업데이트
+      const adminUser = localStorage.getItem('admin_user')
+      if (adminUser) {
+        const adminData = JSON.parse(adminUser)
+        adminData.name = formData.name
+        localStorage.setItem('admin_user', JSON.stringify(adminData))
+      }
 
     } catch (error) {
       console.error('프로필 업데이트 오류:', error)

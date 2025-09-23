@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     const startDateTime = `${startDate}T${startTime}:00+09:00`
     const endDateTime = `${endDate}T${endTime}:00+09:00`
 
-    // 이벤트 생성
+    // 이벤트 생성 (created_by는 null로 설정하여 외래 키 제약 조건 우회)
     const { data: event, error: eventError } = await supabase
       .from('events')
       .insert({
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         organizer_email: `${adminUsername}@admin.local`,
         organizer_phone: '02-1234-5678',
         organizer_kakao: '@neimed_official',
-        created_by: adminId,
+        created_by: null, // 관리자 계정은 auth.users에 없으므로 null로 설정
         status: 'upcoming',
         current_participants: 0
       })

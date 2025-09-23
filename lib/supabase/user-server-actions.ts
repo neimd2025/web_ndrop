@@ -183,26 +183,26 @@ export async function getUserEventsData(): Promise<{
   try {
     const supabase = await createClient()
 
-    const [eventsResult, participationsResult] = await Promise.all([
-      supabase
-        .from('events')
-        .select('*')
-        .order('start_date', { ascending: false }),
+    // 사용자가 실제로 참여한 이벤트만 가져오기
+    const participationsResult = await supabase
+      .from('event_participants')
+      .select(`
+        *,
+        event:events(*)
+      `)
+      .eq('user_id', user.id)
+      .eq('status', 'confirmed')
+      .order('joined_at', { ascending: false })
 
-      supabase
-        .from('event_participants')
-        .select(`
-          *,
-          event:events(*)
-        `)
-        .eq('user_id', user.id)
-        .order('registered_at', { ascending: false })
-    ])
+    const userParticipations = participationsResult.data || []
+
+    // 참여한 이벤트들을 UserEvent 형태로 변환
+    const events = userParticipations.map(participation => participation.event).filter(Boolean)
 
     return {
       user,
-      events: eventsResult.data || [],
-      userParticipations: participationsResult.data || []
+      events,
+      userParticipations
     }
   } catch (error) {
     console.error('이벤트 데이터 가져오기 오류:', error)

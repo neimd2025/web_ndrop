@@ -7,11 +7,10 @@ import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { AdminEvent } from "@/lib/supabase/admin-server-actions"
 import { calculateEventStatus } from "@/lib/supabase/database"
 import { logError } from "@/lib/utils"
-import { createClient } from "@/utils/supabase/client"
 import { AnimatePresence, motion } from "framer-motion"
 import { Bell, Calendar, Copy, Eye, FileText, MapPin, MoreVertical, Plus, Save, Share, Users, X } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 interface Participant {
@@ -42,40 +41,78 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
   const [noticeTitle, setNoticeTitle] = useState("")
   const [noticeMessage, setNoticeMessage] = useState("")
   const [loading, setLoading] = useState(false)
+  const [qrData, setQrData] = useState<any>(null)
+  const [events, setEvents] = useState<AdminEvent[]>(initialEvents)
+  const [eventsLoading, setEventsLoading] = useState(false)
+
+  // 이벤트 목록 가져오기
+  const fetchEvents = async () => {
+    try {
+      setEventsLoading(true)
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
+        return
+      }
+
+      const response = await fetch('/api/admin/get-events', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        }
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('이벤트 목록 조회 오류:', result)
+        toast.error(result.error || '이벤트 목록을 가져오는데 실패했습니다.')
+        return
+      }
+
+      setEvents(result.events || [])
+    } catch (error) {
+      console.error('이벤트 목록 조회 오류:', error)
+      toast.error('이벤트 목록을 가져오는 중 오류가 발생했습니다.')
+    } finally {
+      setEventsLoading(false)
+    }
+  }
+
+  // 컴포넌트 마운트 시 이벤트 목록 가져오기
+  useEffect(() => {
+    fetchEvents()
+  }, [])
 
   // 참여자 데이터 가져오기
   const fetchParticipants = async (eventId: string) => {
     try {
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('event_participants')
-        .select(`
-          *,
-          user_profiles!event_participants_user_profiles_fkey(full_name, email, company, role)
-        `)
-        .eq('event_id', eventId)
-
-      if (error) {
-        logError('참여자 가져오기 오류:', error)
-        toast.error('참여자를 불러오는데 실패했습니다.')
+      // JWT 토큰 가져오기
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
         return
       }
 
-      // 데이터 형식 변환
-      const formattedParticipants = (data || []).map((item: any) => ({
-        id: item.id,
-        name: item.user_profiles?.full_name || '알 수 없음',
-        email: item.user_profiles?.email || '알 수 없음',
-        phone: '', // event_participants 테이블에는 phone 필드가 없으므로 빈 문자열
-        university: '', // event_participants 테이블에는 university 필드가 없으므로 빈 문자열
-        major: '', // event_participants 테이블에는 major 필드가 없으므로 빈 문자열
-        company: item.user_profiles?.company || '알 수 없음',
-        position: item.user_profiles?.role || '알 수 없음',
-        interests: '', // event_participants 테이블에는 interests 필드가 없으므로 빈 문자열
-        event_id: item.event_id
-      }))
+      // 관리자용 참여자 조회 API 호출
+      const response = await fetch('/api/admin/get-participants', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ eventId })
+      })
 
-      setParticipants(formattedParticipants)
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('참여자 조회 오류:', result)
+        toast.error(result.error || '참여자를 불러오는데 실패했습니다.')
+        return
+      }
+
+      setParticipants(result.participants || [])
     } catch (error) {
       logError('참여자 가져오기 오류:', error)
       toast.error('참여자를 불러오는데 실패했습니다.')
@@ -114,7 +151,7 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
     })
   }
 
-  const filteredEvents = initialEvents.filter(event => {
+  const filteredEvents = events.filter(event => {
     if (filter === "all") return true
     const status = calculateEventStatus(event)
     return status === filter
@@ -129,57 +166,36 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
     try {
       setLoading(true)
 
-      const supabase = createClient()
-      // 1. 이벤트 참가자 목록 가져오기
-      const { data: participants, error: participantsError } = await supabase
-        .from('event_participants')
-        .select('user_id')
-        .eq('event_id', selectedEvent.id)
-
-      if (participantsError) {
-        console.error('참가자 목록 조회 오류:', participantsError)
-        toast.error('참가자 목록을 가져오는데 실패했습니다.')
+      // JWT 토큰 가져오기
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
         return
       }
 
-      if (!participants || participants.length === 0) {
-        toast.error('이벤트에 참가자가 없습니다.')
-        return
-      }
-
-      // 2. 배치 처리로 효율적으로 알림 전송
-      const batchSize = 50; // 한 번에 50개씩 처리
-      let successCount = 0;
-
-      for (let i = 0; i < participants.length; i += batchSize) {
-        const batch = participants.slice(i, i + batchSize);
-
-        const notifications = batch.map(participant => ({
+      // 관리자용 공지 전송 API 호출
+      const response = await fetch('/api/admin/send-notice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({
+          eventId: selectedEvent.id,
           title: noticeTitle,
-          message: noticeMessage,
-          target_type: 'event_participants',
-          target_event_id: selectedEvent.id,
-          user_id: participant.user_id,
-          sent_by: admin.id
-        }));
+          message: noticeMessage
+        })
+      })
 
-        const { error: batchError } = await supabase
-          .from('notifications')
-          .insert(notifications);
+      const result = await response.json()
 
-        if (batchError) {
-          console.error(`배치 ${Math.floor(i / batchSize) + 1} 전송 실패:`, batchError);
-        } else {
-          successCount += batch.length;
-        }
+      if (!response.ok) {
+        console.error('공지 전송 오류:', result)
+        toast.error(result.error || '공지 전송에 실패했습니다.')
+        return
       }
 
-      if (successCount === participants.length) {
-        toast.success(`${participants.length}명의 참가자에게 공지가 성공적으로 전송되었습니다.`)
-      } else {
-        toast.warning(`${successCount}명에게 전송되었습니다. (${participants.length - successCount}명 실패)`)
-      }
-
+      toast.success(`공지가 성공적으로 전송되었습니다. (대상: ${result.targetCount}명)`)
       setShowNoticeModal(false)
       setNoticeTitle("")
       setNoticeMessage("")
@@ -194,7 +210,7 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
 
   const handleCopyLink = () => {
     if (selectedEvent) {
-      const link = `${window.location.origin}/events/${selectedEvent.id}`
+      const link = qrData?.url || `${window.location.origin}/events/${selectedEvent.id}`
       navigator.clipboard.writeText(link)
       toast.success('링크가 복사되었습니다.')
     }
@@ -202,7 +218,7 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
 
   const handleShare = () => {
     if (selectedEvent) {
-      const link = `${window.location.origin}/events/${selectedEvent.id}`
+      const link = qrData?.url || `${window.location.origin}/events/${selectedEvent.id}`
       if (navigator.share) {
         navigator.share({
           title: selectedEvent.title,
@@ -217,8 +233,18 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
   }
 
   const handleSaveQR = () => {
-    // QR 코드 저장 로직 구현
-    toast.success('QR 코드가 저장되었습니다.')
+    if (qrData?.dataUrl) {
+      // QR 코드 이미지 다운로드
+      const link = document.createElement('a')
+      link.href = qrData.dataUrl
+      link.download = `qr-${selectedEvent?.event_code || 'event'}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      toast.success('QR 코드가 저장되었습니다.')
+    } else {
+      toast.error('QR 코드를 먼저 생성해주세요.')
+    }
   }
 
   const handleViewParticipants = async (event: AdminEvent) => {
@@ -227,9 +253,41 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
     setShowParticipantsBottomSheet(true)
   }
 
-  const handleViewQR = (event: AdminEvent) => {
+  const handleViewQR = async (event: AdminEvent) => {
     setSelectedEvent(event)
-    setShowQRBottomSheet(true)
+
+    try {
+      // JWT 토큰 가져오기
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
+        return
+      }
+
+      // 관리자용 QR 코드 생성 API 호출
+      const response = await fetch('/api/admin/generate-qr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ eventId: event.id })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('QR 코드 생성 오류:', result)
+        toast.error(result.error || 'QR 코드 생성에 실패했습니다.')
+        return
+      }
+
+      setQrData(result.qr)
+      setShowQRBottomSheet(true)
+    } catch (error) {
+      console.error('QR 코드 생성 오류:', error)
+      toast.error('QR 코드 생성 중 오류가 발생했습니다.')
+    }
   }
 
   return (
@@ -545,10 +603,20 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
 
                 <div className="text-center mb-6">
                   <div className="w-56 h-56 bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-inner">
-                    <div className="text-center">
-                      <div className="w-40 h-40 bg-white border-2 border-gray-300 rounded-lg mx-auto mb-3 shadow-sm"></div>
-                      <p className="text-xs text-gray-500 font-medium">QR Code</p>
-                    </div>
+                    {qrData ? (
+                      <img
+                        src={qrData.dataUrl}
+                        alt="QR Code"
+                        className="w-40 h-40 rounded-lg shadow-sm"
+                      />
+                    ) : (
+                      <div className="text-center">
+                        <div className="w-40 h-40 bg-white border-2 border-gray-300 rounded-lg mx-auto mb-3 shadow-sm flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                        </div>
+                        <p className="text-xs text-gray-500 font-medium">QR 코드 생성 중...</p>
+                      </div>
+                    )}
                   </div>
                   <p className="text-sm text-gray-600 mb-4 leading-relaxed">
                     이 QR 코드를 스캔하거나<br />
@@ -556,7 +624,7 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                   </p>
                   <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-200">
                     <p className="text-xs text-gray-600 break-all font-mono">
-                      {window.location.origin}/events/{selectedEvent.id}
+                      {qrData?.url || `${window.location.origin}/events/${selectedEvent.id}`}
                     </p>
                   </div>
                 </div>

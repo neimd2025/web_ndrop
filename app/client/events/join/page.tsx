@@ -1,13 +1,14 @@
-import { getUserEventsData } from '@/lib/supabase/user-server-actions'
 import { UserEventsJoinClient } from '@/components/user/user-events-join-client'
+import { getUserEventsData } from '@/lib/supabase/user-server-actions'
 
 export default async function EventsJoinPage() {
-  const { user, events } = await getUserEventsData()
+  const { user, events, userParticipations } = await getUserEventsData()
 
   return (
     <UserEventsJoinClient
       user={user}
       events={events}
+      userParticipations={userParticipations}
     />
   )
 }

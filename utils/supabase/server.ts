@@ -25,6 +25,11 @@ export async function createClient() {
           }
         },
       },
+      global: {
+        headers: {
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+      },
     },
   );
 }
