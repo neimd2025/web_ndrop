@@ -25,12 +25,18 @@ type LoginFormData = z.infer<typeof loginSchema>
 export default function LoginPage() {
   const searchParams = useSearchParams()
   const isAdminLogin = searchParams.get('type') === 'admin'
+  const router = useRouter()
 
-  const { signInWithEmail, signInWithOAuth, user, loading: authLoading } = useAuth(isAdminLogin ? 'admin' : 'user')
+  // 관리자 로그인 시도 시 관리자 로그인 페이지로 리다이렉트
+  if (isAdminLogin) {
+    router.push('/admin/login')
+    return null
+  }
+
+  const { signInWithEmail, signInWithOAuth, user, loading: authLoading } = useAuth('user')
 
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   const {
     register,

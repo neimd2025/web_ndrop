@@ -3,12 +3,11 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { useUserProfile } from "@/hooks/use-user-profile"
+import { useAdminAuth } from "@/hooks/use-admin-auth"
+import { AdminEvent } from "@/lib/supabase/admin-server-actions"
 import { calculateEventStatus } from "@/lib/supabase/database"
 import { logError } from "@/lib/utils"
-import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/utils/supabase/client"
-import { AdminEvent } from "@/lib/supabase/admin-server-actions"
 import { AnimatePresence, motion } from "framer-motion"
 import { Bell, Calendar, Copy, Eye, FileText, MapPin, MoreVertical, Plus, Save, Share, Users, X } from "lucide-react"
 import Link from "next/link"
@@ -33,8 +32,7 @@ interface AdminEventsClientProps {
 }
 
 export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
-  const { user: admin } = useAuth('admin')
-  const { profile } = useUserProfile()
+  const { admin } = useAdminAuth()
   const [filter, setFilter] = useState<"all" | "upcoming" | "ongoing" | "completed">("ongoing")
   const [showNoticeModal, setShowNoticeModal] = useState(false)
   const [showQRBottomSheet, setShowQRBottomSheet] = useState(false)
@@ -260,7 +258,7 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
             <Link href="/admin/my-page">
               <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-purple-700 rounded-full flex items-center justify-center shadow-md cursor-pointer hover:shadow-lg transition-shadow">
                 <span className="text-white text-xs font-medium">
-                  {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'A'}
+                  {admin?.name ? admin.name.charAt(0).toUpperCase() : 'A'}
                 </span>
               </div>
             </Link>

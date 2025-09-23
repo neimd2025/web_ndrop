@@ -1,12 +1,12 @@
 "use client"
 
-import { useAuth } from '@/hooks/use-auth'
+import { useAdminAuth } from '@/hooks/use-admin-auth'
 import { usePathname, useRouter } from "next/navigation"
 
 export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user: admin, loading: authLoading, initialized: adminInitialized } = useAuth('admin')
+  const { admin, loading: authLoading } = useAdminAuth()
 
   // admin 인증 페이지들은 인증 체크 완전 제외
   if (pathname === '/admin/login' || pathname === '/admin/signup') {
@@ -14,7 +14,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   }
 
   // 로딩 중
-  if (authLoading || !adminInitialized) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

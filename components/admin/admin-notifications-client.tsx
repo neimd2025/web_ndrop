@@ -6,9 +6,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useAuth } from "@/hooks/use-auth"
+import { useAdminAuth } from "@/hooks/use-admin-auth"
+import { AdminEvent, AdminNotification } from "@/lib/supabase/admin-server-actions"
 import { createClient } from "@/utils/supabase/client"
-import { AdminNotification, AdminEvent } from "@/lib/supabase/admin-server-actions"
 import { ArrowLeft, Megaphone, Plus, Search, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -24,7 +24,7 @@ export function AdminNotificationsClient({
   initialEvents
 }: AdminNotificationsClientProps) {
   const router = useRouter()
-  const { user: admin } = useAuth('admin')
+  const { admin } = useAdminAuth()
   const [searchTerm, setSearchTerm] = useState("")
   const [filter, setFilter] = useState<"all" | "draft" | "sent" | "scheduled">("all")
   const [isCreating, setIsCreating] = useState(false)

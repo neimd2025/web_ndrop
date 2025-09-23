@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useAuth } from "@/hooks/use-auth"
+import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { ArrowLeft, Eye, EyeOff, Save, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 export default function AdminProfilePage() {
   const router = useRouter()
-  const { user: admin, signOut } = useAuth('admin')
+  const { admin, signOut } = useAdminAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -21,8 +21,8 @@ export default function AdminProfilePage() {
   const [messageType, setMessageType] = useState<"success" | "error" | "">("")
 
   const [formData, setFormData] = useState({
-    name: admin?.user_metadata?.full_name || "",
-    email: admin?.email || "",
+    name: admin?.name || "",
+    email: admin?.username ? `${admin.username}@admin.local` : "",
     company: "",
     currentPassword: "",
     newPassword: "",
@@ -132,11 +132,15 @@ export default function AdminProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">이름</Label>
-                  <p className="text-gray-900 font-medium">{admin.user_metadata?.full_name}</p>
+                  <p className="text-gray-900 font-medium">{admin.name}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">사용자명</Label>
+                  <p className="text-gray-900 font-medium">{admin.username}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">이메일</Label>
-                  <p className="text-gray-900 font-medium">{admin.email}</p>
+                  <p className="text-gray-900 font-medium">{admin.username}@admin.local</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">회사/조직</Label>
