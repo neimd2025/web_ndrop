@@ -15,24 +15,6 @@ export function SimpleAdminLayout({ children }: { children: React.ReactNode }) {
   const [admin, setAdmin] = useState<AdminUser | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const handleLogout = async () => {
-    try {
-      // JWT 토큰과 사용자 데이터 삭제
-      localStorage.removeItem('admin_token')
-      localStorage.removeItem('admin_user')
-
-      // 쿠키도 삭제
-      document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-      document.cookie = 'admin_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-
-      setAdmin(null)
-      router.push('/admin/login')
-    } catch (error) {
-      console.error('Logout failed:', error)
-      // 실패해도 로그인 페이지로 이동
-      router.push('/admin/login')
-    }
-  }
 
   // 인증 페이지 체크 (hooks 호출 후)
   const isAuthPage = pathname === '/admin/login' || pathname === '/admin/signup'
@@ -134,27 +116,7 @@ export function SimpleAdminLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
         <div className="flex-1">
-          <div className="bg-white shadow-sm border-b px-6 py-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                관리자 패널
-              </h2>
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-600">
-                  {admin.email}
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="text-sm text-red-600 hover:text-red-700 hover:underline"
-                >
-                  로그아웃
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="p-6">
             {children}
-          </div>
         </div>
       </div>
     </div>

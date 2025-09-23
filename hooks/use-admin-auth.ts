@@ -56,6 +56,15 @@ export const useAdminAuth = () => {
   // 로그아웃 함수
   const signOut = async () => {
     try {
+      // 서버 사이드 로그아웃 API 호출
+      await fetch('/api/auth/admin-logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+
+      // 클라이언트 사이드 정리
       localStorage.removeItem('admin_token')
       localStorage.removeItem('admin_user')
 
@@ -67,6 +76,8 @@ export const useAdminAuth = () => {
       router.push('/admin/login')
     } catch (error) {
       console.error('로그아웃 오류:', error)
+      // 실패해도 로그인 페이지로 이동
+      router.push('/admin/login')
     }
   }
 
