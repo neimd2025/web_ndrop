@@ -44,7 +44,7 @@ export function AdminNotificationsClient({
       sent: { label: "전송완료", color: "bg-green-100 text-green-800" },
       scheduled: { label: "예약전송", color: "bg-blue-100 text-blue-800" }
     }
-    const config = statusConfig[status]
+    const config = statusConfig[status] || { label: "알 수 없음", color: "bg-gray-100 text-gray-800" }
     return <Badge className={config.color}>{config.label}</Badge>
   }
 
