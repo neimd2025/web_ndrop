@@ -12,8 +12,9 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.substring(7)
 
+    let decoded: any
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
+      decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
       if (decoded.role_id !== 2) {
         return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 })
       }
@@ -51,7 +52,19 @@ export async function POST(request: NextRequest) {
     const startDateTime = `${startDate}T${startTime}:00+09:00`
     const endDateTime = `${endDate}T${endTime}:00+09:00`
 
-    // 이벤트 생성 (created_by는 null로 설정하여 외래 키 제약 조건 우회)
+    // JWT 토큰에서 관리자 ID 가져오기
+    const adminAccountId = decoded.adminId // admin_accounts의 ID
+
+    // user_profiles에서 해당 관리자 찾기
+    const { data: adminProfile } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('email', `${decoded.username}@admin.local`)
+      .single()
+
+    const adminProfileId = adminProfile?.id || null
+
+    // 이벤트 생성 (created_by에 관리자 ID 설정)
     const { data: event, error: eventError } = await supabase
       .from('events')
       .insert({
@@ -63,11 +76,11 @@ export async function POST(request: NextRequest) {
         max_participants: parseInt(maxParticipants),
         event_code: eventCode,
         image_url: imageUrl,
-        organizer_name: adminName || adminUsername || '관리자',
-        organizer_email: `${adminUsername}@admin.local`,
+        organizer_name: adminName || decoded.username || '관리자',
+        organizer_email: `${decoded.username}@admin.local`,
         organizer_phone: '02-1234-5678',
         organizer_kakao: '@neimed_official',
-        created_by: null, // 관리자 계정은 auth.users에 없으므로 null로 설정
+        created_by: adminProfileId, // 관리자 프로필 ID 설정 (없으면 null)
         status: 'upcoming',
         current_participants: 0
       })
@@ -76,7 +89,24 @@ export async function POST(request: NextRequest) {
 
     if (eventError) {
       console.error('이벤트 생성 오류:', eventError)
-      return NextResponse.json({ error: '이벤트 생성 중 오류가 발생했습니다.' }, { status: 500 })
+      console.error('이벤트 생성 데이터:', {
+        title,
+        description,
+        start_date: startDateTime,
+        end_date: endDateTime,
+        location,
+        max_participants: parseInt(maxParticipants),
+        event_code: eventCode,
+        image_url: imageUrl,
+        organizer_name: adminName || decoded.username || '관리자',
+        organizer_email: `${decoded.username}@admin.local`,
+        organizer_phone: '02-1234-5678',
+        organizer_kakao: '@neimed_official',
+        created_by: adminProfileId,
+        status: 'upcoming',
+        current_participants: 0
+      })
+      return NextResponse.json({ error: `이벤트 생성 중 오류가 발생했습니다: ${eventError.message}` }, { status: 500 })
     }
 
     return NextResponse.json({
