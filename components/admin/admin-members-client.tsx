@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { AdminMember } from "@/lib/supabase/admin-server-actions"
 import { Eye, Filter, MessageSquare, Search, Users } from "lucide-react"
 import { useState } from "react"
+import { toast } from "sonner"
 
 interface AdminMembersClientProps {
   initialMembers: AdminMember[]
@@ -16,8 +17,23 @@ interface AdminMembersClientProps {
 export function AdminMembersClient({ initialMembers }: AdminMembersClientProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeFilter, setActiveFilter] = useState("전체")
+  const [selectedMember, setSelectedMember] = useState<AdminMember | null>(null)
+  const [showMemberDetail, setShowMemberDetail] = useState(false)
+  const [showMessageModal, setShowMessageModal] = useState(false)
 
   const filters = ["전체", "활성", "비활성"]
+
+  // 회원 상세보기 핸들러
+  const handleViewMember = (member: AdminMember) => {
+    setSelectedMember(member)
+    setShowMemberDetail(true)
+  }
+
+  // 메시지 보내기 핸들러
+  const handleSendMessage = (member: AdminMember) => {
+    setSelectedMember(member)
+    setShowMessageModal(true)
+  }
 
   const filteredMembers = initialMembers.filter((member) => {
     const matchesSearch =
@@ -125,10 +141,20 @@ export function AdminMembersClient({ initialMembers }: AdminMembersClientProps) 
                       </div>
                     </div>
                     <div className="flex space-x-2">
-                      <Button variant="ghost" size="sm" className="p-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-2"
+                        onClick={() => handleViewMember(member)}
+                      >
                         <Eye className="h-4 w-4 text-gray-400" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="p-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-2"
+                        onClick={() => handleSendMessage(member)}
+                      >
                         <MessageSquare className="h-4 w-4 text-gray-400" />
                       </Button>
                     </div>
@@ -139,6 +165,133 @@ export function AdminMembersClient({ initialMembers }: AdminMembersClientProps) 
           )}
         </div>
       </div>
+
+      {/* 회원 상세보기 모달 */}
+      {showMemberDetail && selectedMember && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">회원 상세 정보</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowMemberDetail(false)}
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">{selectedMember.full_name.charAt(0)}</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">{selectedMember.full_name}</h3>
+                  <p className="text-gray-600">{selectedMember.email}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">회사:</span>
+                  <span>{selectedMember.company || '없음'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">역할:</span>
+                  <span>{selectedMember.role}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">가입일:</span>
+                  <span>{new Date(selectedMember.created_at).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">상태:</span>
+                  <Badge
+                    variant={selectedMember.role === "active" ? "default" : "secondary"}
+                    className={`text-xs ${
+                      selectedMember.role === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {selectedMember.role === "active" ? "활성" : "비활성"}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowMemberDetail(false)}
+              >
+                닫기
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 메시지 보내기 모달 */}
+      {showMessageModal && selectedMember && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">메시지 보내기</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowMessageModal(false)}
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  받는 사람
+                </label>
+                <p className="text-gray-900">{selectedMember.full_name} ({selectedMember.email})</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  제목
+                </label>
+                <Input placeholder="메시지 제목을 입력하세요" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  메시지
+                </label>
+                <textarea
+                  className="w-full p-3 border border-gray-300 rounded-lg resize-none"
+                  rows={4}
+                  placeholder="메시지 내용을 입력하세요"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowMessageModal(false)}
+              >
+                취소
+              </Button>
+              <Button
+                onClick={() => {
+                  toast.success(`${selectedMember.full_name}님에게 메시지를 전송했습니다!`)
+                  setShowMessageModal(false)
+                }}
+              >
+                전송
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
