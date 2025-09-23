@@ -104,7 +104,7 @@ export default function AdminMyPage() {
 
         {/* 메뉴 */}
         <div className="space-y-4">
-          <Link href="/profile/edit">
+          <Link href="/admin/profile">
             <Card className="cursor-pointer hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">

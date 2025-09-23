@@ -35,7 +35,10 @@ export async function POST(request: NextRequest) {
     // 파일 업로드
     const { error: uploadError } = await supabase.storage
       .from('images')
-      .upload(path, file)
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: false // 중복 파일명 방지
+      })
 
     if (uploadError) {
       console.error('이미지 업로드 오류:', uploadError)
