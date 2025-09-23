@@ -17,9 +17,19 @@ import { z } from 'zod'
 // Zod 스키마 정의
 const eventSchema = z.object({
   title: z.string().min(1, '이벤트 이름을 입력해주세요').max(100, '이벤트 이름은 100자 이하여야 합니다'),
-  startDate: z.string().min(1, '시작 날짜를 입력해주세요'),
+  startDate: z.string().min(1, '시작 날짜를 입력해주세요').refine((date) => {
+    const selectedDate = new Date(date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return selectedDate >= today
+  }, '시작 날짜는 오늘 이후여야 합니다'),
   startTime: z.string().min(1, '시작 시간을 입력해주세요'),
-  endDate: z.string().min(1, '종료 날짜를 입력해주세요'),
+  endDate: z.string().min(1, '종료 날짜를 입력해주세요').refine((date) => {
+    const selectedDate = new Date(date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return selectedDate >= today
+  }, '종료 날짜는 오늘 이후여야 합니다'),
   endTime: z.string().min(1, '종료 시간을 입력해주세요'),
   location: z.string().min(1, '장소를 입력해주세요').max(200, '장소는 200자 이하여야 합니다'),
   description: z.string().min(1, '이벤트 설명을 입력해주세요').max(1000, '이벤트 설명은 1000자 이하여야 합니다'),
@@ -234,6 +244,7 @@ export default function NewEventPage() {
                     <Input
                       {...register('startDate')}
                       type="date"
+                      min={new Date().toISOString().split('T')[0]}
                       className={`border-2 border-gray-200 focus:border-purple-500 rounded-xl ${errors.startDate ? 'border-red-500' : ''}`}
                     />
                     {errors.startDate && (
@@ -270,6 +281,7 @@ export default function NewEventPage() {
                     <Input
                       {...register('endDate')}
                       type="date"
+                      min={new Date().toISOString().split('T')[0]}
                       className={`border-2 border-gray-200 focus:border-purple-500 rounded-xl ${errors.endDate ? 'border-red-500' : ''}`}
                     />
                     {errors.endDate && (

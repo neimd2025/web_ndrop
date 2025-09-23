@@ -74,15 +74,19 @@ export async function POST(request: NextRequest) {
     }
 
     // 이벤트 참가자 수 업데이트
+    const currentParticipants = event.current_participants || 0
     const { error: updateError } = await supabase
       .from('events')
       .update({
-        current_participants: event.current_participants + 1
+        current_participants: currentParticipants + 1
       })
       .eq('id', event.id)
 
     if (updateError) {
       console.error('참가자 수 업데이트 오류:', updateError)
+      // 참가자 수 업데이트 실패해도 참가는 성공으로 처리
+    } else {
+      console.log('참가자 수 업데이트 성공:', currentParticipants + 1)
     }
 
     return NextResponse.json({
