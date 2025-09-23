@@ -10,15 +10,16 @@ import React, { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 interface UserNotificationsClientProps {
-  user: UserProfile
-  initialNotifications: UserNotification[]
+  user?: UserProfile
+  initialNotifications?: UserNotification[]
 }
 
 export function UserNotificationsClient({
-  user,
+  user: initialUser,
   initialNotifications
-}: UserNotificationsClientProps) {
-  const [notifications, setNotifications] = useState<UserNotification[]>(initialNotifications)
+}: UserNotificationsClientProps = {}) {
+  const [user, setUser] = useState<UserProfile | null>(initialUser || null)
+  const [notifications, setNotifications] = useState<UserNotification[]>(initialNotifications || [])
   const [loading, setLoading] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
   const supabase = createClient()

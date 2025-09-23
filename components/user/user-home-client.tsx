@@ -3,17 +3,18 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { UserProfile, UserEvent, UserNotification } from '@/lib/supabase/user-server-actions'
-import { businessCardAPI, collectedCardAPI, eventAPI, userProfileAPI } from '@/lib/supabase/database'
+import { useAuth } from '@/hooks/use-auth'
+import { businessCardAPI, collectedCardAPI, eventAPI } from '@/lib/supabase/database'
+import { UserEvent, UserNotification, UserProfile } from '@/lib/supabase/user-server-actions'
 import { Calendar, Camera, Star } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 interface UserHomeClientProps {
-  user: UserProfile
-  upcomingEvents: UserEvent[]
-  recentNotifications: UserNotification[]
-  businessCardStats: {
+  user?: UserProfile
+  upcomingEvents?: UserEvent[]
+  recentNotifications?: UserNotification[]
+  businessCardStats?: {
     totalViews: number
     totalShares: number
     publicCards: number
@@ -21,16 +22,41 @@ interface UserHomeClientProps {
 }
 
 export function UserHomeClient({
-  user,
+  user: initialUser,
   upcomingEvents: initialEvents,
-  recentNotifications,
-  businessCardStats
-}: UserHomeClientProps) {
+  recentNotifications: initialNotifications,
+  businessCardStats: initialStats
+}: UserHomeClientProps = {}) {
+  const [user, setUser] = useState<UserProfile | null>(initialUser || null)
   const [events, setEvents] = useState<any[]>(initialEvents || [])
+  const [notifications, setNotifications] = useState<UserNotification[]>(initialNotifications || [])
+  const [businessCardStats, setBusinessCardStats] = useState(initialStats || { totalViews: 0, totalShares: 0, publicCards: 0 })
   const [userCard, setUserCard] = useState<any>(null)
   const [collectedCards, setCollectedCards] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(!initialUser)
   const [activeTab, setActiveTab] = useState<'진행중' | '예정' | '종료'>('진행중')
+
+  const { profile: authUser } = useAuth('user')
+
+  // 초기 데이터 로딩
+  useEffect(() => {
+    const loadInitialData = async () => {
+      if (!initialUser && authUser) {
+        setLoading(true)
+        try {
+          setUser(authUser as any)
+          // 사용자 정보가 로드된 후 다른 데이터들 로드
+          await loadUserCard()
+        } catch (error) {
+          console.error('초기 데이터 로딩 실패:', error)
+        } finally {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadInitialData()
+  }, [initialUser, authUser])
 
   // 데이터 로딩 함수들
   const loadUserCard = async () => {
@@ -91,6 +117,41 @@ export function UserHomeClient({
       loadAllData()
     }
   }, [user?.id])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto animate-pulse">
+            <span className="text-white font-bold text-xl">N</span>
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-xl font-semibold text-gray-900">
+              Neimed
+            </h1>
+            <p className="text-gray-600">
+              로딩 중...
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h1 className="text-xl font-semibold text-gray-900">
+            로그인이 필요합니다
+          </h1>
+          <p className="text-gray-600">
+            홈페이지를 보려면 로그인해주세요.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen">
