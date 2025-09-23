@@ -143,7 +143,7 @@ export const userProfileAPI = {
     }
 
     // 빈 문자열 필드들을 null로 설정
-    const fieldsToNullify = ['affiliation', 'role', 'contact', 'introduction', 'mbti', 'external_link']
+    const fieldsToNullify = ['affiliation', 'role', 'work_field', 'contact', 'introduction', 'mbti', 'external_link']
     fieldsToNullify.forEach(field => {
       if (cleanedUpdates[field as keyof typeof cleanedUpdates] === '') {
         console.log(`${field} 빈 문자열을 null로 설정`)

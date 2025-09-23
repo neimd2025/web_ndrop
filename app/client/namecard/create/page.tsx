@@ -26,6 +26,7 @@ const profileSchema = z.object({
   affiliation_type: z.enum(['소속', '미소속']).default('소속'),
   affiliation: z.string().max(100, '소속은 100자 이하여야 합니다'),
   role: z.string().max(100, '역할은 100자 이하여야 합니다'),
+  work_field: z.string().max(100, '하는일은 100자 이하여야 합니다'),
   contact: z.string().max(100, '연락처는 100자 이하여야 합니다'),
   mbti: z.string().optional(),
   personality_keywords: z.array(z.string()).max(3, '성격 키워드는 최대 3개까지 선택할 수 있습니다'),
@@ -57,6 +58,7 @@ export default function CreateNamecardPage() {
       affiliation_type: '소속',
       affiliation: '',
       role: '',
+      work_field: '',
       contact: '',
       mbti: '',
       personality_keywords: [],
@@ -105,7 +107,8 @@ export default function CreateNamecardPage() {
         birth_date: data.birth_date || null,
         affiliation_type: data.affiliation_type,
         affiliation: data.affiliation_type === '소속' ? (data.affiliation || null) : null,
-        role: data.role || null,
+        role: data.affiliation_type === '소속' ? (data.role || null) : null,
+        work_field: data.affiliation_type === '미소속' ? (data.work_field || null) : null,
         contact: data.contact || null,
         mbti: data.mbti || null,
         personality_keywords: data.personality_keywords.length > 0 ? data.personality_keywords : null,
@@ -137,6 +140,7 @@ export default function CreateNamecardPage() {
             introduction: createdProfile.introduction || '안녕하세요!',
             company: createdProfile.affiliation,
             role: createdProfile.role,
+            work_field: createdProfile.work_field,
             contact: createdProfile.contact,
             mbti: createdProfile.mbti,
             keywords: createdProfile.personality_keywords,
@@ -296,20 +300,36 @@ export default function CreateNamecardPage() {
               )}
             </div>
 
-            {/* 역할 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                역할
-              </label>
-              <Input
-                {...register('role')}
-                placeholder="예: 마케팅, 개발자, 디자이너"
-                className={errors.role ? 'border-red-500' : ''}
-              />
-              {errors.role && (
-                <p className="text-red-500 text-sm mt-1">{errors.role.message}</p>
-              )}
-            </div>
+            {/* 역할 또는 하는일 */}
+            {watch('affiliation_type') === '소속' ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  역할
+                </label>
+                <Input
+                  {...register('role')}
+                  placeholder="예: 마케팅, 개발자, 디자이너"
+                  className={errors.role ? 'border-red-500' : ''}
+                />
+                {errors.role && (
+                  <p className="text-red-500 text-sm mt-1">{errors.role.message}</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  하는일
+                </label>
+                <Input
+                  {...register('work_field')}
+                  placeholder="예: 프리랜서 디자이너, 스타트업 창업자, 유튜버"
+                  className={errors.work_field ? 'border-red-500' : ''}
+                />
+                {errors.work_field && (
+                  <p className="text-red-500 text-sm mt-1">{errors.work_field.message}</p>
+                )}
+              </div>
+            )}
 
             {/* 연락처나 카카오톡 아이디 */}
             <div>
