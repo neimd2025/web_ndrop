@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
-import { businessCardAPI, collectedCardAPI, eventAPI } from '@/lib/supabase/database'
+import { businessCardAPI, collectedCardAPI } from '@/lib/supabase/database'
 import { UserEvent, UserNotification, UserProfile } from '@/lib/supabase/user-server-actions'
 import { Calendar, Camera, Star } from 'lucide-react'
 import Link from 'next/link'
@@ -28,7 +28,7 @@ export function UserHomeClient({
   businessCardStats: initialStats
 }: UserHomeClientProps = {}) {
   const [user, setUser] = useState<UserProfile | null>(initialUser || null)
-  const [events, setEvents] = useState<any[]>(initialEvents || [])
+  const [events, setEvents] = useState<UserEvent[]>(initialEvents || [])
   const [notifications, setNotifications] = useState<UserNotification[]>(initialNotifications || [])
   const [businessCardStats, setBusinessCardStats] = useState(initialStats || { totalViews: 0, totalShares: 0, publicCards: 0 })
   const [userCard, setUserCard] = useState<any>(null)
@@ -81,10 +81,17 @@ export function UserHomeClient({
 
   const loadEvents = async () => {
     try {
-      const eventsData = await eventAPI.getAllEvents()
-      setEvents(eventsData || [])
+      // 사용자가 실제로 참가한 이벤트만 가져오기
+      const response = await fetch('/api/user/events')
+      if (response.ok) {
+        const data = await response.json()
+        setEvents(data.events || [])
+      } else {
+        setEvents([])
+      }
     } catch (error) {
       console.error('Error loading events:', error)
+      setEvents([])
     }
   }
 

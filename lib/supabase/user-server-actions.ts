@@ -183,7 +183,7 @@ export async function getUserEventsData(): Promise<{
   try {
     const supabase = await createClient()
 
-    // 사용자가 실제로 참여한 이벤트만 가져오기
+    // 사용자가 참여한 모든 이벤트 가져오기 (status 무관)
     const participationsResult = await supabase
       .from('event_participants')
       .select(`
@@ -191,7 +191,6 @@ export async function getUserEventsData(): Promise<{
         event:events(*)
       `)
       .eq('user_id', user.id)
-      .eq('status', 'confirmed')
       .order('joined_at', { ascending: false })
 
     const userParticipations = participationsResult.data || []
