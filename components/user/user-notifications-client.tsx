@@ -89,7 +89,7 @@ export function UserNotificationsClient({
 
           // 현재 사용자에게 온 알림인지 확인
           if (newNotification.target_type === 'all' ||
-              newNotification.user_id === user.id) {
+              (newNotification.target_ids && newNotification.target_ids.includes(user.id))) {
             console.log('사용자에게 맞는 알림 확인됨:', newNotification)
             setNotifications((prev) => [newNotification, ...prev])
             toast.success('새 알림이 도착했습니다!')

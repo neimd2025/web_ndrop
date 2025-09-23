@@ -63,6 +63,7 @@ interface AuthState {
   // Utility methods
   clearAuthCache: () => void
   resetAuth: (type: AuthType) => void
+  handleTokenExpired: () => void
 }
 
 export const useAuthStore = create<AuthState>()(persist((set, get) => ({

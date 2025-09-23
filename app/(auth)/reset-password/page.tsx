@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useAuth } from '@/hooks/use-auth'
 import { createClient } from "@/utils/supabase/client"
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, CheckCircle, Eye, EyeOff, Lock } from "lucide-react"
@@ -32,9 +31,7 @@ export default function ResetPasswordPage() {
   const [isValidToken, setIsValidToken] = useState(false)
   const [isCheckingToken, setIsCheckingToken] = useState(true)
   const [currentUser, setCurrentUser] = useState<string | null>(null)
-  // Note: setPasswordResetInProgress and clearPasswordResetState functions
-  // are used in this component but not available in the unified auth hook.
-  // These may need to be implemented separately or added to the unified auth system.
+  // Note: 비밀번호 재설정 상태는 localStorage를 통해 관리됩니다.
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -57,7 +54,6 @@ export default function ResetPasswordPage() {
 
         if (resetInProgress === 'true' && resetEmail) {
           console.log('비밀번호 재설정 진행 중 상태 감지:', resetEmail)
-          setPasswordResetInProgress(true, resetEmail)
           setCurrentUser(resetEmail)
         }
 
@@ -104,7 +100,6 @@ export default function ResetPasswordPage() {
               console.log('세션 확인됨 - recovery 성공', session.user.email)
               setIsValidToken(true)
               setCurrentUser(session.user.email || null)
-                            setPasswordResetInProgress(true, session.user.email || undefined)
 
               // localStorage에 비밀번호 재설정 상태 저장
               localStorage.setItem('passwordResetInProgress', 'true')
@@ -172,7 +167,6 @@ export default function ResetPasswordPage() {
       await supabase.auth.signOut()
 
             setIsSuccess(true)
-      clearPasswordResetState()
 
       // localStorage에서 비밀번호 재설정 상태 제거
       localStorage.removeItem('passwordResetInProgress')

@@ -34,7 +34,7 @@ export async function middleware(req: NextRequest) {
   async function getUserRole(userId: string): Promise<number | null> {
     // 캐시에서 먼저 확인
     if (roleCache.has(userId)) {
-      return roleCache.get(userId)
+      return roleCache.get(userId) ?? null
     }
 
     try {
