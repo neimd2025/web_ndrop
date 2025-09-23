@@ -50,7 +50,7 @@ export default async function ClientEventDetailPage({ params }: EventDetailPageP
   const showEventCode = !!participation
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen ">
       <EventDetailCard
         event={event}
         showEventCode={showEventCode}

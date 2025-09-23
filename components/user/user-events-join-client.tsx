@@ -386,7 +386,7 @@ export function UserEventsJoinClient({ user, events: initialEvents, userParticip
                 {recentEvents.map((event) => (
                   <div
                     key={event.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-4  rounded-lg"
                   >
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-700 text-base">

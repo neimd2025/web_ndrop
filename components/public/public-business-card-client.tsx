@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { UserBusinessCard } from '@/lib/supabase/user-server-actions'
-import { Mail, Phone, Globe, MapPin, User, Building } from 'lucide-react'
+import { Globe, Mail, Phone } from 'lucide-react'
 import { useState } from 'react'
 
 interface PublicBusinessCardClientProps {
@@ -32,7 +32,7 @@ export function PublicBusinessCardClient({ businessCard }: PublicBusinessCardCli
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen ">
       {/* 헤더 */}
       <div className="bg-white shadow-sm border-b px-4 py-4">
         <div className="max-w-md mx-auto">

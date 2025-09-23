@@ -2,16 +2,16 @@
 
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle
 } from '@/components/ui/sheet'
 import { ChevronRight, X } from 'lucide-react'
 import { useState } from 'react'
@@ -215,7 +215,7 @@ Neimd(이하 "회사")는 정보주체의 개인정보 보호를 중요시하며
 
           <div className="space-y-4">
             {/* 전체 동의 */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4  rounded-lg">
               <div className="flex items-center space-x-3">
                 <label className="relative">
                   <input
@@ -246,7 +246,7 @@ Neimd(이하 "회사")는 정보주체의 개인정보 보호를 중요시하며
             <div className="space-y-3">
               {/* 서비스 이용약관 (필수) */}
               <div
-                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover: transition-colors"
                 onClick={() => handleTermsClick('service')}
               >
                 <div className="flex items-center space-x-3">
@@ -277,7 +277,7 @@ Neimd(이하 "회사")는 정보주체의 개인정보 보호를 중요시하며
 
               {/* 개인정보 처리방침 (필수) */}
               <div
-                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover: transition-colors"
                 onClick={() => handleTermsClick('privacy')}
               >
                 <div className="flex items-center space-x-3">
@@ -308,7 +308,7 @@ Neimd(이하 "회사")는 정보주체의 개인정보 보호를 중요시하며
 
               {/* 마케팅 정보 수신 동의 (선택) */}
               <div
-                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover: transition-colors"
                 onClick={() => handleTermsClick('marketing')}
               >
                 <div className="flex items-center space-x-3">

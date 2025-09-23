@@ -113,7 +113,7 @@ export function SimpleAdminLayout({ children }: { children: React.ReactNode }) {
 
   // 관리자 인증 완료 - 레이아웃 렌더링
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen ">
       <div className="flex">
         <div className="flex-1">
             {children}

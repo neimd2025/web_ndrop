@@ -169,7 +169,7 @@ export function UserEventsAvailableClient({ user, availableEvents: initialEvents
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen ">
       {/* 헤더 */}
       <div className="bg-white border-b">
         <div className="max-w-md mx-auto px-4 py-4">

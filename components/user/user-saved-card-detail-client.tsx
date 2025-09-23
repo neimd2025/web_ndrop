@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { UserProfile } from '@/lib/supabase/user-server-actions'
 import { createClient } from '@/utils/supabase/client'
-import { ArrowLeft, Mail, Phone, Globe, Star, Trash2, Share } from 'lucide-react'
+import { ArrowLeft, Globe, Mail, Phone, Share, Star, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -109,7 +109,7 @@ export function UserSavedCardDetailClient({ user, savedCard }: UserSavedCardDeta
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen ">
       {/* 헤더 */}
       <div className="bg-white border-b border-gray-200 px-5 py-4">
         <div className="flex items-center justify-between">

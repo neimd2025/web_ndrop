@@ -64,7 +64,7 @@ export default async function AdminEventDetailPage({ params }: EventDetailPagePr
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen ">
       <EventDetailCard
         event={event}
         showEventCode={true}
