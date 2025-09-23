@@ -141,7 +141,7 @@ export function SimpleAdminLayout({ children }: { children: React.ReactNode }) {
               </h2>
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-600">
-                  {admin.username}
+                  {admin.email}
                 </span>
                 <button
                   onClick={handleLogout}
