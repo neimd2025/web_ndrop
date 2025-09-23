@@ -1,5 +1,7 @@
-import { getAdminEventsData } from '@/lib/supabase/admin-server-actions'
 import { AdminEventsClient } from '@/components/admin/admin-events-client'
+import { getAdminEventsData } from '@/lib/supabase/admin-server-actions'
+
+export const dynamic = 'force-dynamic'
 
 interface Event {
   id: string
