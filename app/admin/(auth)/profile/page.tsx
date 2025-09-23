@@ -6,28 +6,109 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useAuth } from "@/hooks/use-auth"
-import { ArrowLeft, Eye, EyeOff, Save, User } from "lucide-react"
+import { useAdminAuth } from "@/hooks/use-admin-auth"
+import { ArrowLeft, Camera, Eye, EyeOff, Save, User } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 
 export default function AdminProfilePage() {
   const router = useRouter()
-  const { user: admin, signOut } = useAuth('admin')
+  const { admin, signOut } = useAdminAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState("")
   const [messageType, setMessageType] = useState<"success" | "error" | "">("")
 
+  // 프로필 이미지 업로드 관련 상태
+  const [profileImage, setProfileImage] = useState<string | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 프로필 이미지 업로드 함수
+  const handleImageUpload = async (file: File) => {
+    if (!admin) {
+      toast.error('관리자 인증이 필요합니다.')
+      return
+    }
+
+    setIsUploadingImage(true)
+
+    try {
+      // 파일 크기 확인 (5MB 제한)
+      const maxSize = 5 * 1024 * 1024 // 5MB
+      if (file.size > maxSize) {
+        toast.error('파일 크기는 5MB를 초과할 수 없습니다.')
+        return
+      }
+
+      // 파일 형식 확인
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP만 허용)')
+        return
+      }
+
+      const formData = new FormData()
+      formData.append('file', file)
+
+      // JWT 토큰 가져오기
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        toast.error('인증 토큰이 없습니다.')
+        return
+      }
+
+      const response = await fetch('/api/admin/upload-profile-image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || '이미지 업로드에 실패했습니다.')
+      }
+
+      setProfileImage(result.publicUrl)
+      toast.success('프로필 이미지가 업로드되었습니다!')
+
+    } catch (error) {
+      console.error('이미지 업로드 오류:', error)
+      toast.error(error instanceof Error ? error.message : '이미지 업로드에 실패했습니다.')
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }
+
+  // 이미지 선택 핸들러
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleImageUpload(file)
+    }
+  }
+
   const [formData, setFormData] = useState({
-    name: admin?.user_metadata?.full_name || "",
-    email: admin?.email || "",
+    name: admin?.name || "",
+    email: admin?.username ? `${admin.username}@admin.local` : "",
     company: "",
     currentPassword: "",
     newPassword: "",
     confirmNewPassword: ""
   })
+
+  // 관리자 프로필 이미지 초기화
+  useEffect(() => {
+    if (admin) {
+      // 관리자 프로필 이미지가 있다면 설정
+      setProfileImage((admin as any).profile_image_url || null)
+    }
+  }, [admin])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -63,12 +144,37 @@ export default function AdminProfilePage() {
     setIsLoading(true)
 
     try {
-      // 실제로는 Supabase에 프로필 업데이트를 해야 함
-      await new Promise(resolve => setTimeout(resolve, 1000)) // 시뮬레이션
+      // JWT 토큰 가져오기
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        setMessage("인증 토큰이 없습니다. 다시 로그인해주세요.")
+        setMessageType("error")
+        return
+      }
 
-      console.log('관리자 프로필 업데이트:', formData)
+      // 관리자 프로필 업데이트 API 호출
+      const response = await fetch('/api/admin/update-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          currentPassword: formData.currentPassword || undefined,
+          newPassword: formData.newPassword || undefined
+        })
+      })
 
-      setMessage("프로필이 성공적으로 업데이트되었습니다.")
+      const result = await response.json()
+
+      if (!response.ok) {
+        setMessage(result.error || "프로필 업데이트 중 오류가 발생했습니다.")
+        setMessageType("error")
+        return
+      }
+
+      setMessage(result.message || "프로필이 성공적으로 업데이트되었습니다.")
       setMessageType("success")
 
       // 비밀번호 필드 초기화
@@ -78,6 +184,14 @@ export default function AdminProfilePage() {
         newPassword: "",
         confirmNewPassword: ""
       }))
+
+      // 로컬 스토리지의 관리자 정보도 업데이트
+      const adminUser = localStorage.getItem('admin_user')
+      if (adminUser) {
+        const adminData = JSON.parse(adminUser)
+        adminData.name = formData.name
+        localStorage.setItem('admin_user', JSON.stringify(adminData))
+      }
 
     } catch (error) {
       console.error('프로필 업데이트 오류:', error)
@@ -94,8 +208,14 @@ export default function AdminProfilePage() {
   }
 
   if (!admin) {
-    router.push('/admin/login')
-    return null
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">관리자 정보를 불러오는 중...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -129,14 +249,69 @@ export default function AdminProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* 프로필 이미지 섹션 */}
+              <div className="flex items-center space-x-4 mb-6">
+                <div
+                  className="relative w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden cursor-pointer hover:bg-gray-200 transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    if (fileInputRef.current && !isUploadingImage) {
+                      fileInputRef.current.click()
+                    }
+                  }}
+                >
+                  {profileImage ? (
+                    <img
+                      src={profileImage}
+                      alt="프로필 이미지"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-10 h-10 text-gray-600" />
+                  )}
+                  <Button
+                    size="sm"
+                    className="absolute bottom-0 right-0 w-6 h-6 bg-purple-600 hover:bg-purple-700 rounded-full"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (fileInputRef.current && !isUploadingImage) {
+                        fileInputRef.current.click()
+                      }
+                    }}
+                    disabled={isUploadingImage}
+                  >
+                    <Camera className="w-3 h-3 text-white" />
+                  </Button>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">프로필 이미지</p>
+                  <p className="text-xs text-gray-500">
+                    {isUploadingImage ? '업로드 중...' : '클릭하여 이미지 변경'}
+                  </p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">이름</Label>
-                  <p className="text-gray-900 font-medium">{admin.user_metadata?.full_name}</p>
+                  <p className="text-gray-900 font-medium">{admin.name}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">사용자명</Label>
+                  <p className="text-gray-900 font-medium">{admin.username}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">이메일</Label>
-                  <p className="text-gray-900 font-medium">{admin.email}</p>
+                  <p className="text-gray-900 font-medium">{admin.username}@admin.local</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">회사/조직</Label>

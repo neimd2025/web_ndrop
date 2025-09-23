@@ -3,15 +3,15 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useUserProfile } from '@/hooks/use-user-profile'
-import { useBusinessCards } from '@/hooks/use-business-cards'
 import { useAuth } from '@/hooks/use-auth'
+import { useBusinessCards } from '@/hooks/use-business-cards'
+import { useUserProfile } from '@/hooks/use-user-profile'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Camera, User } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -43,6 +43,68 @@ export default function EditNamecardPage() {
   const { user } = useAuth()
   const { profile, updateProfile, createProfile, loading } = useUserProfile()
   const { userCard, createBusinessCard, updateBusinessCard } = useBusinessCards()
+
+  // 프로필 이미지 업로드 관련 상태
+  const [profileImage, setProfileImage] = useState<string | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 프로필 이미지 업로드 함수
+  const handleImageUpload = async (file: File) => {
+    if (!user) {
+      toast.error('로그인이 필요합니다.')
+      return
+    }
+
+    setIsUploadingImage(true)
+
+    try {
+      // 파일 크기 확인 (5MB 제한)
+      const maxSize = 5 * 1024 * 1024 // 5MB
+      if (file.size > maxSize) {
+        toast.error('파일 크기는 5MB를 초과할 수 없습니다.')
+        return
+      }
+
+      // 파일 형식 확인
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP만 허용)')
+        return
+      }
+
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/user/upload-profile-image', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || '이미지 업로드에 실패했습니다.')
+      }
+
+      setProfileImage(result.publicUrl)
+      toast.success('프로필 이미지가 업로드되었습니다!')
+
+    } catch (error) {
+      console.error('이미지 업로드 오류:', error)
+      toast.error(error instanceof Error ? error.message : '이미지 업로드에 실패했습니다.')
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }
+
+  // 이미지 선택 핸들러
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleImageUpload(file)
+    }
+  }
 
   const {
     register,
@@ -82,6 +144,9 @@ export default function EditNamecardPage() {
       setValue('interest_keywords', profile.interest_keywords || [])
       setValue('introduction', profile.introduction || '')
       setValue('external_link', profile.external_link || '')
+
+      // 프로필 이미지 초기화
+      setProfileImage(profile.profile_image_url || null)
     }
   }, [profile, setValue])
 
@@ -122,7 +187,7 @@ export default function EditNamecardPage() {
         email: user?.email || '',
         company: data.affiliation_type === '소속' ? (data.affiliation || null) : null,
         keywords: data.personality_keywords.length > 0 ? data.personality_keywords : null,
-        profile_image_url: null,
+        profile_image_url: profileImage,
         nickname: data.full_name,
         qr_code_url: null,
         role_id: null,
@@ -261,16 +326,50 @@ export default function EditNamecardPage() {
           >
             {/* 프로필 사진 섹션 */}
             <div className="text-center mb-8">
-              <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center relative">
-                <User className="w-12 h-12 text-gray-600" />
+              <div
+                className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center relative overflow-hidden cursor-pointer hover:bg-gray-200 transition-colors"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  if (fileInputRef.current && !isUploadingImage) {
+                    fileInputRef.current.click()
+                  }
+                }}
+              >
+                {profileImage ? (
+                  <img
+                    src={profileImage}
+                    alt="프로필 이미지"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-12 h-12 text-gray-600" />
+                )}
                 <Button
                   size="sm"
                   className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 hover:bg-purple-700 rounded-full"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    if (fileInputRef.current && !isUploadingImage) {
+                      fileInputRef.current.click()
+                    }
+                  }}
+                  disabled={isUploadingImage}
                 >
                   <Camera className="w-4 h-4 text-white" />
                 </Button>
               </div>
-              <p className="text-purple-600 text-sm font-medium">프로필 사진 추가(선택)</p>
+              <p className="text-purple-600 text-sm font-medium">
+                {isUploadingImage ? '업로드 중...' : '프로필 사진 추가(선택)'}
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
             </div>
 
             {/* 제목과 설명 */}

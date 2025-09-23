@@ -3,10 +3,10 @@
 import MobileHeader from "@/components/mobile-header"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { UserProfile, UserNotification } from '@/lib/supabase/user-server-actions'
+import { UserNotification, UserProfile } from '@/lib/supabase/user-server-actions'
 import { createClient } from "@/utils/supabase/client"
 import { Calendar, Megaphone, Plus } from "lucide-react"
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 interface UserNotificationsClientProps {
@@ -35,7 +35,7 @@ export function UserNotificationsClient({
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .or(`target_type.eq.all,target_ids.cs.{${user.id}}`)
+        .or(`target_type.eq.all,user_id.eq.${user.id}`)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -89,7 +89,7 @@ export function UserNotificationsClient({
 
           // 현재 사용자에게 온 알림인지 확인
           if (newNotification.target_type === 'all' ||
-              (Array.isArray(newNotification.target_ids) && newNotification.target_ids.includes(user.id))) {
+              newNotification.user_id === user.id) {
             console.log('사용자에게 맞는 알림 확인됨:', newNotification)
             setNotifications((prev) => [newNotification, ...prev])
             toast.success('새 알림이 도착했습니다!')

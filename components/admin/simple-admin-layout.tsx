@@ -1,6 +1,5 @@
 "use client"
 
-import { createClient } from '@/utils/supabase/client'
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from 'react'
 
@@ -18,8 +17,15 @@ export function SimpleAdminLayout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     try {
-      const supabase = createClient()
-      await supabase.auth.signOut()
+      // JWT 토큰과 사용자 데이터 삭제
+      localStorage.removeItem('admin_token')
+      localStorage.removeItem('admin_user')
+
+      // 쿠키도 삭제
+      document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+      document.cookie = 'admin_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+
+      setAdmin(null)
       router.push('/admin/login')
     } catch (error) {
       console.error('Logout failed:', error)
@@ -43,10 +49,17 @@ export function SimpleAdminLayout({ children }: { children: React.ReactNode }) {
 
     const checkAuth = () => {
       try {
-        // JWT 토큰 기반 인증 확인
-        const adminToken = localStorage.getItem('admin_token')
-        const adminUser = localStorage.getItem('admin_user')
-        
+        // 쿠키에서 먼저 확인
+        const getCookie = (name: string) => {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop()?.split(';').shift();
+          return null;
+        };
+
+        const adminToken = getCookie('admin_token')
+        const adminUser = getCookie('admin_user')
+
         if (!mounted) return
 
         if (!adminToken || !adminUser) {
@@ -56,7 +69,7 @@ export function SimpleAdminLayout({ children }: { children: React.ReactNode }) {
           return
         }
 
-        const userData = JSON.parse(adminUser)
+        const userData = JSON.parse(decodeURIComponent(adminUser))
         if (userData.role_id !== 2) {
           timeoutId = setTimeout(() => {
             if (mounted) router.push('/admin/login?error=unauthorized')
@@ -65,7 +78,7 @@ export function SimpleAdminLayout({ children }: { children: React.ReactNode }) {
         }
 
         if (mounted) {
-          console.log('=== 관리자 로그인 상태 (JWT) ===')
+          console.log('=== 관리자 로그인 상태 (Cookie) ===')
           console.log('관리자 계정:', userData)
           console.log('관리자 ID:', userData.id)
           console.log('관리자 사용자명:', userData.username)
@@ -73,7 +86,7 @@ export function SimpleAdminLayout({ children }: { children: React.ReactNode }) {
           setAdmin(userData)
         }
       } catch (error) {
-        console.error('JWT Auth check failed:', error)
+        console.error('Cookie Auth check failed:', error)
         if (mounted) {
           timeoutId = setTimeout(() => {
             if (mounted) router.push('/admin/login?error=auth_failed')
@@ -128,7 +141,7 @@ export function SimpleAdminLayout({ children }: { children: React.ReactNode }) {
               </h2>
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-600">
-                  {admin.email}
+                  {admin.username}
                 </span>
                 <button
                   onClick={handleLogout}

@@ -5,8 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useAuth } from "@/hooks/use-auth"
-import { createClient } from "@/utils/supabase/client"
+import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, Calendar, Clock, Upload, User } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -42,7 +41,7 @@ type EventFormData = z.infer<typeof eventSchema>
 
 export default function NewEventPage() {
   const router = useRouter()
-  const { user: admin } = useAuth('admin')
+  const { admin, loading: authLoading } = useAdminAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -56,6 +55,18 @@ export default function NewEventPage() {
   })
 
   // 관리자 권한 확인
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-purple-600 mx-auto"></div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">인증 상태 확인 중...</h2>
+          <p className="text-gray-600">잠시만 기다려 주세요.</p>
+        </div>
+      </div>
+    )
+  }
+
   if (!admin) {
     router.push('/admin/login')
     return null
@@ -75,7 +86,13 @@ export default function NewEventPage() {
 
   const uploadImage = async (file: File, eventCode: string, startDate: string): Promise<string | null> => {
     try {
-      const supabase = createClient()
+      // JWT 토큰 가져오기
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        console.error('인증 토큰이 없습니다.')
+        return null
+      }
+
       const fileExt = file.name.split('.').pop()
 
       // 이벤트 코드와 날짜를 포함한 구조화된 경로 생성
@@ -85,20 +102,28 @@ export default function NewEventPage() {
       const fileName = `${eventCode}_${dateStr}_${timestamp}.${fileExt}`
       const filePath = `events/${eventCode}/${fileName}`
 
-      const { error: uploadError } = await supabase.storage
-        .from('images')
-        .upload(filePath, file)
+      // FormData 생성
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('path', filePath)
 
-      if (uploadError) {
-        console.error('이미지 업로드 오류:', uploadError)
+      // 관리자용 이미지 업로드 API 호출
+      const response = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('이미지 업로드 오류:', result)
         return null
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('images')
-        .getPublicUrl(filePath)
-
-      return publicUrl
+      return result.publicUrl
     } catch (error) {
       console.error('이미지 업로드 오류:', error)
       return null
@@ -109,52 +134,55 @@ export default function NewEventPage() {
     setIsLoading(true)
 
     try {
-      const supabase = createClient()
-
-      // 이벤트 코드 자동 생성
-      const eventCode = Math.random().toString(36).substring(2, 8).toUpperCase()
-
-      // 한국 시간으로 저장 (UTC 변환 없이)
-      const startDateTime = `${data.startDate}T${data.startTime}:00+09:00`
-      const endDateTime = `${data.endDate}T${data.endTime}:00+09:00`
-
-      // 이미지 업로드 (이벤트 코드 생성 후)
-      let imageUrl = null
-      if (imageFile) {
-        imageUrl = await uploadImage(imageFile, eventCode, data.startDate)
-      }
-
-      // 이벤트 생성
-      const { data: event, error: eventError } = await supabase
-        .from('events')
-        .insert({
-          title: data.title,
-          description: data.description,
-          start_date: startDateTime,
-          end_date: endDateTime,
-          location: data.location,
-          max_participants: parseInt(data.maxParticipants),
-          event_code: eventCode,
-          image_url: imageUrl,
-          organizer_name: admin.user_metadata?.full_name || admin.email?.split('@')[0] || '관리자',
-          organizer_email: admin.email || 'support@neimed.com',
-          organizer_phone: admin.user_metadata?.phone || '02-1234-5678',
-          organizer_kakao: admin.user_metadata?.kakao || '@neimed_official',
-          created_by: admin.id,
-          status: 'upcoming',
-          current_participants: 0
-        })
-        .select()
-        .single()
-
-      if (eventError) {
-        console.error('이벤트 생성 오류:', eventError)
-        toast.error("이벤트 생성 중 오류가 발생했습니다.")
+      // JWT 토큰 가져오기
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
+        router.push('/admin/login')
         return
       }
 
-      console.log('이벤트 생성 성공:', event)
-      toast.success('이벤트가 성공적으로 생성되었습니다!')
+      // 이미지 업로드 (이벤트 코드는 서버에서 생성)
+      let imageUrl = null
+      if (imageFile) {
+        // 임시 이벤트 코드로 이미지 업로드 (서버에서 실제 코드 생성)
+        const tempEventCode = 'TEMP'
+        imageUrl = await uploadImage(imageFile, tempEventCode, data.startDate)
+      }
+
+      // 관리자용 이벤트 생성 API 호출
+      const response = await fetch('/api/admin/create-event', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({
+          title: data.title,
+          description: data.description,
+          startDate: data.startDate,
+          startTime: data.startTime,
+          endDate: data.endDate,
+          endTime: data.endTime,
+          location: data.location,
+          maxParticipants: data.maxParticipants,
+          imageUrl: imageUrl,
+          adminId: admin.id,
+          adminName: admin.name,
+          adminUsername: admin.username
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('이벤트 생성 오류:', result)
+        toast.error(result.error || "이벤트 생성 중 오류가 발생했습니다.")
+        return
+      }
+
+      console.log('이벤트 생성 성공:', result.event)
+      toast.success(result.message || '이벤트가 성공적으로 생성되었습니다!')
 
       // 성공 시 이벤트 목록으로 이동
       router.push('/admin/events')
@@ -362,12 +390,11 @@ export default function NewEventPage() {
                 </div>
               </div>
               <div className="space-y-2 text-sm text-blue-800">
-                <p><strong>이름:</strong> {admin.user_metadata?.full_name || admin.email?.split('@')[0] || '관리자'}</p>
-                <p><strong>이메일:</strong> {admin.email || 'support@neimed.com'}</p>
-                <p><strong>연락처:</strong> {admin.user_metadata?.phone || '02-1234-5678'}</p>
-                {admin.user_metadata?.kakao && (
-                  <p><strong>카카오톡:</strong> {admin.user_metadata.kakao}</p>
-                )}
+                <p><strong>이름:</strong> {admin.name || admin.username || '관리자'}</p>
+                <p><strong>사용자명:</strong> {admin.username}</p>
+                <p><strong>이메일:</strong> {admin.username}@admin.local</p>
+                <p><strong>연락처:</strong> 02-1234-5678</p>
+                <p><strong>카카오톡:</strong> @neimed_official</p>
               </div>
             </CardContent>
           </Card>

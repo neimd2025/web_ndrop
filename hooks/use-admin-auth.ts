@@ -20,11 +20,19 @@ export const useAdminAuth = () => {
   useEffect(() => {
     const checkAdminAuth = () => {
       try {
-        const adminToken = localStorage.getItem('admin_token')
-        const adminUser = localStorage.getItem('admin_user')
+        // 쿠키에서 먼저 확인
+        const getCookie = (name: string) => {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop()?.split(';').shift();
+          return null;
+        };
+
+        const adminToken = getCookie('admin_token')
+        const adminUser = getCookie('admin_user')
 
         if (adminToken && adminUser) {
-          const userData = JSON.parse(adminUser)
+          const userData = JSON.parse(decodeURIComponent(adminUser))
           if (userData.role_id === 2) {
             setAdmin(userData)
             setLoading(false)
@@ -37,8 +45,6 @@ export const useAdminAuth = () => {
         setLoading(false)
       } catch (error) {
         console.error('관리자 인증 확인 오류:', error)
-        localStorage.removeItem('admin_token')
-        localStorage.removeItem('admin_user')
         setAdmin(null)
         setLoading(false)
       }
@@ -52,11 +58,11 @@ export const useAdminAuth = () => {
     try {
       localStorage.removeItem('admin_token')
       localStorage.removeItem('admin_user')
-      
+
       // 쿠키도 삭제
       document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
       document.cookie = 'admin_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-      
+
       setAdmin(null)
       router.push('/admin/login')
     } catch (error) {
