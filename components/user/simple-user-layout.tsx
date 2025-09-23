@@ -114,10 +114,11 @@ export function SimpleUserLayout({ children }: { children: React.ReactNode }) {
 
   // 일반 레이아웃 표시
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen ">
       <div className="flex">
         <div className="flex-1">
-          <div className="bg-white shadow-sm border-b px-6 py-4">
+          {/* 헤더 추후에 사용예정  */}
+          {/* <div className="bg-white shadow-sm border-b px-6 py-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
                 Neimed
@@ -134,7 +135,7 @@ export function SimpleUserLayout({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
             </div>
-          </div>
+          </div> */}
             {children}
         </div>
       </div>

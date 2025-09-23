@@ -5,17 +5,20 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { UserProfile } from '@/lib/supabase/user-server-actions'
 import { createClient } from '@/utils/supabase/client'
-import { Edit, Search, Star, User, ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Edit, Search, Star, User } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 interface UserSavedCardsClientProps {
-  user: UserProfile
-  savedCards: any[]
+  user?: UserProfile
+  savedCards?: any[]
 }
 
-export function UserSavedCardsClient({ user, savedCards }: UserSavedCardsClientProps) {
+export function UserSavedCardsClient({ user: initialUser, savedCards: initialSavedCards }: UserSavedCardsClientProps = {}) {
+  const [user, setUser] = useState<UserProfile | null>(initialUser || null)
+  const [savedCards, setSavedCards] = useState<any[]>(initialSavedCards || [])
+  const [loading, setLoading] = useState(!initialUser)
   const [searchTerm, setSearchTerm] = useState('')
   const [showFavorites, setShowFavorites] = useState(false)
   const router = useRouter()

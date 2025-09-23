@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
         full_name: name,
         role_id: 2, // 관리자 role_id
         role: 'admin',
+        work_field: null,
         contact: '',
         company: '',
         introduction: '',

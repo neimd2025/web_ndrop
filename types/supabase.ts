@@ -64,6 +64,7 @@ export type Database = {
           role: string | null
           updated_at: string | null
           user_id: string | null
+          work_field: string | null
         }
         Insert: {
           company?: string | null
@@ -82,6 +83,7 @@ export type Database = {
           role?: string | null
           updated_at?: string | null
           user_id?: string | null
+          work_field?: string | null
         }
         Update: {
           company?: string | null
@@ -100,6 +102,7 @@ export type Database = {
           role?: string | null
           updated_at?: string | null
           user_id?: string | null
+          work_field?: string | null
         }
         Relationships: []
       }
@@ -309,6 +312,7 @@ export type Database = {
           role: string | null
           role_id: number | null
           updated_at: string | null
+          work_field: string | null
         }
         Insert: {
           affiliation?: string | null
@@ -332,6 +336,7 @@ export type Database = {
           role?: string | null
           role_id?: number | null
           updated_at?: string | null
+          work_field?: string | null
         }
         Update: {
           affiliation?: string | null
@@ -355,6 +360,7 @@ export type Database = {
           role?: string | null
           role_id?: number | null
           updated_at?: string | null
+          work_field?: string | null
         }
         Relationships: [
           {

@@ -1,21 +1,19 @@
 "use client"
 
 import DeleteAccountModal from '@/components/delete-account-modal'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
-import { UserProfile, UserBusinessCard, UserEventParticipation } from '@/lib/supabase/user-server-actions'
+import { UserBusinessCard, UserEventParticipation, UserProfile } from '@/lib/supabase/user-server-actions'
 import { FileText, LogOut, Settings, Trash2, User } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 interface UserMyPageClientProps {
-  user: UserProfile
-  businessCards: UserBusinessCard[]
-  participatedEvents: UserEventParticipation[]
-  stats: {
+  user?: UserProfile
+  businessCards?: UserBusinessCard[]
+  participatedEvents?: UserEventParticipation[]
+  stats?: {
     totalEvents: number
     totalBusinessCards: number
     profileViews: number
@@ -23,12 +21,16 @@ interface UserMyPageClientProps {
 }
 
 export function UserMyPageClient({
-  user,
-  businessCards,
-  participatedEvents,
-  stats
-}: UserMyPageClientProps) {
-  const { signOut } = useAuth('user')
+  user: initialUser,
+  businessCards: initialBusinessCards,
+  participatedEvents: initialParticipatedEvents,
+  stats: initialStats
+}: UserMyPageClientProps = {}) {
+  const { user: authUser, signOut } = useAuth('user')
+  const user = initialUser || authUser
+  const businessCards = initialBusinessCards || []
+  const participatedEvents = initialParticipatedEvents || []
+  const stats = initialStats || { totalEvents: 0, totalBusinessCards: 0, profileViews: 0 }
   const router = useRouter()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
@@ -43,7 +45,7 @@ export function UserMyPageClient({
 
   // 사용자 표시 이름 가져오기
   const getUserDisplayName = () => {
-    return user?.full_name || user?.email?.split('@')[0] || "사용자"
+    return (user as any)?.full_name || user?.email?.split('@')[0] || "사용자"
   }
 
   // 사용자 소개 가져오기
@@ -56,7 +58,7 @@ export function UserMyPageClient({
   const getUserCompanyInfo = () => {
     const primaryCard = businessCards.find(card => card.is_public) || businessCards[0]
     const role = primaryCard?.title || user?.role
-    const company = primaryCard?.company || user?.company
+    const company = primaryCard?.company || (user as any)?.company
     if (role && company) return `${role} / ${company}`
     if (role) return role
     if (company) return company
@@ -77,9 +79,9 @@ export function UserMyPageClient({
           <div className="text-center mb-6">
             {/* 프로필 이미지 */}
             <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-5 flex items-center justify-center">
-              {user?.profile_image_url ? (
+              {(user as any)?.profile_image_url ? (
                 <img
-                  src={user.profile_image_url}
+                  src={(user as any).profile_image_url}
                   alt={getUserDisplayName()}
                   className="w-24 h-24 rounded-full object-cover"
                 />
@@ -122,11 +124,11 @@ export function UserMyPageClient({
           <div className="border-t border-gray-200 pt-4 space-y-2 text-sm text-gray-500">
             <div className="flex justify-between">
               <span>이메일</span>
-              <span>{user.email}</span>
+              <span>{user?.email}</span>
             </div>
             <div className="flex justify-between">
               <span>가입일</span>
-              <span>{new Date(user.created_at).toLocaleDateString('ko-KR')}</span>
+              <span>{user?.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '알 수 없음'}</span>
             </div>
           </div>
         </Card>
@@ -146,7 +148,7 @@ export function UserMyPageClient({
 
           {/* 약관 보기 버튼 */}
           <Link href="/client/terms">
-            <div className="w-full justify-start cursor-pointer hover:bg-gray-50 p-4 rounded-lg
+            <div className="w-full justify-start cursor-pointer hover: p-4 rounded-lg
             flex items-center border border-gray-200">
               <FileText className="w-5 h-5 mr-3 text-gray-500" />
               <span className="font-medium">약관 보기</span>

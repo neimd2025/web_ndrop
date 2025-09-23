@@ -1,38 +1,15 @@
 import { createClient } from '@/utils/supabase/server'
-import jwt from 'jsonwebtoken'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   try {
-    // JWT 토큰 확인
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: '인증 토큰이 필요합니다.' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-
-    let decoded: any
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
-      if (decoded.role_id !== 2) {
-        return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 })
-      }
-    } catch (jwtError) {
-      return NextResponse.json({ error: '유효하지 않은 토큰입니다.' }, { status: 401 })
-    }
-
     // 서비스 역할 키로 Supabase 클라이언트 생성
     const supabase = await createClient()
 
-    // JWT 토큰에서 관리자 ID 가져오기
-    const adminId = decoded.adminId
-
-    // 해당 관리자가 생성한 이벤트만 가져오기 (created_by가 null이거나 adminId와 일치)
+    // 클라이언트용 이벤트 목록 가져오기 (모든 이벤트 표시)
     const { data: events, error } = await supabase
       .from('events')
       .select('*')
-      .or(`created_by.is.null,created_by.eq.${adminId}`)
       .order('created_at', { ascending: false })
 
     if (error) {

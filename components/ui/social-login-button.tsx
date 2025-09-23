@@ -59,7 +59,7 @@ export function SocialLoginButton({
       type="button"
       variant="outline"
       className={cn(
-        "w-full border-gray-200 hover:bg-gray-50 py-4 rounded-xl",
+        "w-full border-gray-200 hover: py-4 rounded-xl",
         className
       )}
       onClick={onClick}

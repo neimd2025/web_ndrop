@@ -124,9 +124,9 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
     const statusConfig = {
       upcoming: { label: "예정", color: "bg-blue-50 text-blue-700 border-blue-200" },
       ongoing: { label: "진행중", color: "bg-green-50 text-green-700 border-green-200" },
-      completed: { label: "완료", color: "bg-gray-50 text-gray-700 border-gray-200" }
+      completed: { label: "완료", color: " text-gray-700 border-gray-200" }
     }
-    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, color: "bg-gray-50 text-gray-700 border-gray-200" }
+    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, color: " text-gray-700 border-gray-200" }
     return <Badge variant="outline" className={config.color}>{config.label}</Badge>
   }
 
@@ -403,7 +403,11 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                     {/* 이벤트 정보 */}
                     <div className="p-6">
                       <div className="mb-4">
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">{event.title}</h3>
+                        <Link href={`/admin/events/${event.id}`}>
+                          <h3 className="text-lg font-bold text-gray-900 mb-2 hover:text-purple-600 transition-colors cursor-pointer">
+                            {event.title}
+                          </h3>
+                        </Link>
                         <div className="flex items-center gap-4 text-sm text-gray-600">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
@@ -622,7 +626,7 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                     이 QR 코드를 스캔하거나<br />
                     아래 링크로 접속해 명함을 제출할 수 있어요
                   </p>
-                  <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-200">
+                  <div className=" rounded-xl p-4 mb-6 border border-gray-200">
                     <p className="text-xs text-gray-600 break-all font-mono">
                       {qrData?.url || `${window.location.origin}/events/${selectedEvent.id}`}
                     </p>
@@ -729,7 +733,7 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                           <div className="space-y-2">
                             <p className="text-sm text-gray-600">{participant.email}</p>
                             <p className="text-sm text-gray-600">{participant.phone}</p>
-                            <div className="bg-gray-50 rounded-lg p-2">
+                            <div className=" rounded-lg p-2">
                               <p className="text-xs text-gray-600">관심분야: {participant.interests}</p>
                             </div>
                           </div>

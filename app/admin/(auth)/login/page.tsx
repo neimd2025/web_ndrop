@@ -36,6 +36,7 @@ export default function AdminLoginPage() {
     resolver: zodResolver(adminLoginSchema)
   })
 
+
   // 새로운 관리자 인증 상태 확인
   useEffect(() => {
     const checkAdminAuth = () => {
@@ -77,6 +78,8 @@ export default function AdminLoginPage() {
   }, [router, returnTo])
 
   const onSubmit = async (data: AdminLoginFormData) => {
+    console.log('🚀 onSubmit 함수 호출됨:', data)
+    console.log('🔍 handleSubmit이 정상적으로 작동하는지 확인')
     setIsSubmitting(true)
     try {
       // 새로운 관리자 전용 API 사용
@@ -103,9 +106,11 @@ export default function AdminLoginPage() {
         localStorage.setItem('admin_token', result.token)
         localStorage.setItem('admin_user', JSON.stringify(result.admin))
 
-        // 쿠키에도 저장 (미들웨어에서 사용)
-        document.cookie = `admin_token=${result.token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`
-        document.cookie = `admin_user=${encodeURIComponent(JSON.stringify(result.admin))}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`
+        // 쿠키에도 저장 (미들웨어에서 사용) - localhost에서는 secure 제거
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        const secureFlag = isLocalhost ? '' : '; secure'
+        document.cookie = `admin_token=${result.token}; path=/; max-age=${7 * 24 * 60 * 60}${secureFlag}; samesite=strict`
+        document.cookie = `admin_user=${encodeURIComponent(JSON.stringify(result.admin))}; path=/; max-age=${7 * 24 * 60 * 60}${secureFlag}; samesite=strict`
 
         toast.success('관리자로 로그인되었습니다.')
         router.push(returnTo)
@@ -205,9 +210,22 @@ export default function AdminLoginPage() {
 
           <div>
             <Button
-              type="submit"
+              type="button"
               className="w-full bg-purple-600 hover:bg-purple-700"
               disabled={isSubmitting}
+              onClick={async () => {
+                console.log('🚀 로그인 버튼 클릭됨!');
+                const form = document.querySelector('form');
+                if (form) {
+                  const formData = new FormData(form);
+                  const data = {
+                    username: formData.get('username') as string,
+                    password: formData.get('password') as string
+                  };
+                  console.log('📝 폼 데이터:', data);
+                  await onSubmit(data);
+                }
+              }}
             >
               {isSubmitting ? '로그인 중...' : '로그인'}
             </Button>

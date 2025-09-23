@@ -135,7 +135,7 @@ Neimd(이하 "회사")는 다음의 목적을 위하여 개인정보를 처리�
         </Card>
 
         {/* 문의 안내 */}
-        <Card className="bg-gray-50">
+        <Card className="">
           <CardContent className="p-4">
             <h3 className="font-semibold text-gray-900 mb-2">문의사항</h3>
             <p className="text-sm text-gray-600">

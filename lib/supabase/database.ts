@@ -1,3 +1,4 @@
+import { ROLE_IDS } from '@/lib/constants'
 import { Database } from '@/types/supabase'
 import { createClient } from '@/utils/supabase/client'
 
@@ -80,9 +81,19 @@ export const userProfileAPI = {
   async createUserProfile(profile: UserProfileInsert): Promise<UserProfile | null> {
     const supabase = createClient()
 
+    // 기본 역할 초기화 (필요한 경우)
+    await initializeDefaultRoles()
+
+    // role_id가 null이거나 undefined인 경우 기본값 설정 (일반 사용자)
+    const profileData = { ...profile }
+    if (profileData.role_id === null || profileData.role_id === undefined) {
+      console.log('새 프로필 생성 시 role_id가 null이므로 기본값 USER(1)로 설정')
+      profileData.role_id = ROLE_IDS.USER
+    }
+
     const { data, error } = await supabase
       .from('user_profiles')
-      .insert(profile)
+      .insert(profileData)
       .select()
       .single()
 
@@ -97,6 +108,9 @@ export const userProfileAPI = {
   // 사용자 프로필 업데이트
   async updateUserProfile(userId: string, updates: UserProfileUpdate): Promise<UserProfile | null> {
     const supabase = createClient()
+
+    // 기본 역할 초기화 (필요한 경우)
+    await initializeDefaultRoles()
 
     console.log('프로필 업데이트 시작:', { userId, updates })
 
@@ -129,13 +143,19 @@ export const userProfileAPI = {
     }
 
     // 빈 문자열 필드들을 null로 설정
-    const fieldsToNullify = ['affiliation', 'role', 'contact', 'introduction', 'mbti', 'external_link']
+    const fieldsToNullify = ['affiliation', 'role', 'work_field', 'contact', 'introduction', 'mbti', 'external_link']
     fieldsToNullify.forEach(field => {
       if (cleanedUpdates[field as keyof typeof cleanedUpdates] === '') {
         console.log(`${field} 빈 문자열을 null로 설정`)
         ;(cleanedUpdates as any)[field] = null
       }
     })
+
+    // role_id가 null이거나 undefined인 경우 기본값 설정 (일반 사용자)
+    if (cleanedUpdates.role_id === null || cleanedUpdates.role_id === undefined) {
+      console.log('role_id가 null이므로 기본값 USER(1)로 설정')
+      cleanedUpdates.role_id = ROLE_IDS.USER
+    }
 
     console.log('정리된 업데이트 데이터:', cleanedUpdates)
 
@@ -880,6 +900,52 @@ export const feedbackAPI = {
     }
 
     return true
+  }
+}
+
+// 기본 역할 초기화 함수
+export const initializeDefaultRoles = async () => {
+  const supabase = createClient()
+
+  try {
+    // 기존 역할 확인
+    const { data: existingRoles, error: fetchError } = await supabase
+      .from('roles')
+      .select('*')
+      .order('id', { ascending: true })
+
+    if (fetchError) {
+      console.error('기존 역할 조회 오류:', fetchError)
+      return false
+    }
+
+    // 기본 역할이 없는 경우 생성
+    if (!existingRoles || existingRoles.length === 0) {
+      console.log('기본 역할 데이터가 없습니다. 생성 중...')
+
+      const defaultRoles = [
+        { id: ROLE_IDS.USER, name: 'user', description: '일반 사용자' },
+        { id: ROLE_IDS.ADMIN, name: 'admin', description: '시스템 관리자' }
+      ]
+
+      const { error: insertError } = await supabase
+        .from('roles')
+        .insert(defaultRoles)
+
+      if (insertError) {
+        console.error('기본 역할 생성 오류:', insertError)
+        return false
+      }
+
+      console.log('✅ 기본 역할이 성공적으로 생성되었습니다.')
+      return true
+    } else {
+      console.log('기본 역할이 이미 존재합니다.')
+      return true
+    }
+  } catch (error) {
+    console.error('역할 초기화 중 오류:', error)
+    return false
   }
 }
 
