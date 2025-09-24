@@ -498,27 +498,33 @@ export const eventParticipantAPI = {
     return data
   },
 
-  // 이벤트 참가
+  // 이벤트 참가 (알림 생성 포함)
   async joinEvent(eventId: string, userId: string): Promise<any | null> {
-    const supabase = createClient()
-
-    const { data, error } = await supabase
-      .from('event_participants')
-      .insert({
-        event_id: eventId,
-        user_id: userId,
-        status: 'confirmed',
-        joined_at: new Date().toISOString()
+    try {
+      // API를 통해 참가 (알림 생성 포함)
+      const response = await fetch('/api/user/join-event', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventId: eventId,
+          userId: userId
+        })
       })
-      .select()
-      .single()
 
-    if (error) {
+      const result = await response.json()
+
+      if (result.success) {
+        return result.participant
+      } else {
+        console.error('Error joining event:', result.error)
+        return null
+      }
+    } catch (error) {
       console.error('Error joining event:', error)
       return null
     }
-
-    return data
   },
 
   // 이벤트 참가 취소
@@ -658,10 +664,10 @@ export const notificationAPI = {
   async getUserNotifications(userId: string): Promise<Notification[]> {
     const supabase = createClient()
 
-    const { data, error } = await supabase
+    // 모든 알림을 가져와서 필터링
+    const { data: allNotifications, error } = await supabase
       .from('notifications')
       .select('*')
-      .or(`target_type.eq.all,target_ids.cs.{${userId}}`)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -669,7 +675,27 @@ export const notificationAPI = {
       return []
     }
 
-    return data || []
+    // 사용자에게 보여줄 알림 필터링
+    const notifications = allNotifications?.filter(notification => {
+      // 전체 대상 알림이거나
+      if (notification.target_type === 'all') {
+        return true
+      }
+
+      // 특정 사용자 대상 알림인 경우 (실제 스키마에 맞춤)
+      if (notification.target_type === 'specific') {
+        return notification.user_id === userId
+      }
+
+      // event_participants 타입도 확인 (관리자 공지용)
+      if (notification.target_type === 'event_participants') {
+        return true
+      }
+
+      return false
+    }) || []
+
+    return notifications
   },
 
   // 모든 알림 가져오기 (관리자용)

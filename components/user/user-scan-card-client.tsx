@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from '@/components/ui/button'
+import { notificationService } from '@/lib/notification-helpers'
 import { UserProfile } from '@/lib/supabase/user-server-actions'
 import { createClient } from '@/utils/supabase/client'
 import jsQR from 'jsqr'
@@ -94,6 +95,19 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
           return
         }
 
+        // 명함 수집 알림 생성
+        try {
+          await notificationService.createBusinessCardCollectedNotification(
+            user.id,
+            businessCard.user_id,
+            cardId,
+            businessCard.full_name || '알 수 없는 사용자'
+          )
+        } catch (notificationError) {
+          console.error('알림 생성 오류:', notificationError)
+          // 알림 생성 실패해도 명함 저장은 성공으로 처리
+        }
+
         alert('명함이 성공적으로 저장되었습니다!')
         router.push(`/client/saved-cards/${savedCard.id}`)
       } else {
@@ -124,33 +138,28 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
             // 이벤트 참가 확인
             const confirmed = confirm(`${event.title} 이벤트에 참가하시겠습니까?`)
             if (confirmed) {
-              // 이벤트 참가
-              const { error: joinError } = await supabase
-                .from('event_participants')
-                .insert({
-                  event_id: event.id,
-                  user_id: user.id,
-                  status: 'confirmed'
+              // API를 통해 참가 (알림 생성 포함)
+              const response = await fetch('/api/user/join-event', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  eventId: event.id,
+                  userId: user.id
                 })
+              })
 
-              if (joinError) {
-                console.error('이벤트 참가 오류:', joinError)
-                alert('이벤트 참가에 실패했습니다.')
+              const result = await response.json()
+
+              if (result.success) {
+                alert('이벤트에 참가했습니다!')
+                router.push(`/client/events/${event.id}`)
+              } else {
+                alert(result.error || '이벤트 참가에 실패했습니다.')
                 setIsScanning(true)
                 return
               }
-
-              // 참가자 수 업데이트
-              const { error: updateError } = await supabase.rpc('increment_event_participants', {
-                event_id: event.id
-              })
-
-              if (updateError) {
-                console.warn('참가자 수 업데이트 실패:', updateError)
-              }
-
-              alert('이벤트에 참가했습니다!')
-              router.push(`/client/events/${event.id}`)
             } else {
               setIsScanning(true)
             }

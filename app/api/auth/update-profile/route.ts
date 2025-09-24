@@ -58,6 +58,38 @@ export async function PUT(request: NextRequest) {
 
     console.log('프로필 업데이트 성공:', data)
 
+    // 프로필 업데이트 알림 생성
+    try {
+      const updatedFields = Object.keys(cleanedUpdates)
+      const updateType = updatedFields.length > 0 ? updatedFields.join(', ') : '프로필'
+
+      const { data: notification, error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          title: '프로필 업데이트',
+          message: `${updateType}이 업데이트되었습니다`,
+          notification_type: 'profile_updated',
+          target_type: 'specific',
+          user_id: userId,
+          metadata: {
+            update_type: updateType,
+            updated_fields: updatedFields,
+            action: 'updated'
+          },
+          sent_by: null
+        })
+        .select()
+        .single()
+
+      if (notificationError) {
+        console.error('프로필 업데이트 알림 생성 오류:', notificationError)
+        // 알림 생성 실패해도 프로필 업데이트는 성공으로 처리
+      }
+    } catch (notificationError) {
+      console.error('프로필 업데이트 알림 생성 오류:', notificationError)
+      // 알림 생성 실패해도 프로필 업데이트는 성공으로 처리
+    }
+
     return NextResponse.json({
       success: true,
       message: '프로필이 업데이트되었습니다.',

@@ -67,55 +67,35 @@ export function UserEventsJoinClient({ user, events: initialEvents, userParticip
 
     setJoiningEventId(eventId)
     try {
-      const supabase = createClient()
-
-      // 이미 참가했는지 확인
-      const { data: existingParticipation } = await supabase
-        .from('event_participants')
-        .select('id')
-        .eq('event_id', eventId)
-        .eq('user_id', user.id)
-        .single()
-
-      if (existingParticipation) {
-        alert('이미 참가 신청한 이벤트입니다.')
-        return
-      }
-
-      // 참가 신청
-      const { error } = await supabase
-        .from('event_participants')
-        .insert({
-          event_id: eventId,
-          user_id: user.id,
-          status: 'confirmed'
+      // API를 통해 참가 (알림 생성 포함)
+      const response = await fetch('/api/user/join-event', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventId: eventId,
+          userId: user.id
         })
-
-      if (error) {
-        console.error('이벤트 참가 오류:', error)
-        alert('이벤트 참가에 실패했습니다. 다시 시도해주세요.')
-        return
-      }
-
-      // 이벤트 참가자 수 업데이트
-      const { error: updateError } = await supabase.rpc('increment_event_participants', {
-        event_id: eventId
       })
 
-      if (updateError) {
-        console.warn('참가자 수 업데이트 실패:', updateError)
-      }
+      const result = await response.json()
 
-      alert('이벤트 참가 신청이 완료되었습니다!')
+      if (result.success) {
+        alert('이벤트 참가 신청이 완료되었습니다!')
 
-      // 이벤트 목록 새로고침
-      const { data: updatedEvents } = await supabase
-        .from('events')
-        .select('*')
-        .order('start_date', { ascending: true })
+        // 이벤트 목록 새로고침
+        const supabase = createClient()
+        const { data: updatedEvents } = await supabase
+          .from('events')
+          .select('*')
+          .order('start_date', { ascending: true })
 
-      if (updatedEvents) {
-        setEvents(updatedEvents)
+        if (updatedEvents) {
+          setEvents(updatedEvents)
+        }
+      } else {
+        alert(result.error || '이벤트 참가에 실패했습니다. 다시 시도해주세요.')
       }
 
     } catch (error) {
