@@ -3,9 +3,13 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowLeft, Calendar, Clock, Lightbulb, MapPin, Pin, QrCode, Target, Users } from 'lucide-react'
+import { feedbackAPI } from '@/lib/supabase/database'
+import { createClient } from '@/utils/supabase/client'
+import { ArrowLeft, Calendar, Clock, Lightbulb, MapPin, MessageSquare, Pin, QrCode, Star, Target, Users } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
 interface EventDetailCardProps {
   event: {
@@ -40,6 +44,50 @@ export function EventDetailCard({
   showOrganizerInfo = true,
   backUrl
 }: EventDetailCardProps) {
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [feedbackText, setFeedbackText] = useState('')
+  const [rating, setRating] = useState(0)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // 피드백 제출 함수
+  const handleSubmitFeedback = async () => {
+    if (rating === 0) {
+      toast.error('평점을 선택해주세요')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (!user) {
+        toast.error('로그인이 필요합니다')
+        return
+      }
+
+      const result = await feedbackAPI.createFeedback({
+        user_id: user.id,
+        event_id: event.id,
+        rating: rating,
+        feedback: feedbackText.trim() || null
+      })
+
+      if (result) {
+        toast.success('피드백이 성공적으로 전송되었습니다!')
+        setShowFeedbackModal(false)
+        setFeedbackText('')
+        setRating(0)
+      } else {
+        toast.error('피드백 전송에 실패했습니다')
+      }
+    } catch (error) {
+      console.error('피드백 제출 오류:', error)
+      toast.error('피드백 전송 중 오류가 발생했습니다')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('ko-KR', {
@@ -288,6 +336,96 @@ export function EventDetailCard({
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* 피드백 섹션 */}
+      <Card className="border-0 shadow-lg">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageSquare className="h-5 w-5 text-purple-600" />
+            <h2 className="text-xl font-semibold text-gray-900">이벤트 피드백</h2>
+          </div>
+          <p className="text-gray-600 mb-4">
+            이벤트에 대한 소중한 피드백을 남겨주세요. 더 나은 이벤트를 위해 도움이 됩니다.
+          </p>
+          <Button
+            onClick={() => setShowFeedbackModal(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            피드백 보내기
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* 피드백 모달 */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-4">이벤트 피드백</h3>
+
+            {/* 평점 선택 */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                평점 (필수)
+              </label>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className="p-1"
+                  >
+                    <Star
+                      className={`h-6 w-6 ${
+                        star <= rating
+                          ? 'text-yellow-400 fill-current'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 피드백 텍스트 */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                피드백 내용 (선택)
+              </label>
+              <textarea
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                placeholder="이벤트에 대한 피드백을 작성해주세요..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                rows={4}
+              />
+            </div>
+
+            {/* 버튼들 */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowFeedbackModal(false)
+                  setFeedbackText('')
+                  setRating(0)
+                }}
+                className="flex-1"
+              >
+                취소
+              </Button>
+              <Button
+                onClick={handleSubmitFeedback}
+                disabled={isSubmitting || rating === 0}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {isSubmitting ? '전송 중...' : '피드백 전송'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

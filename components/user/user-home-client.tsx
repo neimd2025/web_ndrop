@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useUserProfile } from '@/hooks/use-user-profile'
 import { businessCardAPI, collectedCardAPI } from '@/lib/supabase/database'
 import { UserEvent, UserNotification, UserProfile } from '@/lib/supabase/user-server-actions'
+import { createClient } from '@/utils/supabase/client'
 import { Calendar, Camera, Star } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -82,15 +83,62 @@ export function UserHomeClient({
   }
 
   const loadEvents = async () => {
+    if (!user?.id) return
+
     try {
       // 사용자가 실제로 참가한 이벤트만 가져오기
-      const response = await fetch('/api/user/events')
-      if (response.ok) {
-        const data = await response.json()
-        setEvents(data.events || [])
-      } else {
+      const supabase = createClient()
+
+      const { data: participations, error } = await supabase
+        .from('event_participants')
+        .select(`
+          event_id,
+          events (
+            id,
+            title,
+            description,
+            start_date,
+            end_date,
+            location,
+            max_participants,
+            current_participants,
+            status,
+            created_at
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'confirmed')
+
+      if (error) {
+        console.error('참가 이벤트 조회 오류:', error)
         setEvents([])
+        return
       }
+
+      // 이벤트 데이터 추출 및 상태 계산
+      const userEvents = participations?.map(participation => {
+        const event = (participation as any).events
+        if (!event) return null
+
+        // 이벤트 상태 계산
+        const now = new Date()
+        const startDate = new Date(event.start_date)
+        const endDate = new Date(event.end_date)
+
+        let status = 'upcoming'
+        if (now >= startDate && now < endDate) {
+          status = 'ongoing'
+        } else if (now >= endDate) {
+          status = 'completed'
+        }
+
+        return {
+          ...event,
+          status
+        }
+      }).filter(Boolean) || []
+
+      setEvents(userEvents)
     } catch (error) {
       console.error('Error loading events:', error)
       setEvents([])
@@ -124,6 +172,36 @@ export function UserHomeClient({
         setLoading(false)
       }
       loadAllData()
+    }
+  }, [user?.id])
+
+  // 실시간 이벤트 참가 감지
+  useEffect(() => {
+    if (!user?.id) return
+
+    const supabase = createClient()
+
+    // event_participants 테이블 변경 감지
+    const channel = supabase
+      .channel('event_participants_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'event_participants',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('새로운 이벤트 참가 감지:', payload)
+          // 이벤트 목록 새로고침
+          loadEvents()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
     }
   }, [user?.id])
 

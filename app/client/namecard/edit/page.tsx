@@ -244,7 +244,7 @@ export default function EditNamecardPage() {
       } else if (userCard && updatedProfile) {
         // 기존 명함이 있으면 업데이트
         try {
-          const businessCardUpdates = {
+          const businessCardUpdates: any = {
             full_name: updatedProfile.full_name || null,
             introduction: updatedProfile.introduction || null,
             company: updatedProfile.affiliation || null,
