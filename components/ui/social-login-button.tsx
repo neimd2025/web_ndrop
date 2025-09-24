@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-export type SocialProvider = 'google' | 'kakao'
+export type SocialProvider = 'google' | 'kakao' | 'naver'
 
 interface SocialLoginButtonProps {
   provider: SocialProvider
@@ -32,6 +32,15 @@ const providerConfig = {
       <svg className="w-5 h-5" viewBox="0 0 24 24">
         <path fill="#FEE500" d="M12 3C6.48 3 2 6.48 2 12c0 2.25.75 4.31 2 5.94L3 22l5.06-1c1.31.63 2.78 1 4.94 1 5.52 0 10-4.48 10-10S17.52 3 12 3z"/>
         <path fill="#000000" d="M12 5c-3.87 0-7 2.79-7 6.25 0 2.25 1.5 4.25 3.75 5.5L9 18l2.25-1.25c.25 0 .5-.25.75-.25s.5.25.75.25L15 18l.25-1.25c2.25-1.25 3.75-3.25 3.75-5.5C19 7.79 15.87 5 12 5z"/>
+      </svg>
+    )
+  },
+  naver: {
+    name: 'Naver',
+    label: '네이버로 계속하기',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24">
+        <path fill="#03C75A" d="M16.273 12.845L7.376 0H0v24h7.726V11.156L16.624 24H24V0h-7.727v12.845z"/>
       </svg>
     )
   }

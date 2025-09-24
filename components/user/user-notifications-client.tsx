@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { UserNotification, UserProfile } from '@/lib/supabase/user-server-actions'
 import { createClient } from "@/utils/supabase/client"
-import { Calendar, Megaphone, Plus } from "lucide-react"
+import { Calendar, Megaphone, Plus, RefreshCw } from "lucide-react"
+import { useRouter } from "next/navigation"
 import React, { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -24,15 +25,19 @@ export function UserNotificationsClient({
   const [isConnected, setIsConnected] = useState(false)
   const supabase = createClient()
   const channelRef = useRef<any>(null)
+  const router = useRouter()
 
   // 알림 새로고침 함수
   const refreshNotifications = async () => {
-    if (!user) return
+    if (!user) {
+      console.log('사용자 정보가 없어서 알림 새로고침을 건너뜁니다')
+      return
+    }
 
     try {
       console.log('알림 새로고침 시작, 사용자 ID:', user.id)
 
-      // 사용자에게 전송된 알림들을 가져옴
+      // 사용자에게 전송된 알림들을 가져옴 (실제 스키마에 맞춤)
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -45,11 +50,42 @@ export function UserNotificationsClient({
       }
 
       console.log('새로고침된 알림 데이터:', data)
+      console.log('알림 개수:', data?.length || 0)
       setNotifications(data || [])
     } catch (error) {
       console.error('알림 새로고침 오류:', error)
     }
   }
+
+  // 사용자 인증 상태 확인 및 초기 알림 로드
+  useEffect(() => {
+    const checkUserAndLoadNotifications = async () => {
+      if (!user) {
+        console.log('사용자 정보가 없습니다. 인증 상태를 확인합니다.')
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        if (currentUser) {
+          console.log('인증된 사용자 발견:', currentUser.id)
+          setUser(currentUser as any)
+        } else {
+          console.log('인증된 사용자가 없습니다.')
+        }
+        return
+      }
+
+      console.log('사용자 정보 확인됨, 알림 로드 시작:', user.id)
+      await refreshNotifications()
+    }
+
+    checkUserAndLoadNotifications()
+  }, [])
+
+  // 사용자 정보가 변경될 때 알림 새로고침
+  useEffect(() => {
+    if (user) {
+      console.log('사용자 정보 변경됨, 알림 새로고침:', user.id)
+      refreshNotifications()
+    }
+  }, [user])
 
   // 페이지 포커스 시 알림 새로고침
   useEffect(() => {
@@ -90,7 +126,7 @@ export function UserNotificationsClient({
 
           // 현재 사용자에게 온 알림인지 확인
           if (newNotification.target_type === 'all' ||
-              (newNotification.target_ids && newNotification.target_ids.includes(user.id))) {
+              (newNotification.target_type === 'specific' && newNotification.user_id === user.id)) {
             console.log('사용자에게 맞는 알림 확인됨:', newNotification)
             setNotifications((prev) => [newNotification, ...prev])
             toast.success('새 알림이 도착했습니다!')
@@ -134,21 +170,24 @@ export function UserNotificationsClient({
 
   // 알림 클릭 처리
   const handleNotificationClick = async (notification: UserNotification) => {
-    if (!notification.is_read) {
+    if (!notification.read_at) {
       await markAsRead(notification.id)
     }
 
     // 알림 타입에 따른 라우팅
-    switch (notification.type) {
-      case 'system':
-        // 시스템 알림은 별도 처리 없음
+    switch (notification.target_type) {
+      case 'all':
+        // 전체 알림은 별도 처리 없음
         break
-      case 'event':
-        // 이벤트 관련 페이지로 이동
-        window.location.href = `/events`
+      case 'specific':
+        if (notification.target_event_id) {
+          router.push(`/client/events/${notification.target_event_id}`)
+        }
         break
-      case 'announcement':
-        // 공지사항은 별도 처리 없음
+      case 'event_participants':
+        if (notification.target_event_id) {
+          router.push(`/client/events/${notification.target_event_id}`)
+        }
         break
       default:
         break
@@ -168,14 +207,14 @@ export function UserNotificationsClient({
   }
 
   // 아이콘과 색상 매핑
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'system':
-        return { icon: Plus, color: 'text-blue-600', bg: 'bg-blue-100' }
-      case 'event':
-        return { icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-100' }
-      case 'announcement':
+  const getNotificationIcon = (targetType: string) => {
+    switch (targetType) {
+      case 'all':
         return { icon: Megaphone, color: 'text-orange-600', bg: 'bg-orange-100' }
+      case 'specific':
+        return { icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-100' }
+      case 'event_participants':
+        return { icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-100' }
       default:
         return { icon: Plus, color: 'text-gray-600', bg: 'bg-gray-100' }
     }
@@ -184,6 +223,17 @@ export function UserNotificationsClient({
   return (
     <div className="min-h-screen bg-white pb-24">
       <MobileHeader title="최근 활동 및 알림" showMenuButton />
+
+      {/* 새로고침 버튼 */}
+      <div className="px-4 py-2">
+        <button
+          onClick={refreshNotifications}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-purple-600 transition-colors"
+        >
+          <RefreshCw className="h-4 w-4" />
+          새로고침
+        </button>
+      </div>
 
       <div className="px-4 py-6 space-y-4">
         {loading ? (
@@ -201,7 +251,7 @@ export function UserNotificationsClient({
           </div>
         ) : (
           notifications.map((notification) => {
-            const { icon, color, bg } = getNotificationIcon(notification.type)
+            const { icon, color, bg } = getNotificationIcon(notification.target_type)
             return (
               <Card
                 key={notification.id}
@@ -222,16 +272,16 @@ export function UserNotificationsClient({
                           <Badge
                             variant="secondary"
                             className={`text-xs ${
-                              notification.type === "event"
+                              notification.target_type === "specific"
                                 ? "bg-gray-100 text-gray-700"
                                 : "bg-purple-100 text-purple-700"
                             }`}
                           >
-                            {notification.type === "system" ? "시스템" :
-                             notification.type === "event" ? "이벤트" :
-                             notification.type === "announcement" ? "공지" : "알림"}
+                            {notification.target_type === "all" ? "전체 공지" :
+                             notification.target_type === "specific" ? "개별 알림" :
+                             notification.target_type === "event_participants" ? "이벤트 공지" : "알림"}
                           </Badge>
-                          {!notification.is_read && <div className="w-2 h-2 bg-purple-600 rounded-full"></div>}
+                          {!notification.read_at && <div className="w-2 h-2 bg-purple-600 rounded-full"></div>}
                         </div>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">{notification.message}</p>

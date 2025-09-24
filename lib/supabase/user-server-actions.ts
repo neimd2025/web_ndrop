@@ -74,16 +74,12 @@ export interface UserNotification {
   id: string
   title: string
   message: string
-  type: 'system' | 'event' | 'announcement'
-  target_type?: 'all' | 'specific' | 'event_participants'
-  target_ids?: string[]
+  target_type: 'all' | 'specific' | 'event_participants'
   target_event_id?: string
-  is_read: boolean
+  user_id?: string
+  sent_by?: string
+  read_at?: string
   created_at: string
-  sent_date?: string
-  delivered_count?: number
-  read_count?: number
-  status?: 'draft' | 'sent' | 'scheduled'
 }
 
 export interface UserEventParticipation {
