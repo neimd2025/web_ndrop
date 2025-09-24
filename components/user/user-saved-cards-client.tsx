@@ -8,7 +8,7 @@ import { createClient } from '@/utils/supabase/client'
 import { ArrowLeft, Edit, Search, Star, User } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface UserSavedCardsClientProps {
   user?: UserProfile
@@ -23,6 +23,30 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
   const [showFavorites, setShowFavorites] = useState(false)
   const router = useRouter()
 
+  // 데이터 로딩
+  useEffect(() => {
+    const loadData = async () => {
+      if (!initialUser) {
+        setLoading(true)
+        try {
+          // 클라이언트에서 데이터 로드
+          const response = await fetch('/api/user/saved-cards')
+          if (response.ok) {
+            const data = await response.json()
+            setUser(data.user)
+            setSavedCards(data.savedCards || [])
+          }
+        } catch (error) {
+          console.error('저장된 명함 데이터 로드 오류:', error)
+        } finally {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadData()
+  }, [initialUser])
+
   // 즐겨찾기된 명함 필터링
   const favoriteCards = savedCards.filter(card => card.is_favorite)
 
@@ -33,10 +57,10 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
     if (!businessCard) return false
 
     const searchFields = [
-      businessCard.name,
-      businessCard.company,
-      businessCard.title,
-      businessCard.email
+      businessCard.full_name || businessCard.name,
+      businessCard.company || businessCard.affiliation,
+      businessCard.role || businessCard.title,
+      businessCard.email || businessCard.contact
     ].filter(Boolean).join(' ').toLowerCase()
 
     return searchFields.includes(searchTerm.toLowerCase())
@@ -61,6 +85,7 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
 
       // 로컬 상태 업데이트
       card.is_favorite = !card.is_favorite
+      setSavedCards([...savedCards])
     } catch (error) {
       console.error('즐겨찾기 오류:', error)
       alert('오류가 발생했습니다.')
@@ -158,14 +183,14 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
                       {/* 프로필 이미지 */}
                       <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-bold text-lg">
-                          {getInitial(businessCard.name)}
+                          {getInitial(businessCard.full_name || businessCard.name)}
                         </span>
                       </div>
 
                       {/* 명함 정보 */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-bold text-gray-900">{businessCard.name}</h3>
+                          <h3 className="font-bold text-gray-900">{businessCard.full_name || businessCard.name}</h3>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -183,11 +208,11 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
                         </div>
 
                         <p className="text-sm text-gray-600 mb-1">
-                          {businessCard.title} / {businessCard.company}
+                          {businessCard.role || businessCard.title} / {businessCard.company || businessCard.affiliation}
                         </p>
 
-                        {businessCard.email && (
-                          <p className="text-sm text-gray-500">{businessCard.email}</p>
+                        {(businessCard.email || businessCard.contact) && (
+                          <p className="text-sm text-gray-500">{businessCard.email || businessCard.contact}</p>
                         )}
 
                         <p className="text-xs text-gray-400 mt-2">

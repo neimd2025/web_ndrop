@@ -12,7 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Webcam from 'react-webcam'
 
 interface UserScanCardClientProps {
-  user: UserProfile
+  user: UserProfile | null
 }
 
 export function UserScanCardClient({ user }: UserScanCardClientProps) {
@@ -49,6 +49,12 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
       }
 
       if (cardId) {
+        // 비로그인 사용자의 경우 명함 페이지로 이동
+        if (!user) {
+          router.push(`/business-card/${cardId}`)
+          return
+        }
+
         // 명함 데이터 가져오기
         const { data: businessCard, error } = await supabase
           .from('business_cards')
@@ -63,17 +69,24 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
           return
         }
 
+        // 자신의 명함인지 확인
+        if (businessCard.user_id === user.id) {
+          alert('자신의 명함은 저장할 수 없습니다.')
+          router.push(`/business-card/${cardId}`)
+          return
+        }
+
         // 이미 저장된 명함인지 확인
         const { data: existingCard } = await supabase
           .from('collected_cards')
           .select('id')
           .eq('collector_id', user.id)
-          .eq('business_card_id', cardId)
+          .eq('card_id', cardId)
           .single()
 
         if (existingCard) {
           alert('이미 저장된 명함입니다!')
-          router.push(`/client/saved-cards/${existingCard.id}`)
+          router.push(`/client/saved-cards`)
           return
         }
 
@@ -82,7 +95,7 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
           .from('collected_cards')
           .insert({
             collector_id: user.id,
-            business_card_id: cardId,
+            card_id: cardId,
             collected_at: new Date().toISOString()
           })
           .select()
@@ -111,71 +124,8 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
         alert('명함이 성공적으로 저장되었습니다!')
         router.push(`/client/saved-cards/${savedCard.id}`)
       } else {
-        // 이벤트 코드인지 확인 (6자리 문자열)
-        if (qrData.length === 6 && /^[A-Z0-9]+$/.test(qrData)) {
-          // 이벤트 코드로 이벤트 찾기
-          const { data: event, error: eventError } = await supabase
-            .from('events')
-            .select('*')
-            .eq('event_code', qrData)
-            .single()
-
-          if (event && !eventError) {
-            // 이미 참가했는지 확인
-            const { data: existingParticipation } = await supabase
-              .from('event_participants')
-              .select('id')
-              .eq('event_id', event.id)
-              .eq('user_id', user.id)
-              .single()
-
-            if (existingParticipation) {
-              alert('이미 참가한 이벤트입니다!')
-              router.push(`/client/events/${event.id}`)
-              return
-            }
-
-            // 이벤트 참가 확인
-            const confirmed = confirm(`${event.title} 이벤트에 참가하시겠습니까?`)
-            if (confirmed) {
-              // API를 통해 참가 (알림 생성 포함)
-              const response = await fetch('/api/user/join-event', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  eventId: event.id,
-                  userId: user.id
-                })
-              })
-
-              const result = await response.json()
-
-              if (result.success) {
-                alert('이벤트에 참가했습니다!')
-                router.push(`/client/events/${event.id}`)
-              } else {
-                alert(result.error || '이벤트 참가에 실패했습니다.')
-                setIsScanning(true)
-                return
-              }
-            } else {
-              setIsScanning(true)
-            }
-            return
-          }
-        }
-
-        // JSON 형식으로 파싱 시도
-        try {
-          const cardData = JSON.parse(qrData)
-          console.log('명함 데이터:', cardData)
-          alert('명함 데이터가 감지되었습니다!')
-          // 추가적인 처리 필요시 여기에 구현
-        } catch (parseError) {
-          alert('유효하지 않은 QR 코드입니다.')
-        }
+        alert('유효하지 않은 명함 QR 코드입니다.')
+        setIsScanning(true)
       }
     } catch (error) {
       console.error('QR 코드 처리 오류:', error)
@@ -240,19 +190,19 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
       }
     }
 
-    // QR 코드가 감지되지 않으면 계속 스캔
+    // QR 코드가 감지되지 않으면 적절한 간격으로 다시 스캔
     if (isScanning) {
-      requestAnimationFrame(scanQRCode)
+      setTimeout(() => requestAnimationFrame(scanQRCode), 100) // 100ms 간격으로 스캔
     }
   }, [isScanning, handleQRCodeDetected])
 
   // 카메라 활성화 시 QR 스캔 시작
   useEffect(() => {
     if (isCameraActive && isScanning) {
-      // 카메라가 로드될 때까지 잠시 대기
+      // 카메라가 로드될 때까지 잠시 대기 (시간 단축)
       const timer = setTimeout(() => {
         scanQRCode()
-      }, 1000) // 1초 대기
+      }, 500) // 500ms 대기로 단축
 
       return () => clearTimeout(timer)
     }
@@ -363,19 +313,29 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
         {/* 스캔 프레임 오버레이 */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-64 h-64 relative">
-            {/* 모서리 표시 */}
-            <div className="absolute top-0 left-0 w-8 h-8 border-l-4 border-t-4 border-purple-600 rounded-tl-lg"></div>
-            <div className="absolute top-0 right-0 w-8 h-8 border-r-4 border-t-4 border-purple-600 rounded-tr-lg"></div>
-            <div className="absolute bottom-0 left-0 w-8 h-8 border-l-4 border-b-4 border-purple-600 rounded-bl-lg"></div>
-            <div className="absolute bottom-0 right-0 w-8 h-8 border-r-4 border-b-4 border-purple-600 rounded-br-lg"></div>
+            {/* 모서리 표시 - 부드러운 애니메이션 */}
+            <div className="absolute top-0 left-0 w-8 h-8 border-l-4 border-t-4 border-purple-500 rounded-tl-lg animate-pulse"></div>
+            <div className="absolute top-0 right-0 w-8 h-8 border-r-4 border-t-4 border-purple-500 rounded-tr-lg animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-l-4 border-b-4 border-purple-500 rounded-bl-lg animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-r-4 border-b-4 border-purple-500 rounded-br-lg animate-pulse" style={{ animationDelay: '0.6s' }}></div>
+
+            {/* 스캔 라인 애니메이션 */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-purple-400 to-transparent animate-bounce" style={{ animationDuration: '2s' }}></div>
+            </div>
           </div>
         </div>
 
         {/* 스캔 중 표시 */}
         {isScanning && (
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="text-white text-center">
-              <div className="animate-pulse">QR 코드 스캔 중...</div>
+            <div className="text-white text-center bg-black/50 rounded-lg px-4 py-2">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                <span className="ml-2 text-sm">스캔 중...</span>
+              </div>
             </div>
           </div>
         )}

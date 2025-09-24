@@ -578,6 +578,7 @@ export const collectedCardAPI = {
         business_cards (*)
       `)
       .eq('collector_id', userId)
+      .not('business_cards.user_id', 'eq', userId)
       .order('collected_at', { ascending: false })
 
     if (error) {

@@ -298,7 +298,7 @@ export function UserEventsJoinClient({ user, events: initialEvents, userParticip
           >
             코드 입력
           </Button>
-          <Link href="/client/scan-card" className="ml-auto">
+          <Link href="/client/events/scan" className="ml-auto">
             <Button variant="outline" size="sm">
               <QrCode className="w-4 h-4 mr-1" />
               QR 스캔

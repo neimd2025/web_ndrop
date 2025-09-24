@@ -16,12 +16,17 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getSession()
 
   // 경로 분류
-  const protectedRoutes = ['/client', '/home', '/my-page', '/events', '/saved-cards', '/scan-card', '/my-namecard', '/my-qr', '/notifications', '/business-card', '/onboarding']
+  const protectedRoutes = ['/client', '/home', '/my-page', '/events', '/saved-cards', '/my-namecard', '/my-qr', '/notifications', '/onboarding']
   const authRoutes = ['/login', '/signup', '/verify', '/forgot-password', '/reset-password']
   const adminRoutes = ['/admin']
   const adminAuthRoutes = ['/admin/login', '/admin/signup']
 
-  const isProtectedRoute = protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route))
+  // 공개 명함 페이지와 QR 스캔 페이지는 인증 불필요
+  const isPublicBusinessCard = req.nextUrl.pathname.startsWith('/business-card/') && req.nextUrl.pathname.split('/').length === 3
+  const isScanCardPage = req.nextUrl.pathname === '/client/scan-card'
+  const isEventScanPage = req.nextUrl.pathname === '/client/events/scan'
+
+  const isProtectedRoute = protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route)) && !isPublicBusinessCard && !isScanCardPage && !isEventScanPage
   const isAuthRoute = authRoutes.some(route => req.nextUrl.pathname.startsWith(route))
   const isAdminRoute = adminRoutes.some(route => req.nextUrl.pathname.startsWith(route))
   const isAdminAuthRoute = adminAuthRoutes.some(route => req.nextUrl.pathname === route)

@@ -138,7 +138,8 @@ export function UserMyNamecardClient({ user, businessCards }: UserMyNamecardClie
   // 공유 링크 생성
   const getShareLink = () => {
     if (userCard?.id) {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : "http://localhost:3000")
+      // 개발 환경에서는 항상 localhost 사용
+      const siteUrl = "http://localhost:3000"
       return `${siteUrl}/business-card/${userCard.id}`
     }
     return "naimd.link/1s2v"

@@ -17,8 +17,10 @@ export default function MobileBottomNav() {
     ["/", "/onboarding", "/welcome", "/login", "/signup", "/forgot-password", "/reset-password"].includes(pathname) ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/profile/edit") ||
-    pathname === "/client/onboarding"
-    || pathname.startsWith("/client/namecard/create")
+    pathname === "/client/onboarding" ||
+    pathname.startsWith("/client/namecard/create") ||
+    pathname === "/client/scan-card" ||
+    pathname === "/client/events/scan"
 
   // 서버사이드 렌더링 중에는 아무것도 렌더링하지 않음
   if (!isClient) {

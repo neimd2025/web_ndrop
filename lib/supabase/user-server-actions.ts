@@ -430,6 +430,7 @@ export async function getUserSavedCardsData(): Promise<{
         business_card:business_cards(*)
       `)
       .eq('collector_id', user.id)
+      .not('business_cards.user_id', 'eq', user.id)
       .order('collected_at', { ascending: false })
 
     if (error) {
