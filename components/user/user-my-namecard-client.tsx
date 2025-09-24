@@ -2,11 +2,12 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { UserProfile, UserBusinessCard } from '@/lib/supabase/user-server-actions'
+import { UserBusinessCard, UserProfile } from '@/lib/supabase/user-server-actions'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Edit, QrCode, User } from 'lucide-react'
+import { Edit, QrCode, User } from 'lucide-react'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import MobileHeader from '../mobile-header'
 
 interface UserMyNamecardClientProps {
   user: UserProfile
@@ -23,31 +24,120 @@ export function UserMyNamecardClient({ user, businessCards }: UserMyNamecardClie
 
   // 사용자 표시 이름 가져오기
   const getUserDisplayName = () => {
-    return userCard?.name || user?.full_name || user?.email?.split('@')[0] || "사용자"
+    return userCard?.full_name || userCard?.name || user?.full_name || user?.email?.split('@')[0] || "사용자"
   }
 
   // 사용자 소개 가져오기
   const getUserIntroduction = () => {
-    return userCard?.bio || "하루하루 의미있게"
+    return userCard?.introduction || userCard?.bio || user?.introduction || "하루하루 의미있게"
   }
 
-  // 사용자 회사/직책 정보 가져오기
-  const getUserCompanyInfo = () => {
-    const role = userCard?.title || user?.role || "직책"
-    const company = userCard?.company || user?.company || "회사"
-    return `${role} / ${company}`
-  }
-
-  // 사용자 링크 정보 가져오기
-  const getUserLinks = () => {
-    if (userCard?.website) {
-      return [{
-        title: "웹사이트",
-        description: "추가 정보를 확인하세요",
-        url: userCard.website
-      }]
+  // 나이 계산
+  const getAge = () => {
+    const birthDate = userCard?.birth_date || user?.birth_date
+    if (birthDate) {
+      const today = new Date()
+      const birth = new Date(birthDate)
+      let age = today.getFullYear() - birth.getFullYear()
+      const monthDiff = today.getMonth() - birth.getMonth()
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--
+      }
+      return `${age}세`
     }
-    return []
+    return ""
+  }
+
+  // 직책/회사 정보
+  const getWorkInfo = () => {
+    const workField = userCard?.work_field || user?.work_field || ""
+    const role = userCard?.title || user?.role || ""
+    const company = userCard?.company || user?.company || ""
+
+    if (workField && role) {
+      return `${workField} / ${role}`
+    } else if (role && company) {
+      return `${role} / ${company}`
+    } else if (workField) {
+      return workField
+    } else if (role) {
+      return role
+    }
+    return ""
+  }
+
+  // MBTI 정보
+  const getMBTI = () => {
+    return userCard?.mbti || user?.mbti || ""
+  }
+
+  // 연락처 정보
+  const getContact = () => {
+    return userCard?.contact || userCard?.phone || user?.contact || ""
+  }
+
+  // 성격 키워드
+  const getPersonalityKeywords = () => {
+    return userCard?.personality_keywords || user?.personality_keywords || []
+  }
+
+  // 관심사 키워드
+  const getInterestKeywords = () => {
+    return userCard?.interest_keywords || user?.interest_keywords || userCard?.keywords || user?.keywords || []
+  }
+
+  // 취미 키워드 (keywords에서 일부를 취미로 사용)
+  const getHobbyKeywords = () => {
+    const allKeywords = userCard?.keywords || user?.keywords || []
+    // 취미 관련 키워드들
+    const hobbyKeywords = allKeywords.filter(keyword =>
+      ['독서', '영화감상', '음악감상', '운동', '요리', '여행', '사진', '게임', '등산', '자전거', '수영', '자기계발', '사람'].includes(keyword)
+    )
+    return hobbyKeywords.slice(0, 4) // 최대 4개
+  }
+
+  // 외부 링크 정보
+  const getExternalLink = () => {
+    const link = userCard?.external_link || user?.external_link || userCard?.website || ""
+    if (link) {
+      // 링크 타입에 따라 제목과 설명 결정
+      let title = "외부 링크"
+      let description = "추가 정보를 확인하세요"
+
+      if (link.includes('youtube') || link.includes('youtu.be')) {
+        title = "YouTube"
+        description = "Enjoy the videos and music you love, upload original content, and share it all with friends..."
+      } else if (link.includes('instagram')) {
+        title = "Instagram"
+        description = "Follow me for more updates and behind-the-scenes content"
+      } else if (link.includes('linkedin')) {
+        title = "LinkedIn"
+        description = "Connect with me professionally and view my career journey"
+      } else if (link.includes('github')) {
+        title = "GitHub"
+        description = "Check out my coding projects and contributions"
+      } else if (link.includes('twitter') || link.includes('x.com')) {
+        title = "Twitter"
+        description = "Follow me for thoughts and updates"
+      } else if (link.includes('facebook')) {
+        title = "Facebook"
+        description = "Connect with me on social media"
+      } else if (link.includes('tiktok')) {
+        title = "TikTok"
+        description = "Watch my creative content and videos"
+      } else {
+        // 일반 웹사이트인 경우
+        title = "웹사이트"
+        description = "Visit my website for more information"
+      }
+
+      return {
+        title,
+        description,
+        url: link
+      }
+    }
+    return null
   }
 
   // 공유 링크 생성
@@ -71,19 +161,9 @@ export function UserMyNamecardClient({ user, businessCards }: UserMyNamecardClie
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-100">
       {/* 헤더 */}
-      <div className="bg-white border-b border-gray-200 px-5 py-4">
-        <div className="flex items-center justify-between">
-          <Link href="/client/home">
-            <Button variant="ghost" size="sm" className="p-2">
-              <ArrowLeft className="w-4 h-4 text-gray-900" />
-            </Button>
-          </Link>
-          <h1 className="text-xl font-bold text-gray-900">내 명함</h1>
-          <div className="w-10"></div>
-        </div>
-      </div>
+      <MobileHeader title="내 명함" />
 
       {/* 메인 콘텐츠 */}
       <div className="px-5 py-6">
@@ -98,15 +178,15 @@ export function UserMyNamecardClient({ user, businessCards }: UserMyNamecardClie
             {/* 프로필 섹션 */}
             <div className="text-center mb-6">
               {/* 프로필 이미지 */}
-              <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-5 flex items-center justify-center">
-                {user?.profile_image_url ? (
+              <div className="w-24 h-24 bg-purple-500 rounded-full mx-auto mb-5 flex items-center justify-center">
+                {userCard?.profile_image_url || user?.profile_image_url ? (
                   <img
-                    src={user.profile_image_url}
+                    src={userCard?.profile_image_url || user?.profile_image_url}
                     alt={getUserDisplayName()}
                     className="w-24 h-24 rounded-full object-cover"
                   />
                 ) : (
-                  <User className="w-12 h-12 text-gray-600" />
+                  <User className="w-12 h-12 text-white" />
                 )}
               </div>
 
@@ -119,34 +199,82 @@ export function UserMyNamecardClient({ user, businessCards }: UserMyNamecardClie
               </p>
 
               {/* 기본 정보 */}
-              <div className="space-y-2 text-sm text-gray-500">
-                {(userCard?.title || user?.role || userCard?.company || user?.company) && (
-                  <p>{getUserCompanyInfo()}</p>
-                )}
-                {userCard?.email && <p>{userCard.email}</p>}
-                {userCard?.phone && <p>{userCard.phone}</p>}
+              <div className="space-y-1 text-sm text-gray-500">
+                <p>{getAge() || ""}</p>
+                <p>{getWorkInfo() || ""}</p>
+                <p>MBTI: {getMBTI() || ""}</p>
+                <p>연락처: {getContact() || ""}</p>
               </div>
             </div>
 
-            {/* 링크들 */}
-            {getUserLinks().length > 0 && (
-              <div className="space-y-4">
-                {getUserLinks().map((link: any, index: number) => (
-                  <div key={index} className="border border-gray-200 rounded-xl p-4">
-                    <h4 className="font-semibold text-gray-900 mb-2">- {link.title}</h4>
-                    <p className="text-gray-600 text-sm mb-2">{link.description}</p>
-                    <p className="text-gray-500 text-sm">{link.url}</p>
-                  </div>
-                ))}
+            {/* 성격 섹션 */}
+            <div className="mb-6">
+              <h3 className="text-center text-lg font-semibold text-gray-900 mb-3">성격</h3>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {getPersonalityKeywords().length > 0 ? (
+                  getPersonalityKeywords().slice(0, 3).map((keyword, index) => (
+                    <Badge key={index} className="bg-[#7C3BED] text-white border-purple-200 px-3 py-1 rounded-full text-sm">
+                      {keyword}
+                    </Badge>
+                  ))
+                ) : (
+                  <div className="text-gray-400 text-sm">정보 없음</div>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* 관심사 섹션 */}
+            <div className="mb-6">
+              <h3 className="text-center text-lg font-semibold text-gray-900 mb-3">관심사</h3>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {getInterestKeywords().length > 0 ? (
+                  getInterestKeywords().slice(0, 3).map((keyword, index) => (
+                    <Badge key={index} className="bg-white text-gray-800 border-gray-200 px-3 py-1 rounded-full text-sm">
+                      {keyword}
+                    </Badge>
+                  ))
+                ) : (
+                  <div className="text-gray-400 text-sm">정보 없음</div>
+                )}
+              </div>
+            </div>
+
+            {/* 취미 섹션 */}
+            <div className="mb-6">
+              <h3 className="text-center text-lg font-semibold text-gray-900 mb-3">취미</h3>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {getHobbyKeywords().length > 0 ? (
+                  getHobbyKeywords().slice(0, 4).map((keyword, index) => (
+                    <Badge key={index} className="bg-gray-100 text-gray-800 border-gray-200 px-3 py-1 rounded-full text-sm">
+                      {keyword}
+                    </Badge>
+                  ))
+                ) : (
+                  <div className="text-gray-400 text-sm">정보 없음</div>
+                )}
+              </div>
+            </div>
+
+            {/* 외부 링크 섹션 */}
+            <div className="mb-6">
+              <h3 className="text-left text-lg font-semibold text-gray-900 mb-3">외부링크</h3>
+              <div className="border border-gray-200 rounded-xl p-4">
+                {getExternalLink() ? (
+                  <>
+                    <h4 className="font-semibold text-gray-900 mb-2">- {getExternalLink()?.title}</h4>
+                    <p className="text-gray-600 text-sm mb-2">{getExternalLink()?.description}</p>
+                    <p className="text-gray-500 text-sm">{getExternalLink()?.url}</p>
+                  </>
+                ) : (
+                  <div className="text-gray-400 text-sm">정보 없음</div>
+                )}
+              </div>
+            </div>
 
             {/* 공유 링크 */}
-            {userCard?.id && (
-              <div className="text-center mt-6">
-                <p className="text-purple-600 text-sm font-medium">{getShareLink()}</p>
-              </div>
-            )}
+            <div className="text-center">
+              <p className="text-purple-600 text-sm font-medium">{getShareLink()}</p>
+            </div>
           </Card>
 
           {/* 액션 버튼들 */}

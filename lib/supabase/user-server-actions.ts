@@ -9,6 +9,19 @@ export interface UserProfile {
   role?: string
   profile_image_url?: string
   created_at: string
+  // 추가 필드들
+  birth_date?: string
+  mbti?: string
+  contact?: string
+  introduction?: string
+  external_link?: string
+  keywords?: string[]
+  personality_keywords?: string[]
+  interest_keywords?: string[]
+  work_field?: string
+  affiliation?: string
+  affiliation_type?: string
+  nickname?: string
 }
 
 export interface UserEvent {
@@ -40,6 +53,19 @@ export interface UserBusinessCard {
   is_public: boolean
   created_at: string
   updated_at: string
+  // 추가 필드들
+  full_name?: string
+  introduction?: string
+  mbti?: string
+  contact?: string
+  external_link?: string
+  keywords?: string[]
+  work_field?: string
+  profile_image_url?: string
+  birth_date?: string
+  personality_keywords?: string[]
+  interest_keywords?: string[]
+  role?: string
 }
 
 export interface UserNotification {
@@ -245,6 +271,18 @@ export async function getUserBusinessCardsData(): Promise<{
   try {
     const supabase = await createClient()
 
+    // 사용자 프로필에서 모든 필드 가져오기
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('사용자 프로필 가져오기 오류:', profileError)
+    }
+
+    // 명함 데이터 가져오기
     const { data: businessCards, error } = await supabase
       .from('business_cards')
       .select('*')
@@ -256,8 +294,11 @@ export async function getUserBusinessCardsData(): Promise<{
       throw new Error('명함 데이터를 불러올 수 없습니다.')
     }
 
+    // 사용자 프로필 데이터와 명함 데이터를 병합
+    const enrichedUser = userProfile ? { ...user, ...userProfile } : user
+
     return {
-      user,
+      user: enrichedUser,
       businessCards: businessCards || []
     }
   } catch (error) {
