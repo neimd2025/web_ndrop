@@ -1,7 +1,7 @@
 "use client"
 
-import { ArrowLeft, QrCode, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ArrowLeft, MoreHorizontal, QrCode } from "lucide-react"
 
 interface MobileHeaderProps {
   title?: string
@@ -21,7 +21,7 @@ export default function MobileHeader({
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
       <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center flex-1">
+        <div className="flex items-center justify-center flex-1">
           {showBackButton && (
             <Button variant="ghost" size="sm" onClick={onBack} className="mr-3 p-2 -ml-2">
               <ArrowLeft className="h-5 w-5" />
