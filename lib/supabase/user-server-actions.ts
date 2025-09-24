@@ -18,6 +18,7 @@ export interface UserProfile {
   keywords?: string[]
   personality_keywords?: string[]
   interest_keywords?: string[]
+  hobby_keywords?: string[]
   work_field?: string
   affiliation?: string
   affiliation_type?: string
@@ -65,6 +66,7 @@ export interface UserBusinessCard {
   birth_date?: string
   personality_keywords?: string[]
   interest_keywords?: string[]
+  hobby_keywords?: string[]
   role?: string
 }
 

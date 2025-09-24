@@ -33,6 +33,7 @@ const profileSchema = z.object({
   mbti: z.string().optional(),
   personality_keywords: z.array(z.string()).max(3, '성격 키워드는 최대 3개까지 선택할 수 있습니다'),
   interest_keywords: z.array(z.string()).max(3, '관심 키워드는 최대 3개까지 선택할 수 있습니다'),
+  hobby_keywords: z.array(z.string()).max(3, '취미는 최대 3개까지 선택할 수 있습니다'),
   introduction: z.string().max(500, '자기소개는 500자 이하여야 합니다'),
   external_link: z.string().url('올바른 URL 형식을 입력해주세요').optional().or(z.literal(''))
 })
@@ -126,6 +127,7 @@ export default function EditNamecardPage() {
       mbti: '',
       personality_keywords: [],
       interest_keywords: [],
+      hobby_keywords: [],
       introduction: '',
       external_link: ''
     }
@@ -145,6 +147,7 @@ export default function EditNamecardPage() {
       // 기존 keywords를 personality_keywords로 마이그레이션
       setValue('personality_keywords', profile.personality_keywords || profile.keywords || [])
       setValue('interest_keywords', profile.interest_keywords || [])
+      setValue('hobby_keywords', profile.hobby_keywords || [])
       setValue('introduction', profile.introduction || '')
       setValue('external_link', profile.external_link || '')
 
@@ -172,6 +175,12 @@ export default function EditNamecardPage() {
     '진로탐색', '자기계발', '지속가능성'
   ]
 
+  const hobbyOptions = [
+    '독서', '영화감상', '음악감상', '운동', '요리', '여행', '사진', '게임',
+    '등산', '자전거', '수영', '자기계발', '사람', '그림그리기', '악기연주',
+    '춤', '글쓰기', '쇼핑', '카페투어', '맛집탐방', '드라마', '웹툰', '만화'
+  ]
+
   const onSubmit = async (data: ProfileFormData) => {
     try {
       // 빈 문자열들을 null로 변환
@@ -183,9 +192,10 @@ export default function EditNamecardPage() {
         role: data.affiliation_type === '소속' ? (data.role || null) : null,
         work_field: data.affiliation_type === '미소속' ? (data.work_field || null) : null,
         contact: data.contact || null,
-        mbti: data.mbti || null,
+        mbti: data.mbti && data.mbti.trim() !== '' ? data.mbti : null,
         personality_keywords: data.personality_keywords.length > 0 ? data.personality_keywords : null,
         interest_keywords: data.interest_keywords.length > 0 ? data.interest_keywords : null,
+        hobby_keywords: data.hobby_keywords.length > 0 ? data.hobby_keywords : null,
         introduction: data.introduction || null,
         external_link: data.external_link || null,
         email: user?.email || '',
@@ -235,15 +245,15 @@ export default function EditNamecardPage() {
         // 기존 명함이 있으면 업데이트
         try {
           const businessCardUpdates = {
-            full_name: updatedProfile.full_name || undefined,
-            introduction: updatedProfile.introduction || undefined,
-            company: updatedProfile.affiliation || undefined,
-            role: updatedProfile.role || undefined,
-            work_field: updatedProfile.work_field || undefined,
-            contact: updatedProfile.contact || undefined,
-            mbti: updatedProfile.mbti || undefined,
-            keywords: updatedProfile.personality_keywords || undefined,
-            external_link: updatedProfile.external_link || undefined
+            full_name: updatedProfile.full_name || null,
+            introduction: updatedProfile.introduction || null,
+            company: updatedProfile.affiliation || null,
+            role: updatedProfile.role || null,
+            work_field: updatedProfile.work_field || null,
+            contact: updatedProfile.contact || null,
+            mbti: updatedProfile.mbti && updatedProfile.mbti.trim() !== '' ? updatedProfile.mbti : null,
+            keywords: updatedProfile.personality_keywords || null,
+            external_link: updatedProfile.external_link || null
           }
 
           await updateBusinessCard(userCard.id, businessCardUpdates)
@@ -261,7 +271,9 @@ export default function EditNamecardPage() {
   }
 
   const handleMBTISelect = (mbti: string) => {
-    setValue('mbti', mbti)
+    const currentMBTI = watch('mbti')
+    // 이미 선택된 MBTI를 다시 클릭하면 해제
+    setValue('mbti', currentMBTI === mbti ? '' : mbti)
   }
 
   const handlePersonalityToggle = (personality: string) => {
@@ -282,6 +294,16 @@ export default function EditNamecardPage() {
         ? [...currentKeywords, interest]
         : currentKeywords
     setValue('interest_keywords', newKeywords)
+  }
+
+  const handleHobbyToggle = (hobby: string) => {
+    const currentKeywords = watch('hobby_keywords')
+    const newKeywords = currentKeywords.includes(hobby)
+      ? currentKeywords.filter(p => p !== hobby)
+      : currentKeywords.length < 3
+        ? [...currentKeywords, hobby]
+        : currentKeywords
+    setValue('hobby_keywords', newKeywords)
   }
 
   return (
@@ -565,6 +587,28 @@ export default function EditNamecardPage() {
                 </div>
                 {errors.interest_keywords && (
                   <p className="text-red-500 text-sm mt-1">{errors.interest_keywords.message}</p>
+                )}
+              </div>
+
+              {/* 취미 키워드 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  취미 (선택, 최대 3개)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {hobbyOptions.map((hobby) => (
+                    <Badge
+                      key={hobby}
+                      variant={watch('hobby_keywords').includes(hobby) ? 'default' : 'outline'}
+                      className={`cursor-pointer ${watch('hobby_keywords').includes(hobby) ? 'bg-purple-600' : ''}`}
+                      onClick={() => handleHobbyToggle(hobby)}
+                    >
+                      {hobby}
+                    </Badge>
+                  ))}
+                </div>
+                {errors.hobby_keywords && (
+                  <p className="text-red-500 text-sm mt-1">{errors.hobby_keywords.message}</p>
                 )}
               </div>
 

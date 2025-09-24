@@ -86,14 +86,9 @@ export function UserMyNamecardClient({ user, businessCards }: UserMyNamecardClie
     return userCard?.interest_keywords || user?.interest_keywords || userCard?.keywords || user?.keywords || []
   }
 
-  // 취미 키워드 (keywords에서 일부를 취미로 사용)
+  // 취미 키워드
   const getHobbyKeywords = () => {
-    const allKeywords = userCard?.keywords || user?.keywords || []
-    // 취미 관련 키워드들
-    const hobbyKeywords = allKeywords.filter(keyword =>
-      ['독서', '영화감상', '음악감상', '운동', '요리', '여행', '사진', '게임', '등산', '자전거', '수영', '자기계발', '사람'].includes(keyword)
-    )
-    return hobbyKeywords.slice(0, 4) // 최대 4개
+    return userCard?.hobby_keywords || user?.hobby_keywords || []
   }
 
   // 외부 링크 정보
@@ -202,7 +197,7 @@ export function UserMyNamecardClient({ user, businessCards }: UserMyNamecardClie
               <div className="space-y-1 text-sm text-gray-500">
                 <p>{getAge() || ""}</p>
                 <p>{getWorkInfo() || ""}</p>
-                <p>MBTI: {getMBTI() || ""}</p>
+                <p>MBTI: {getMBTI()}</p>
                 <p>연락처: {getContact() || ""}</p>
               </div>
             </div>
@@ -245,7 +240,7 @@ export function UserMyNamecardClient({ user, businessCards }: UserMyNamecardClie
               <div className="flex flex-wrap gap-2 justify-center">
                 {getHobbyKeywords().length > 0 ? (
                   getHobbyKeywords().slice(0, 4).map((keyword, index) => (
-                    <Badge key={index} className="bg-gray-100 text-gray-800 border-gray-200 px-3 py-1 rounded-full text-sm">
+                    <Badge key={index} className="bg-white text-gray-800 border-gray-200 px-3 py-1 rounded-full text-sm">
                       {keyword}
                     </Badge>
                   ))
