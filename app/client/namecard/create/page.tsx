@@ -8,8 +8,9 @@ import { userProfileAPI } from '@/lib/supabase/database'
 import { createClient } from '@/utils/supabase/client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Camera, User } from 'lucide-react'
+import { ArrowLeft, Camera, User, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -40,6 +41,8 @@ type ProfileFormData = z.infer<typeof profileSchema>
 export default function CreateNamecardPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const [profileImage, setProfileImage] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   // SimpleUserLayout에서 이미 명함 체크를 했으므로 여기 도달했다면 명함 생성이 필요한 상태
   // useUserProfile 훅 사용하지 않음 (중복 쿼리 방지)
@@ -101,6 +104,39 @@ export default function CreateNamecardPage() {
     }
 
     try {
+      let profileImageUrl = null
+
+      // 이미지가 선택된 경우 업로드
+      if (selectedFile) {
+        setIsUploading(true)
+        try {
+          const formData = new FormData()
+          formData.append('file', selectedFile)
+
+          const response = await fetch('/api/user/upload-profile-image', {
+            method: 'POST',
+            body: formData
+          })
+
+          const result = await response.json()
+
+          if (!response.ok) {
+            throw new Error(result.error || '이미지 업로드에 실패했습니다.')
+          }
+
+          profileImageUrl = result.publicUrl
+          console.log('이미지 업로드 성공:', profileImageUrl)
+        } catch (error) {
+          console.error('이미지 업로드 오류:', error)
+          console.error('오류 상세:', JSON.stringify(error, null, 2))
+
+          // 이미지 업로드 실패해도 명함 생성은 계속 진행
+          toast.warning('이미지 업로드에 실패했지만 명함 생성은 계속됩니다.')
+          profileImageUrl = null
+        } finally {
+          setIsUploading(false)
+        }
+      }
       // 빈 문자열들을 null로 변환
       const cleanedData = {
         full_name: data.full_name,
@@ -118,7 +154,7 @@ export default function CreateNamecardPage() {
         email: user.email || '',
         company: data.affiliation_type === '소속' ? (data.affiliation || null) : null,
         keywords: data.personality_keywords.length > 0 ? data.personality_keywords : null,
-        profile_image_url: null,
+        profile_image_url: profileImageUrl,
         nickname: data.full_name,
         qr_code_url: null,
         role_id: 1, // 클라이언트 사용자
@@ -197,6 +233,36 @@ export default function CreateNamecardPage() {
     setValue('interest_keywords', newKeywords)
   }
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // 파일 크기 체크 (5MB 제한)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('파일 크기는 5MB 이하여야 합니다.')
+      return
+    }
+
+    // 파일 타입 체크
+    if (!file.type.startsWith('image/')) {
+      toast.error('이미지 파일만 업로드 가능합니다.')
+      return
+    }
+
+    setSelectedFile(file)
+
+    // 미리보기를 위한 URL 생성
+    const imageUrl = URL.createObjectURL(file)
+    setProfileImage(imageUrl)
+  }
+
+  const handleRemoveImage = () => {
+    setProfileImage(null)
+    setSelectedFile(null)
+  }
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* 헤더 */}
@@ -223,16 +289,38 @@ export default function CreateNamecardPage() {
         >
           {/* 프로필 사진 섹션 */}
           <div className="text-center mb-8">
-            <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center relative">
-              <User className="w-12 h-12 text-gray-600" />
-              <Button
-                size="sm"
-                className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 hover:bg-purple-700 rounded-full"
-              >
+            <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center relative ">
+              {profileImage ? (
+                <>
+                  <img
+                    src={profileImage}
+                    alt="프로필"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    onClick={handleRemoveImage}
+                    className="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </>
+              ) : (
+                <User className="w-12 h-12 text-gray-600" />
+              )}
+              <label className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 hover:bg-purple-700 rounded-full cursor-pointer flex items-center justify-center">
                 <Camera className="w-4 h-4 text-white" />
-              </Button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                  disabled={isUploading}
+                />
+              </label>
             </div>
-            <p className="text-purple-600 text-sm font-medium">프로필 사진 추가(선택)</p>
+            <p className="text-purple-600 text-sm font-medium">
+              {isUploading ? '업로드 중...' : '프로필 사진 추가(선택)'}
+            </p>
           </div>
 
           {/* 제목과 설명 */}
