@@ -45,6 +45,7 @@ export interface UserBusinessCard {
   template_id?: string
   name: string
   company: string
+  affiliation?: string
   title: string
   email: string
   phone?: string

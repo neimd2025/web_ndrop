@@ -52,7 +52,7 @@ export function UserMyNamecardClient({ user, businessCards }: UserMyNamecardClie
   const getWorkInfo = () => {
     const workField = userCard?.work_field || user?.work_field || ""
     const role = userCard?.title || user?.role || ""
-    const company = userCard?.company || user?.company || ""
+    const company = userCard?.company || userCard?.affiliation || user?.company || user?.affiliation || ""
 
     if (workField && role) {
       return `${workField} / ${role}`

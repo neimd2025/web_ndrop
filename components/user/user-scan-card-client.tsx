@@ -133,7 +133,7 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
     }
 
     setIsScanning(true)
-  }, [user.id, router])
+  }, [user?.id, router])
 
   // QR 코드 스캔
   const scanQRCode = useCallback(() => {

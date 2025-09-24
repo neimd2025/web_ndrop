@@ -48,6 +48,7 @@ export type Database = {
       }
       business_cards: {
         Row: {
+          affiliation: string | null
           company: string | null
           contact: string | null
           created_at: string | null
@@ -68,6 +69,7 @@ export type Database = {
           work_field: string | null
         }
         Insert: {
+          affiliation?: string | null
           company?: string | null
           contact?: string | null
           created_at?: string | null
@@ -88,6 +90,7 @@ export type Database = {
           work_field?: string | null
         }
         Update: {
+          affiliation?: string | null
           company?: string | null
           contact?: string | null
           created_at?: string | null
