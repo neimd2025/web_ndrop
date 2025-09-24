@@ -58,16 +58,7 @@ export async function POST(request: NextRequest) {
     // JWT 토큰에서 관리자 ID 가져오기
     const adminAccountId = decoded.adminId // admin_accounts의 ID
 
-    // user_profiles에서 해당 관리자 찾기
-    const { data: adminProfile } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('email', `${decoded.username}@admin.local`)
-      .single()
-
-    const adminProfileId = adminProfile?.id || null
-
-    // 이벤트 생성 (created_by에 관리자 ID 설정)
+    // 이벤트 생성 (관리자가 생성하므로 created_by는 null로 설정)
     const { data: event, error: eventError } = await supabase
       .from('events')
       .insert({
@@ -83,7 +74,7 @@ export async function POST(request: NextRequest) {
         organizer_email: `${decoded.username}@admin.local`,
         organizer_phone: '02-1234-5678',
         organizer_kakao: '@neimed_official',
-        created_by: adminProfileId, // 관리자 프로필 ID 설정 (없으면 null)
+        created_by: null, // 관리자가 생성하므로 null로 설정
         status: 'upcoming',
         current_participants: 0,
         // 새로운 필드들
@@ -109,11 +100,50 @@ export async function POST(request: NextRequest) {
         organizer_email: `${decoded.username}@admin.local`,
         organizer_phone: '02-1234-5678',
         organizer_kakao: '@neimed_official',
-        created_by: adminProfileId,
+        created_by: null,
         status: 'upcoming',
         current_participants: 0
       })
       return NextResponse.json({ error: `이벤트 생성 중 오류가 발생했습니다: ${eventError.message}` }, { status: 500 })
+    }
+
+    // 새로운 이벤트 알림을 모든 사용자에게 전송
+    try {
+      const { data: allUsers } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .limit(100) // 성능을 위해 최대 100명에게만 전송
+
+      if (allUsers && allUsers.length > 0) {
+        const notifications = allUsers.map(user => ({
+          title: '새로운 네트워킹 이벤트',
+          message: `${event.title}이 ${new Date(event.start_date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}에 열립니다. 지금 참가신청하세요!`,
+          notification_type: 'event_created',
+          target_type: 'specific',
+          user_id: user.id,
+          related_event_id: event.id,
+          metadata: {
+            event_title: event.title,
+            event_date: new Date(event.start_date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }),
+            action: 'created'
+          },
+          sent_by: null
+        }))
+
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert(notifications)
+
+        if (notificationError) {
+          console.error('새 이벤트 알림 생성 오류:', notificationError)
+          // 알림 생성 실패해도 이벤트 생성은 성공으로 처리
+        } else {
+          console.log(`${allUsers.length}명에게 새 이벤트 알림 전송 완료`)
+        }
+      }
+    } catch (notificationError) {
+      console.error('새 이벤트 알림 생성 오류:', notificationError)
+      // 알림 생성 실패해도 이벤트 생성은 성공으로 처리
     }
 
     return NextResponse.json({

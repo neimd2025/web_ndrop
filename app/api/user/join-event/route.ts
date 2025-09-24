@@ -89,6 +89,46 @@ export async function POST(request: NextRequest) {
       console.log('참가자 수 업데이트 성공:', currentParticipants + 1)
     }
 
+    // 이벤트 참가 알림 생성
+    console.log('이벤트 참가 알림 생성 시작:', {
+      userId,
+      eventId: event.id,
+      eventTitle: event.title
+    })
+
+    try {
+      const notificationData = {
+        title: '이벤트 참가',
+        message: `${event.title}에 참가했습니다`,
+        target_type: 'specific',
+        user_id: userId,
+        target_event_id: event.id,
+        notification_type: 'event_joined',
+        metadata: {
+          event_title: event.title,
+          action: 'joined'
+        }
+      }
+
+      console.log('알림 데이터:', notificationData)
+
+      const { data: notification, error: notificationError } = await supabase
+        .from('notifications')
+        .insert(notificationData)
+        .select()
+        .single()
+
+      if (notificationError) {
+        console.error('이벤트 참가 알림 생성 오류:', notificationError)
+        // 알림 생성 실패해도 참가는 성공으로 처리
+      } else {
+        console.log('✅ 이벤트 참가 알림 생성 성공:', notification)
+      }
+    } catch (notificationError) {
+      console.error('이벤트 참가 알림 생성 오류:', notificationError)
+      // 알림 생성 실패해도 참가는 성공으로 처리
+    }
+
     return NextResponse.json({
       success: true,
       participant,

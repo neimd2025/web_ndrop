@@ -45,6 +45,7 @@ export interface UserBusinessCard {
   template_id?: string
   name: string
   company: string
+  affiliation?: string
   title: string
   email: string
   phone?: string
@@ -80,6 +81,11 @@ export interface UserNotification {
   sent_by?: string
   read_at?: string
   created_at: string
+  notification_type: 'announcement' | 'business_card_collected' | 'event_joined' | 'event_created' | 'profile_updated' | 'system'
+  metadata?: Record<string, any>
+  related_user_id?: string
+  related_business_card_id?: string
+  related_event_id?: string
 }
 
 export interface UserEventParticipation {
@@ -314,16 +320,36 @@ export async function getUserNotificationsData(): Promise<{
   try {
     const supabase = await createClient()
 
-    const { data: notifications, error } = await supabase
+    // 모든 알림을 가져와서 필터링
+    const { data: allNotifications, error } = await supabase
       .from('notifications')
       .select('*')
-      .or(`target_type.eq.all,user_id.eq.${user.id}`)
       .order('created_at', { ascending: false })
 
     if (error) {
       console.error('알림 데이터 가져오기 오류:', error)
       throw new Error('알림 데이터를 불러올 수 없습니다.')
     }
+
+    // 사용자에게 보여줄 알림 필터링
+    const notifications = allNotifications?.filter(notification => {
+      // 전체 대상 알림이거나
+      if (notification.target_type === 'all') {
+        return true
+      }
+
+      // 특정 사용자 대상 알림인 경우 (실제 스키마에 맞춤)
+      if (notification.target_type === 'specific') {
+        return notification.user_id === user.id
+      }
+
+      // event_participants 타입도 확인 (관리자 공지용)
+      if (notification.target_type === 'event_participants') {
+        return true
+      }
+
+      return false
+    }) || []
 
     return {
       user,
@@ -405,6 +431,7 @@ export async function getUserSavedCardsData(): Promise<{
         business_card:business_cards(*)
       `)
       .eq('collector_id', user.id)
+      .not('business_cards.user_id', 'eq', user.id)
       .order('collected_at', { ascending: false })
 
     if (error) {

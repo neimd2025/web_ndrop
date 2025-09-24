@@ -256,7 +256,24 @@ export default function EditNamecardPage() {
             external_link: updatedProfile.external_link || null
           }
 
-          await updateBusinessCard(userCard.id, businessCardUpdates)
+          // 서버 API를 통해 명함 업데이트
+          const response = await fetch('/api/auth/update-business-card', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              cardId: userCard.id,
+              updates: businessCardUpdates
+            })
+          })
+
+          if (!response.ok) {
+            throw new Error('명함 업데이트 API 호출 실패')
+          }
+
+          const result = await response.json()
+          console.log('명함 업데이트 성공:', result)
         } catch (cardError) {
           console.error('명함 업데이트 오류:', cardError)
           toast.error('일부 정보 업데이트에 실패했습니다.')
