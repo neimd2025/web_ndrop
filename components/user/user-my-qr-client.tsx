@@ -3,9 +3,10 @@
 import MobileHeader from "@/components/mobile-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { UserProfile, UserBusinessCard } from '@/lib/supabase/user-server-actions'
+import { UserBusinessCard, UserProfile } from '@/lib/supabase/user-server-actions'
 import { generateQRCodeUrl } from "@/lib/utils"
-import { Download, MapPin, Share } from "lucide-react"
+import { Download, Share } from "lucide-react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import QRCode from "qrcode"
 import { useEffect, useState } from "react"
@@ -104,26 +105,27 @@ export function UserMyQRClient({ user, businessCards }: UserMyQRClientProps) {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-24">
-      <MobileHeader title="내 QR코드" showMenuButton />
+    <div className="min-h-screen bg-[#] pb-24">
+      <MobileHeader title="내 QR코드" />
 
-      <div className="px-4 py-6 space-y-6">
+      <div className="px-5 py-6 space-y-6">
         {/* QR 코드 카드 */}
-        <Card className="border border-gray-200 shadow-sm">
+        <Card className="border border-gray-200 shadow-md">
           <CardContent className="p-6 text-center">
             <div className="mb-6">
               <h2 className="text-xl font-bold text-gray-900 mb-2">
                 {getUserDisplayName()}
               </h2>
               <p className="text-gray-600 text-sm">
-                {getUserCompanyInfo()}
+                {/* {getUserCompanyInfo()} */}
+                QR코드를 스캔하면 내 명함을 볼 수 있어요
               </p>
             </div>
 
             {/* QR 코드 */}
             <div className="flex justify-center mb-6">
               {qrCodeDataURL ? (
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <div className="bg-white p-4 rounded-xl shadow-sm ">
                   <img
                     src={qrCodeDataURL}
                     alt="QR Code"
@@ -150,14 +152,14 @@ export function UserMyQRClient({ user, businessCards }: UserMyQRClientProps) {
             )}
 
             {/* 액션 버튼들 */}
-            <div className="space-y-3">
+            <div className="flex justify-between items-center gap-2">
               <Button
                 onClick={handleShare}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                 disabled={!qrUrl}
               >
-                <Share className="w-4 h-4 mr-2" />
-                공유하기
+                <Share className="w-4 h-4" />
+                공유
               </Button>
 
               <Button
@@ -166,7 +168,7 @@ export function UserMyQRClient({ user, businessCards }: UserMyQRClientProps) {
                 className="w-full border-gray-200"
                 disabled={!qrCodeDataURL}
               >
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="w-4 h-4 " />
                 QR 코드 저장
               </Button>
             </div>
@@ -174,18 +176,18 @@ export function UserMyQRClient({ user, businessCards }: UserMyQRClientProps) {
         </Card>
 
         {/* 사용법 안내 */}
-        <Card className="border border-gray-200 shadow-sm">
+        <Card className="border bg-[#F5F0FF] border-gray-200 shadow-sm">
           <CardContent className="p-4">
-            <div className="flex items-start space-x-3">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <MapPin className="w-4 h-4 text-blue-600" />
+            <div className="flex flex-col items-start">
+              <div className="flex items-center gap-2">
+                <Image src="/images/icon/tip.png" alt="QR 코드 팁" width={12} height={12} className="pb-2" />
+                <h3 className="font-semibold text-gray-900 mb-2">QR 코드 팁</h3>
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">사용법</h3>
+              <div className="pl-4">
                 <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• 상대방에게 QR 코드를 보여주세요</li>
-                  <li>• 상대방이 카메라로 스캔하면 내 명함을 볼 수 있어요</li>
-                  <li>• QR 코드를 저장해서 인쇄물에도 사용할 수 있어요</li>
+                  <li>상대방에게 QR 코드를 보여주세요</li>
+                  <li>상대방이 카메라로 스캔하면 내 명함을 볼 수 있어요</li>
+                  <li>QR 코드를 저장해서 인쇄물에도 사용할 수 있어요</li>
                 </ul>
               </div>
             </div>
