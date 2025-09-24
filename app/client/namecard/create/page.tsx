@@ -8,7 +8,7 @@ import { userProfileAPI } from '@/lib/supabase/database'
 import { createClient } from '@/utils/supabase/client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { Camera, User } from 'lucide-react'
+import { ArrowLeft, Camera, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -198,14 +198,28 @@ export default function CreateNamecardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-8">
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* 헤더 */}
+      <div className="bg-white border-b border-gray-200 px-5 py-4">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => router.back()}
+            className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
+          </button>
+          <h1 className="text-lg font-semibold text-gray-900 ml-2">명함 만들기</h1>
+          <div className="w-10"></div>
+        </div>
+      </div>
+
       {/* 메인 콘텐츠 */}
-      <div className="px-5 py-6">
+      <div className="flex-1 px-5 py-6 pb-24 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="max-w-md mx-auto"
+          className="w-full"
         >
           {/* 프로필 사진 섹션 */}
           <div className="text-center mb-8">
@@ -265,16 +279,13 @@ export default function CreateNamecardPage() {
 
             {/* 소속 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                소속
-              </label>
-              <div className="flex gap-2 mb-3">
+              <div className="flex gap-2 mb-3 w-full">
                 <Button
                   type="button"
                   variant={watch('affiliation_type') === '소속' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setValue('affiliation_type', '소속')}
-                  className={watch('affiliation_type') === '소속' ? 'bg-purple-600' : ''}
+                  className={`flex-1 ${watch('affiliation_type') === '소속' ? 'bg-purple-600' : ''}`}
                 >
                   소속
                 </Button>
@@ -283,17 +294,22 @@ export default function CreateNamecardPage() {
                   variant={watch('affiliation_type') === '미소속' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setValue('affiliation_type', '미소속')}
-                  className={watch('affiliation_type') === '미소속' ? 'bg-purple-600' : ''}
+                  className={`flex-1 ${watch('affiliation_type') === '미소속' ? 'bg-purple-600' : ''}`}
                 >
                   미소속
                 </Button>
               </div>
               {watch('affiliation_type') === '소속' && (
+                <>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  소속
+                  </label>
                 <Input
                   {...register('affiliation')}
                   placeholder="예: 네이버"
                   className={errors.affiliation ? 'border-red-500' : ''}
                 />
+                </>
               )}
               {errors.affiliation && (
                 <p className="text-red-500 text-sm mt-1">{errors.affiliation.message}</p>
@@ -377,7 +393,7 @@ export default function CreateNamecardPage() {
                   <Badge
                     key={personality}
                     variant={watch('personality_keywords').includes(personality) ? 'default' : 'outline'}
-                    className={`cursor-pointer ${watch('personality_keywords').includes(personality) ? 'bg-purple-600' : ''}`}
+                    className={`cursor-pointer h-[30px] ${watch('personality_keywords').includes(personality) ? 'bg-purple-600' : ''}`}
                     onClick={() => handlePersonalityToggle(personality)}
                   >
                     {personality}
@@ -399,7 +415,7 @@ export default function CreateNamecardPage() {
                   <Badge
                     key={interest}
                     variant={watch('interest_keywords').includes(interest) ? 'default' : 'outline'}
-                    className={`cursor-pointer ${watch('interest_keywords').includes(interest) ? 'bg-purple-600' : ''}`}
+                    className={`cursor-pointer h-[30px] ${watch('interest_keywords').includes(interest) ? 'bg-purple-600' : ''}`}
                     onClick={() => handleInterestToggle(interest)}
                   >
                     {interest}
@@ -444,16 +460,19 @@ export default function CreateNamecardPage() {
               )}
             </div>
 
-            {/* 제출 버튼 */}
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-medium"
-            >
-              {isSubmitting ? '생성 중...' : '명함 생성하기'}
-            </Button>
           </form>
         </motion.div>
+      </div>
+
+      {/* 하단 고정 버튼 */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-5 py-4 max-w-md mx-auto">
+        <Button
+          onClick={handleSubmit(onSubmit)}
+          disabled={isSubmitting}
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-medium"
+        >
+          {isSubmitting ? '생성 중...' : '명함 생성하기'}
+        </Button>
       </div>
     </div>
   )
