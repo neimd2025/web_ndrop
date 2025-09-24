@@ -161,7 +161,7 @@ export default function AdminSignupPage() {
           {/* 프로필 이미지 섹션 */}
           <div className="text-center mb-6">
             <div
-              className="relative w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center overflow-hidden cursor-pointer hover:bg-gray-200 transition-colors"
+              className="relative w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center  cursor-pointer hover:bg-gray-200 transition-colors"
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
@@ -229,7 +229,7 @@ export default function AdminSignupPage() {
 
             <div>
               <Label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                사용자명
+                아이디
               </Label>
               <div className="mt-1 relative">
                 <Input
