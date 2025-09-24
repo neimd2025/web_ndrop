@@ -13,7 +13,7 @@ import { toast } from "sonner"
 import { z } from 'zod'
 
 const adminLoginSchema = z.object({
-  username: z.string().min(3, '사용자명은 3자 이상이어야 합니다'),
+  username: z.string().min(3, '아이디은 3자 이상이어야 합니다'),
   password: z.string().min(1, '비밀번호를 입력해주세요')
 })
 
@@ -97,7 +97,7 @@ export default function AdminLoginPage() {
       const result = await response.json()
 
       if (!response.ok) {
-        toast.error(result.error || '로그인에 실패했습니다. 사용자명과 비밀번호를 확인해주세요.')
+        toast.error(result.error || '로그인에 실패했습니다. 아이디과 비밀번호를 확인해주세요.')
         return
       }
 
@@ -164,7 +164,7 @@ export default function AdminLoginPage() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                사용자명
+                아이디
               </Label>
               <div className="mt-1 relative">
                 <Input

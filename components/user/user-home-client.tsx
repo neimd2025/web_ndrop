@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
+import { useUserProfile } from '@/hooks/use-user-profile'
 import { businessCardAPI, collectedCardAPI } from '@/lib/supabase/database'
 import { UserEvent, UserNotification, UserProfile } from '@/lib/supabase/user-server-actions'
 import { Calendar, Camera, Star } from 'lucide-react'
@@ -27,6 +28,7 @@ export function UserHomeClient({
   recentNotifications: initialNotifications,
   businessCardStats: initialStats
 }: UserHomeClientProps = {}) {
+  const { profile } = useUserProfile()
   const [user, setUser] = useState<UserProfile | null>(initialUser || null)
   const [events, setEvents] = useState<UserEvent[]>(initialEvents || [])
   const [notifications, setNotifications] = useState<UserNotification[]>(initialNotifications || [])
@@ -163,7 +165,7 @@ export function UserHomeClient({
   return (
     <div className="min-h-screen">
       {/* 헤더 섹션 */}
-      <div className="bg-white border-b border-gray-200 px-5 py-10">
+      <div className="bg-white border-b border-gray-200 px-5 pt-10 pb-5">
         <div className="flex items-center gap-3 mb-4">
           {/* 프로필 아바타 */}
           <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-500 rounded-full flex items-center justify-center">
@@ -183,18 +185,18 @@ export function UserHomeClient({
         {/* 액션 버튼들 */}
         <div className="flex gap-3">
           <Link href="/client/scan-card" className="flex-1">
-            <Card className="bg-purple-600 text-white border-0 hover:bg-purple-700 transition-colors">
+            <Card className="bg-purple-600 text-white border-0 hover:bg-purple-700 transition-colors h-[87px]">
               <CardContent className="p-5 text-center">
-                <Camera className="w-4 h-4 mx-auto mb-4 text-white" />
+                <Camera className="w-4 h-4 mx-auto mb-2 text-white" />
                 <p className="text-sm">명함 스캔</p>
               </CardContent>
             </Card>
           </Link>
 
           <Link href="/client/events/join" className="flex-1">
-            <Card className="bg-white border border-gray-200 hover:border-gray-300 transition-colors">
+            <Card className="bg-white border border-gray-200 hover:border-gray-300 transition-colors h-[87px]">
               <CardContent className="p-5 text-center">
-                <Calendar className="w-4 h-4 mx-auto mb-4 text-gray-700" />
+                <Calendar className="w-4 h-4 mx-auto mb-2 text-gray-700" />
                 <p className="text-sm text-gray-700">행사참가</p>
               </CardContent>
             </Card>
@@ -206,7 +208,7 @@ export function UserHomeClient({
       <div className="px-5 py-6 space-y-6">
         {/* 통계 카드들 */}
         <div className="flex gap-3">
-          <Card className="flex-1 bg-white border border-gray-200 shadow-sm">
+          <Card className="flex-1 bg-white border border-gray-200 shadow-md">
             <CardContent className="p-4 flex justify-between items-center">
               <div>
                 <p className="text-2xl font-bold text-gray-900">{businessCardStats.totalViews}</p>
@@ -216,7 +218,7 @@ export function UserHomeClient({
             </CardContent>
           </Card>
 
-          <Card className="flex-1 bg-white border border-gray-200 shadow-sm">
+          <Card className="flex-1 bg-white border border-gray-200 shadow-md">
             <CardContent className="p-4 flex justify-between items-center">
               <div>
                 <p className="text-2xl font-bold text-gray-900">
@@ -230,10 +232,10 @@ export function UserHomeClient({
         </div>
 
         {/* 내 명함 섹션 */}
-        <Card className="bg-white border border-gray-200 shadow-sm">
+        <Card className="bg-white border border-gray-200 shadow-md">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">내 명함</h2>
+              <h2 className="text-lg font-bold text-[]">내 명함</h2>
               <Link href="/client/my-qr">
                 <Button variant="ghost" size="sm" className="text-purple-600 hover:text-purple-700">
                   내 QR코드
@@ -242,13 +244,26 @@ export function UserHomeClient({
             </div>
             <Link href="/client/my-namecard">
               <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                  <span className="text-gray-600 font-bold text-lg">{getInitial()}</span>
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-500 rounded-full flex items-center justify-center overflow-hidden">
+                  {profile?.profile_image_url ? (
+                    <img
+                      src={profile.profile_image_url}
+                      alt="프로필"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-white font-bold text-lg">{getInitial()}</span>
+                  )}
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">{getDisplayName()}</h3>
                   <p className="text-sm text-gray-600">
-                    {`${userCard?.role || '직책'} / ${userCard?.company || '회사'}`}
+                    {userCard?.role && userCard?.company
+                      ? `${userCard.role} / ${userCard.company}`
+                      : userCard?.work_field
+                        ? userCard.work_field
+                        : '프로필을 완성해주세요'
+                    }
                   </p>
                 </div>
               </div>
@@ -257,7 +272,7 @@ export function UserHomeClient({
         </Card>
 
         {/* 내 이벤트 참가 기록 섹션 */}
-        <Card className="bg-white border border-gray-200 shadow-sm">
+        <Card className="bg-white border border-gray-200 shadow-md">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-gray-900">내 이벤트 참가 기록</h2>

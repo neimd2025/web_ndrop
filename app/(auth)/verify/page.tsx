@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ROLE_IDS, ROLE_NAMES, isAdminEmail } from '@/lib/constants'
 import { createClient } from '@/utils/supabase/client'
 import { CheckCircle, Mail, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
@@ -102,18 +101,18 @@ export default function VerifyPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 flex items-center justify-center px-4">
+      <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm border-0 shadow-xl">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Mail className="w-8 h-8 text-green-600" />
+          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Mail className="w-8 h-8 text-purple-600" />
           </div>
           <CardTitle className="text-xl font-bold text-gray-900">이메일 인증</CardTitle>
           <p className="text-gray-600">
             {email ? `${email}로 전송된 6자리 인증 코드를 입력해주세요.` : '이메일 인증이 필요합니다.'}
           </p>
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-700">
+          <div className="mt-4 p-3 bg-purple-50 rounded-lg">
+            <p className="text-sm text-purple-700">
               💡 이메일이 오지 않는다면 스팸함을 확인해주세요.
             </p>
           </div>
@@ -140,7 +139,7 @@ export default function VerifyPage() {
             <Button
               type="submit"
               disabled={loading || code.length !== 6}
-              className="w-full bg-green-600 hover:bg-green-700"
+              className="w-full bg-purple-600 hover:bg-purple-700"
             >
               {loading ? (
                 <div className="flex items-center">
@@ -182,7 +181,7 @@ export default function VerifyPage() {
                 <li>• 이메일 주소가 정확한지 확인</li>
                 <li>• 몇 분 후 다시 시도</li>
               </ul>
-              <Link href="/login" className="text-blue-600 hover:underline block mt-2">
+              <Link href="/login" className="text-purple-600 hover:underline block mt-2">
                 로그인 페이지로 돌아가기
               </Link>
             </div>

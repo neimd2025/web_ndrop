@@ -8,8 +8,9 @@ import { userProfileAPI } from '@/lib/supabase/database'
 import { createClient } from '@/utils/supabase/client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { Camera, User } from 'lucide-react'
+import { ArrowLeft, Camera, User, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -31,6 +32,7 @@ const profileSchema = z.object({
   mbti: z.string().optional(),
   personality_keywords: z.array(z.string()).max(3, '성격 키워드는 최대 3개까지 선택할 수 있습니다'),
   interest_keywords: z.array(z.string()).max(3, '관심 키워드는 최대 3개까지 선택할 수 있습니다'),
+  hobby_keywords: z.array(z.string()).max(3, '취미는 최대 3개까지 선택할 수 있습니다'),
   introduction: z.string().max(500, '자기소개는 500자 이하여야 합니다'),
   external_link: z.string().url('올바른 URL 형식을 입력해주세요').optional().or(z.literal(''))
 })
@@ -40,6 +42,8 @@ type ProfileFormData = z.infer<typeof profileSchema>
 export default function CreateNamecardPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const [profileImage, setProfileImage] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   // SimpleUserLayout에서 이미 명함 체크를 했으므로 여기 도달했다면 명함 생성이 필요한 상태
   // useUserProfile 훅 사용하지 않음 (중복 쿼리 방지)
@@ -63,6 +67,7 @@ export default function CreateNamecardPage() {
       mbti: '',
       personality_keywords: [],
       interest_keywords: [],
+      hobby_keywords: [],
       introduction: '',
       external_link: ''
     }
@@ -87,6 +92,12 @@ export default function CreateNamecardPage() {
     '진로탐색', '자기계발', '지속가능성'
   ]
 
+  const hobbyOptions = [
+    '독서', '영화감상', '음악감상', '운동', '요리', '여행', '사진', '게임',
+    '등산', '자전거', '수영', '자기계발', '사람', '그림그리기', '악기연주',
+    '춤', '글쓰기', '쇼핑', '카페투어', '맛집탐방', '드라마', '웹툰', '만화'
+  ]
+
   const onSubmit = async (data: ProfileFormData) => {
     console.log('=== 명함 생성 시작 ===')
     console.log('로그인된 사용자:', user)
@@ -101,6 +112,39 @@ export default function CreateNamecardPage() {
     }
 
     try {
+      let profileImageUrl = null
+
+      // 이미지가 선택된 경우 업로드
+      if (selectedFile) {
+        setIsUploading(true)
+        try {
+          const formData = new FormData()
+          formData.append('file', selectedFile)
+
+          const response = await fetch('/api/user/upload-profile-image', {
+            method: 'POST',
+            body: formData
+          })
+
+          const result = await response.json()
+
+          if (!response.ok) {
+            throw new Error(result.error || '이미지 업로드에 실패했습니다.')
+          }
+
+          profileImageUrl = result.publicUrl
+          console.log('이미지 업로드 성공:', profileImageUrl)
+        } catch (error) {
+          console.error('이미지 업로드 오류:', error)
+          console.error('오류 상세:', JSON.stringify(error, null, 2))
+
+          // 이미지 업로드 실패해도 명함 생성은 계속 진행
+          toast.warning('이미지 업로드에 실패했지만 명함 생성은 계속됩니다.')
+          profileImageUrl = null
+        } finally {
+          setIsUploading(false)
+        }
+      }
       // 빈 문자열들을 null로 변환
       const cleanedData = {
         full_name: data.full_name,
@@ -110,15 +154,16 @@ export default function CreateNamecardPage() {
         role: data.affiliation_type === '소속' ? (data.role || null) : null,
         work_field: data.affiliation_type === '미소속' ? (data.work_field || null) : null,
         contact: data.contact || null,
-        mbti: data.mbti || null,
+        mbti: data.mbti && data.mbti.trim() !== '' ? data.mbti : null,
         personality_keywords: data.personality_keywords.length > 0 ? data.personality_keywords : null,
         interest_keywords: data.interest_keywords.length > 0 ? data.interest_keywords : null,
+        hobby_keywords: data.hobby_keywords.length > 0 ? data.hobby_keywords : null,
         introduction: data.introduction || null,
         external_link: data.external_link || null,
         email: user.email || '',
         company: data.affiliation_type === '소속' ? (data.affiliation || null) : null,
         keywords: data.personality_keywords.length > 0 ? data.personality_keywords : null,
-        profile_image_url: null,
+        profile_image_url: profileImageUrl,
         nickname: data.full_name,
         qr_code_url: null,
         role_id: 1, // 클라이언트 사용자
@@ -174,7 +219,9 @@ export default function CreateNamecardPage() {
   }
 
   const handleMBTISelect = (mbti: string) => {
-    setValue('mbti', mbti)
+    const currentMBTI = watch('mbti')
+    // 이미 선택된 MBTI를 다시 클릭하면 해제
+    setValue('mbti', currentMBTI === mbti ? '' : mbti)
   }
 
   const handlePersonalityToggle = (personality: string) => {
@@ -197,28 +244,104 @@ export default function CreateNamecardPage() {
     setValue('interest_keywords', newKeywords)
   }
 
+  const handleHobbyToggle = (hobby: string) => {
+    const currentKeywords = watch('hobby_keywords')
+    const newKeywords = currentKeywords.includes(hobby)
+      ? currentKeywords.filter(p => p !== hobby)
+      : currentKeywords.length < 3
+        ? [...currentKeywords, hobby]
+        : currentKeywords
+    setValue('hobby_keywords', newKeywords)
+  }
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // 파일 크기 체크 (5MB 제한)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('파일 크기는 5MB 이하여야 합니다.')
+      return
+    }
+
+    // 파일 타입 체크
+    if (!file.type.startsWith('image/')) {
+      toast.error('이미지 파일만 업로드 가능합니다.')
+      return
+    }
+
+    setSelectedFile(file)
+
+    // 미리보기를 위한 URL 생성
+    const imageUrl = URL.createObjectURL(file)
+    setProfileImage(imageUrl)
+  }
+
+  const handleRemoveImage = () => {
+    setProfileImage(null)
+    setSelectedFile(null)
+  }
+
   return (
-    <div className="min-h-screen bg-white pb-8">
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* 헤더 */}
+      <div className="bg-white border-b border-gray-200 px-5 py-4">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => router.back()}
+            className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
+          </button>
+          <h1 className="text-lg font-semibold text-gray-900 ml-2">명함 만들기</h1>
+          <div className="w-10"></div>
+        </div>
+      </div>
+
       {/* 메인 콘텐츠 */}
-      <div className="px-5 py-6">
+      <div className="flex-1 px-5 py-6 pb-24 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="max-w-md mx-auto"
+          className="w-full"
         >
           {/* 프로필 사진 섹션 */}
           <div className="text-center mb-8">
-            <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center relative">
-              <User className="w-12 h-12 text-gray-600" />
-              <Button
-                size="sm"
-                className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 hover:bg-purple-700 rounded-full"
-              >
+            <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center relative ">
+              {profileImage ? (
+                <>
+                  <img
+                    src={profileImage}
+                    alt="프로필"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    onClick={handleRemoveImage}
+                    className="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </>
+              ) : (
+                <User className="w-12 h-12 text-gray-600" />
+              )}
+              <label className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 hover:bg-purple-700 rounded-full cursor-pointer flex items-center justify-center">
                 <Camera className="w-4 h-4 text-white" />
-              </Button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                  disabled={isUploading}
+                />
+              </label>
             </div>
-            <p className="text-purple-600 text-sm font-medium">프로필 사진 추가(선택)</p>
+            <p className="text-purple-600 text-sm font-medium">
+              {isUploading ? '업로드 중...' : '프로필 사진 추가(선택)'}
+            </p>
           </div>
 
           {/* 제목과 설명 */}
@@ -265,16 +388,13 @@ export default function CreateNamecardPage() {
 
             {/* 소속 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                소속
-              </label>
-              <div className="flex gap-2 mb-3">
+              <div className="flex gap-2 mb-3 w-full">
                 <Button
                   type="button"
                   variant={watch('affiliation_type') === '소속' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setValue('affiliation_type', '소속')}
-                  className={watch('affiliation_type') === '소속' ? 'bg-purple-600' : ''}
+                  className={`flex-1 ${watch('affiliation_type') === '소속' ? 'bg-purple-600' : ''}`}
                 >
                   소속
                 </Button>
@@ -283,17 +403,22 @@ export default function CreateNamecardPage() {
                   variant={watch('affiliation_type') === '미소속' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setValue('affiliation_type', '미소속')}
-                  className={watch('affiliation_type') === '미소속' ? 'bg-purple-600' : ''}
+                  className={`flex-1 ${watch('affiliation_type') === '미소속' ? 'bg-purple-600' : ''}`}
                 >
                   미소속
                 </Button>
               </div>
               {watch('affiliation_type') === '소속' && (
+                <>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  소속
+                  </label>
                 <Input
                   {...register('affiliation')}
                   placeholder="예: 네이버"
                   className={errors.affiliation ? 'border-red-500' : ''}
                 />
+                </>
               )}
               {errors.affiliation && (
                 <p className="text-red-500 text-sm mt-1">{errors.affiliation.message}</p>
@@ -377,7 +502,7 @@ export default function CreateNamecardPage() {
                   <Badge
                     key={personality}
                     variant={watch('personality_keywords').includes(personality) ? 'default' : 'outline'}
-                    className={`cursor-pointer ${watch('personality_keywords').includes(personality) ? 'bg-purple-600' : ''}`}
+                    className={`cursor-pointer h-[30px] ${watch('personality_keywords').includes(personality) ? 'bg-purple-600' : ''}`}
                     onClick={() => handlePersonalityToggle(personality)}
                   >
                     {personality}
@@ -399,7 +524,7 @@ export default function CreateNamecardPage() {
                   <Badge
                     key={interest}
                     variant={watch('interest_keywords').includes(interest) ? 'default' : 'outline'}
-                    className={`cursor-pointer ${watch('interest_keywords').includes(interest) ? 'bg-purple-600' : ''}`}
+                    className={`cursor-pointer h-[30px] ${watch('interest_keywords').includes(interest) ? 'bg-purple-600' : ''}`}
                     onClick={() => handleInterestToggle(interest)}
                   >
                     {interest}
@@ -408,6 +533,28 @@ export default function CreateNamecardPage() {
               </div>
               {errors.interest_keywords && (
                 <p className="text-red-500 text-sm mt-1">{errors.interest_keywords.message}</p>
+              )}
+            </div>
+
+            {/* 취미 키워드 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                취미 (선택, 최대 3개)
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {hobbyOptions.map((hobby) => (
+                  <Badge
+                    key={hobby}
+                    variant={watch('hobby_keywords').includes(hobby) ? 'default' : 'outline'}
+                    className={`cursor-pointer h-[30px] ${watch('hobby_keywords').includes(hobby) ? 'bg-purple-600' : ''}`}
+                    onClick={() => handleHobbyToggle(hobby)}
+                  >
+                    {hobby}
+                  </Badge>
+                ))}
+              </div>
+              {errors.hobby_keywords && (
+                <p className="text-red-500 text-sm mt-1">{errors.hobby_keywords.message}</p>
               )}
             </div>
 
@@ -444,16 +591,19 @@ export default function CreateNamecardPage() {
               )}
             </div>
 
-            {/* 제출 버튼 */}
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-medium"
-            >
-              {isSubmitting ? '생성 중...' : '명함 생성하기'}
-            </Button>
           </form>
         </motion.div>
+      </div>
+
+      {/* 하단 고정 버튼 */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-5 py-4 max-w-md mx-auto">
+        <Button
+          onClick={handleSubmit(onSubmit)}
+          disabled={isSubmitting}
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-medium"
+        >
+          {isSubmitting ? '생성 중...' : '명함 생성하기'}
+        </Button>
       </div>
     </div>
   )

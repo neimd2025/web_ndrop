@@ -54,6 +54,7 @@ export type Database = {
           email: string | null
           external_link: string | null
           full_name: string
+          hobby_keywords: string[] | null
           id: string
           introduction: string | null
           is_public: boolean | null
@@ -73,6 +74,7 @@ export type Database = {
           email?: string | null
           external_link?: string | null
           full_name: string
+          hobby_keywords?: string[] | null
           id?: string
           introduction?: string | null
           is_public?: boolean | null
@@ -92,6 +94,7 @@ export type Database = {
           email?: string | null
           external_link?: string | null
           full_name?: string
+          hobby_keywords?: string[] | null
           id?: string
           introduction?: string | null
           is_public?: boolean | null
@@ -300,6 +303,7 @@ export type Database = {
           email: string
           external_link: string | null
           full_name: string | null
+          hobby_keywords: string[] | null
           id: string
           interest_keywords: string[] | null
           introduction: string | null
@@ -324,6 +328,7 @@ export type Database = {
           email: string
           external_link?: string | null
           full_name?: string | null
+          hobby_keywords?: string[] | null
           id: string
           interest_keywords?: string[] | null
           introduction?: string | null
@@ -348,6 +353,7 @@ export type Database = {
           email?: string
           external_link?: string | null
           full_name?: string | null
+          hobby_keywords?: string[] | null
           id?: string
           interest_keywords?: string[] | null
           introduction?: string | null

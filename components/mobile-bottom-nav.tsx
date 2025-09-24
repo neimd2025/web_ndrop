@@ -4,7 +4,6 @@ import { Bell, Bookmark, Home, User } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
-import { createClient } from "@/utils/supabase/client"
 
 export default function MobileBottomNav() {
   const pathname = usePathname()
@@ -19,6 +18,7 @@ export default function MobileBottomNav() {
     pathname.startsWith("/admin") ||
     pathname.startsWith("/profile/edit") ||
     pathname === "/client/onboarding"
+    || pathname.startsWith("/client/namecard/create")
 
   // 서버사이드 렌더링 중에는 아무것도 렌더링하지 않음
   if (!isClient) {
