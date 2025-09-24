@@ -45,14 +45,15 @@ export async function POST(request: NextRequest) {
 
     const targetIds = participants?.map(p => p.user_id) || []
 
-    // 각 참가자에게 개별 알림 생성
+    // 각 참가자에게 개별 알림 생성 (실제 스키마에 맞춤)
     const notifications = targetIds.map(userId => ({
       title,
       message,
       target_type: 'specific',
-      user_id: userId,
       target_event_id: eventId,
+      user_id: userId,
       sent_by: null // 관리자 계정은 auth.users에 없으므로 null로 설정
+      // id, created_at은 자동 생성됨
     }))
 
     const { data: createdNotifications, error: notificationError } = await supabase
@@ -74,8 +75,14 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('공지 전송 API 오류:', error)
+    console.error('에러 상세:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      error: error
+    })
     return NextResponse.json({
-      error: '서버 오류가 발생했습니다.'
+      error: '서버 오류가 발생했습니다.',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }

@@ -191,7 +191,14 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
 
       if (!response.ok) {
         console.error('공지 전송 오류:', result)
-        toast.error(result.error || '공지 전송에 실패했습니다.')
+        console.error('응답 상태:', response.status)
+        console.error('응답 헤더:', response.headers)
+        console.error('요청 데이터:', {
+          eventId: selectedEvent.id,
+          title: noticeTitle,
+          message: noticeMessage
+        })
+        toast.error(result.error || result.details || '공지 전송에 실패했습니다.')
         return
       }
 
