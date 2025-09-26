@@ -99,7 +99,7 @@ Authentication APIs follow the pattern:
 - Automatic user/admin separation
 
 ## MCP Integration
-When working with Supabase operations, use the `supabase-neimd` MCP server as specified in `.cursor/rules/rule.mdc`.
+When working with Supabase operations, use the `supabase-ndrop` MCP server as specified in `.cursor/rules/rule.mdc`.
 
 ## Environment Variables
 Required environment variables:

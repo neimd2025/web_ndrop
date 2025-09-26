@@ -34,7 +34,7 @@ export default function WelcomePage() {
           </div>
           <CardTitle className="text-xl font-bold text-gray-900">환영합니다! 🎉</CardTitle>
           <p className="text-gray-600">
-            이메일 인증이 완료되었습니다. Neimd에서 네트워킹을 시작해보세요!
+            이메일 인증이 완료되었습니다. ndrop에서 네트워킹을 시작해보세요!
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -65,7 +65,7 @@ export default function WelcomePage() {
           </div>
 
           <div className="text-center text-sm text-gray-500">
-            <p>Neimd에서 명함을 교환하고 네트워킹을 시작하세요!</p>
+            <p>ndrop에서 명함을 교환하고 네트워킹을 시작하세요!</p>
           </div>
         </CardContent>
       </Card>

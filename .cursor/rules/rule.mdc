@@ -2,4 +2,4 @@
 alwaysApply: false
 ---
 ## supabase 사용
-- supabase 작업시에는 supabase-neimd mcp 사용
+- supabase 작업시에는 supabase-ndrop mcp 사용

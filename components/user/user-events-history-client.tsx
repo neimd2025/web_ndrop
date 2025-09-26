@@ -155,7 +155,7 @@ export function UserEventsHistoryClient({
                         <h3 className="text-lg font-semibold text-gray-900 hover:text-purple-600 transition-colors cursor-pointer">
                           {event.title}
                         </h3>
-                      </Link>
+                      </Link> 
                       {getStatusBadge(event)}
                     </div>
                     <p className="text-gray-600 text-sm mb-3 line-clamp-2">{event.description}</p>

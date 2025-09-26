@@ -1,8 +1,8 @@
 {
-  "projectName": "web-neimd",
+  "projectName": "web-ndrop",
   "description": "Next.js 기반 명함 관리 웹 애플리케이션",
   "mcpServers": {
-    "supabase-neimd": {
+    "supabase-ndrop": {
       "command": "npx",
       "args": [
         "-y",

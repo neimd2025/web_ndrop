@@ -1,7 +1,7 @@
-// Service Worker for Neimd PWA
-const CACHE_NAME = 'neimd-v1.0.0'
-const STATIC_CACHE = 'neimd-static-v1'
-const DYNAMIC_CACHE = 'neimd-dynamic-v1'
+// Service Worker for ndrop PWA
+const CACHE_NAME = 'ndrop-v1.0.0'
+const STATIC_CACHE = 'ndrop-static-v1'
+const DYNAMIC_CACHE = 'ndrop-dynamic-v1'
 
 // 캐시할 정적 리소스
 const STATIC_ASSETS = [
@@ -150,7 +150,7 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification('Neimd', options)
+    self.registration.showNotification('ndrop', options)
   )
 })
 

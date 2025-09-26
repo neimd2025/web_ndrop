@@ -96,3 +96,5 @@ export default function BusinessCardError({ error, reset }: ErrorProps) {
     </div>
   )
 }
+
+

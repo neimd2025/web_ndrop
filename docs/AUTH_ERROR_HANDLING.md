@@ -86,7 +86,7 @@ export const createClient = () => {
   client.auth.onAuthStateChange((event, session) => {
     if (event === 'TOKEN_REFRESHED' && !session) {
       console.warn('⚠️ 토큰 갱신 실패 - 리프레시 토큰이 유효하지 않습니다')
-      
+
       // 전역 에러 이벤트 발생
       if (typeof window !== 'undefined') {
         const error = new Error('Invalid Refresh Token: Refresh Token Not Found')
@@ -148,12 +148,12 @@ export default function AuthErrorHandler({ children }: AuthErrorHandlerProps) {
     // 전역 에러 핸들러 등록
     const handleAuthError = (event: CustomEvent) => {
       const error = event.detail
-      
-      if (error?.message?.includes('Invalid Refresh Token') || 
+
+      if (error?.message?.includes('Invalid Refresh Token') ||
           error?.message?.includes('Refresh Token Not Found')) {
-        
+
         console.warn('🔄 리프레시 토큰 에러 감지:', error.message)
-        
+
         // 사용자에게 친화적인 메시지 표시
         toast.error('세션이 만료되었습니다. 다시 로그인해주세요.', {
           duration: 5000,
@@ -164,7 +164,7 @@ export default function AuthErrorHandler({ children }: AuthErrorHandlerProps) {
             }
           }
         })
-        
+
         // 3초 후 자동으로 로그인 페이지로 이동
         setTimeout(() => {
           handleTokenExpired()
@@ -189,7 +189,7 @@ export default function AuthErrorHandler({ children }: AuthErrorHandlerProps) {
 // stores/auth-store.ts
 handleTokenExpired: () => {
   console.warn('🔄 토큰이 만료되었습니다. 로그인 페이지로 이동합니다.')
-  
+
   // 모든 인증 상태 초기화
   set({
     user: null,
@@ -230,10 +230,10 @@ export const triggerAuthError = (error: any) => {
 useEffect(() => {
   const handleAuthCallback = async () => {
     console.log('🔄 OAuth 콜백 처리 시작')
-    
+
     try {
       const supabase = createClient()
-      
+
       // 세션 확인
       const { data, error } = await supabase.auth.getSession()
 
@@ -241,7 +241,7 @@ useEffect(() => {
         console.error('❌ OAuth 콜백 실패:', error)
         setError(error.message)
         toast.error('로그인 처리 중 오류가 발생했습니다.')
-        
+
         setTimeout(() => {
           router.push('/login')
         }, 3000)
@@ -257,7 +257,7 @@ useEffect(() => {
       console.error('❌ OAuth 콜백 처리 중 예외 발생:', error)
       setError('예상치 못한 오류가 발생했습니다.')
       toast.error('로그인 처리 중 오류가 발생했습니다.')
-      
+
       setTimeout(() => {
         router.push('/login')
       }, 3000)
@@ -298,7 +298,7 @@ export async function GET(request: NextRequest) {
       // 프로필 생성 로직
       try {
         const existingProfile = await userProfileAPI.getUserProfile(data.user.id)
-        
+
         if (!existingProfile) {
           // 신규 사용자 프로필 생성
           await userProfileAPI.createUserProfile({...})
@@ -378,14 +378,14 @@ if (isAdminRoute && !isAdminAuthRoute) {
   if (!session || userRole !== 2) {
     const redirectUrl = new URL('/admin/login', req.url)
     redirectUrl.searchParams.set('returnTo', returnTo)
-    
+
     // 권한 부족 에러 로깅
     console.warn(`❌ 관리자 권한 부족: ${req.nextUrl.pathname}`, {
       userId: session?.user?.id,
       userRole,
       requiredRole: 2
     })
-    
+
     return NextResponse.redirect(redirectUrl)
   }
 }
@@ -418,10 +418,10 @@ async function getUserRole(userId: string): Promise<number | null> {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
-    
+
     // 사용자 인증 확인
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       console.warn('❌ API 인증 실패:', authError)
       return NextResponse.json(
@@ -484,16 +484,16 @@ const getLoginErrorMessage = (error: any): string => {
     case 'Invalid login credentials':
     case 'Invalid email or password':
       return '이메일 또는 비밀번호가 올바르지 않습니다.'
-    
+
     case 'Email not confirmed':
       return '이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요.'
-    
+
     case 'User not found':
       return '가입되지 않은 이메일입니다. 회원가입을 먼저 진행해주세요.'
-    
+
     case 'Too many requests':
       return '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.'
-    
+
     default:
       if (error.message.includes('email')) {
         return '올바른 이메일 형식을 입력해주세요.'
@@ -511,16 +511,16 @@ const getSignupErrorMessage = (error: any): string => {
   switch (error.message) {
     case 'User already registered':
       return '이미 가입된 이메일입니다. 로그인을 시도해주세요.'
-    
+
     case 'Password should be at least 6 characters':
       return '비밀번호는 최소 6자 이상이어야 합니다.'
-    
+
     case 'Invalid email':
       return '올바른 이메일 형식을 입력해주세요.'
-    
+
     case 'Signup is disabled':
       return '현재 회원가입이 비활성화되어 있습니다.'
-    
+
     default:
       return '회원가입에 실패했습니다. 입력 정보를 확인해주세요.'
   }
@@ -602,7 +602,7 @@ const logAuthError = (error: any, context: string, additionalInfo?: any) => {
   }
 
   console.error('🚨 인증 에러:', errorLog)
-  
+
   // 프로덕션에서는 외부 로깅 서비스로 전송
   if (process.env.NODE_ENV === 'production') {
     // Sentry, LogRocket 등으로 전송
@@ -645,24 +645,24 @@ const handleTokenExpiredError = (error: any) => {
 // 인증 시간 측정
 const measureAuthPerformance = async (authFunction: () => Promise<any>, operation: string) => {
   const startTime = performance.now()
-  
+
   try {
     const result = await authFunction()
     const endTime = performance.now()
     const duration = endTime - startTime
-    
+
     console.log(`✅ ${operation} 성공: ${duration.toFixed(2)}ms`)
-    
+
     // 성능 임계값 확인
     if (duration > 5000) {
       console.warn(`⚠️ ${operation} 지연: ${duration.toFixed(2)}ms`)
     }
-    
+
     return result
   } catch (error) {
     const endTime = performance.now()
     const duration = endTime - startTime
-    
+
     console.error(`❌ ${operation} 실패: ${duration.toFixed(2)}ms`, error)
     throw error
   }
@@ -694,7 +694,7 @@ const retryAuthOperation = async (
       if (attempt === maxRetries) {
         throw error
       }
-      
+
       // 네트워크 에러인 경우에만 재시도
       if (error.message.includes('network') || error.message.includes('timeout')) {
         console.warn(`🔄 인증 작업 재시도 ${attempt}/${maxRetries}:`, error.message)
@@ -714,17 +714,17 @@ const attemptSessionRecovery = async () => {
   try {
     const supabase = createClient()
     const { data: { session }, error } = await supabase.auth.getSession()
-    
+
     if (error) {
       console.warn('⚠️ 세션 복구 실패:', error)
       return false
     }
-    
+
     if (session) {
       console.log('✅ 세션 복구 성공')
       return true
     }
-    
+
     return false
   } catch (error) {
     console.error('❌ 세션 복구 중 오류:', error)
@@ -751,10 +751,10 @@ const errorStats = {
 
 const trackError = (errorType: keyof typeof errorStats) => {
   errorStats[errorType]++
-  
+
   // 로컬 스토리지에 저장
   localStorage.setItem('authErrorStats', JSON.stringify(errorStats))
-  
+
   // 주기적으로 서버로 전송
   if (errorStats[errorType] % 10 === 0) {
     sendErrorStatsToServer(errorStats)
@@ -774,9 +774,9 @@ const trackUserBehavior = (action: string, context?: any) => {
     userId: getCurrentUserId(),
     sessionId: getCurrentSessionId()
   }
-  
+
   console.log('📊 사용자 행동:', behavior)
-  
+
   // 분석 서비스로 전송
   // analytics.track(action, context)
 }
@@ -793,7 +793,7 @@ const trackUserBehavior = (action: string, context?: any) => {
 const getErrorHandlingConfig = () => {
   const isDevelopment = process.env.NODE_ENV === 'development'
   const isProduction = process.env.NODE_ENV === 'production'
-  
+
   return {
     showDetailedErrors: isDevelopment,
     logToConsole: isDevelopment,
@@ -815,7 +815,7 @@ export const withErrorHandling = (handler: Function) => {
       return await handler(request)
     } catch (error) {
       console.error('❌ API 에러:', error)
-      
+
       // 에러 타입별 처리
       if (error instanceof AuthError) {
         return NextResponse.json(
@@ -823,14 +823,14 @@ export const withErrorHandling = (handler: Function) => {
           { status: 401 }
         )
       }
-      
+
       if (error instanceof PermissionError) {
         return NextResponse.json(
           { error: '권한이 없습니다.' },
           { status: 403 }
         )
       }
-      
+
       // 일반 서버 에러
       return NextResponse.json(
         { error: '서버 오류가 발생했습니다.' },
@@ -857,4 +857,4 @@ export const withErrorHandling = (handler: Function) => {
 
 ---
 
-*이 문서는 Neimd 인증 시스템의 에러 처리 방식을 상세히 설명합니다. 에러가 발생했을 때 적절한 대응을 할 수 있도록 도와줍니다.*
+*이 문서는 ndrop 인증 시스템의 에러 처리 방식을 상세히 설명합니다. 에러가 발생했을 때 적절한 대응을 할 수 있도록 도와줍니다.*

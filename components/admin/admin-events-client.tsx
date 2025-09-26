@@ -308,7 +308,7 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                 <span className="text-white font-bold text-sm">NN</span>
               </div>
               <div>
-                <span className="text-xl font-bold text-gray-900">Neimd Network</span>
+                <span className="text-xl font-bold text-gray-900">ndrop Network</span>
                 <div className="text-xs text-gray-500">이벤트 관리</div>
               </div>
             </div>
