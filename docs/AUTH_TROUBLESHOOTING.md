@@ -45,8 +45,8 @@ const { error } = await supabase.auth.resetPasswordForEmail(email, {
 **원인 3: 계정이 비활성화됨**
 ```sql
 -- 데이터베이스에서 계정 상태 확인
-SELECT email, email_confirmed_at, banned_until 
-FROM auth.users 
+SELECT email, email_confirmed_at, banned_until
+FROM auth.users
 WHERE email = 'user@example.com';
 ```
 
@@ -270,7 +270,7 @@ const handleOAuthLogin = async (provider: string) => {
         redirectTo: `${window.location.origin}/auth/callback`
       }
     })
-    
+
     if (error) {
       console.error('OAuth 로그인 실패:', error)
     }
@@ -335,7 +335,7 @@ export default function AuthCallbackPage() {
     const handleAuthCallback = async () => {
       try {
         const { data, error } = await supabase.auth.getSession()
-        
+
         if (error) {
           console.error('OAuth 콜백 실패:', error)
           setError(error.message)
@@ -382,13 +382,13 @@ export default function AuthCallbackPage() {
 **원인 1: role_id 설정 오류**
 ```sql
 -- 사용자 역할 확인
-SELECT id, email, role_id, role 
-FROM user_profiles 
+SELECT id, email, role_id, role
+FROM user_profiles
 WHERE id = 'user-id';
 
 -- 관리자 권한 부여
-UPDATE user_profiles 
-SET role_id = 2, role = 'admin' 
+UPDATE user_profiles
+SET role_id = 2, role = 'admin'
 WHERE id = 'user-id';
 ```
 
@@ -422,8 +422,8 @@ async function getUserRole(userId: string): Promise<number | null> {
 **원인 1: RLS 정책 문제**
 ```sql
 -- RLS 정책 확인
-SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual 
-FROM pg_policies 
+SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual
+FROM pg_policies
 WHERE tablename = 'user_profiles';
 
 -- 올바른 RLS 정책 생성
@@ -439,9 +439,9 @@ CREATE POLICY "Users can update own profile" ON user_profiles
 // 서버 사이드에서 인증 확인
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
-  
+
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  
+
   if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -476,8 +476,8 @@ export async function GET(request: NextRequest) {
 **원인 1: 데이터베이스 트리거 실패**
 ```sql
 -- 트리거 함수 확인
-SELECT proname, prosrc 
-FROM pg_proc 
+SELECT proname, prosrc
+FROM pg_proc
 WHERE proname = 'handle_new_user';
 
 -- 트리거 재생성
@@ -497,10 +497,10 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 \d user_profiles
 
 -- 누락된 컬럼 추가
-ALTER TABLE user_profiles 
+ALTER TABLE user_profiles
 ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
 
-ALTER TABLE user_profiles 
+ALTER TABLE user_profiles
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
 ```
 
@@ -516,15 +516,15 @@ ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
 ```sql
 -- 외래 키 제약 조건 확인
 SELECT conname, contype, confrelid::regclass, conkey, confkey
-FROM pg_constraint 
+FROM pg_constraint
 WHERE conrelid = 'business_cards'::regclass;
 
 -- 비즈니스 카드 수동 생성
 INSERT INTO business_cards (
-  user_id, full_name, email, company, role, 
+  user_id, full_name, email, company, role,
   contact, introduction, is_public
 ) VALUES (
-  'user-id', '사용자명', 'user@example.com', 
+  'user-id', '사용자명', 'user@example.com',
   '', '', '', '', true
 );
 ```
@@ -540,8 +540,8 @@ INSERT INTO business_cards (
 **원인 1: 트리거 실행 실패**
 ```sql
 -- 트리거 상태 확인
-SELECT tgname, tgenabled 
-FROM pg_trigger 
+SELECT tgname, tgenabled
+FROM pg_trigger
 WHERE tgname = 'on_auth_user_created';
 
 -- 트리거 활성화
@@ -626,7 +626,7 @@ const monitorNetworkStatus = () => {
 const checkEnvVars = () => {
   console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
   console.log('SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20) + '...')
-  
+
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     console.error('Supabase 환경 변수가 설정되지 않았습니다.')
   }
@@ -642,7 +642,7 @@ const testSupabaseConnection = async () => {
       .from('user_profiles')
       .select('count')
       .limit(1)
-    
+
     if (error) {
       console.error('Supabase 연결 실패:', error)
     } else {
@@ -723,18 +723,18 @@ const logAPIResponse = (url: string, response: any, error?: any) => {
 // API 응답 시간 측정
 const measureAPIPerformance = async (apiCall: () => Promise<any>, name: string) => {
   const startTime = performance.now()
-  
+
   try {
     const result = await apiCall()
     const endTime = performance.now()
     const duration = endTime - startTime
-    
+
     console.log(`⏱️ ${name}: ${duration.toFixed(2)}ms`)
-    
+
     if (duration > 5000) {
       console.warn(`⚠️ ${name} 지연: ${duration.toFixed(2)}ms`)
     }
-    
+
     return result
   } catch (error) {
     const endTime = performance.now()
@@ -776,7 +776,7 @@ const optimizedLogin = async (email: string, password: string) => {
       .select('*')
       .eq('id', data.user.id)
       .single()
-    
+
     return profile
   }
 
@@ -811,7 +811,7 @@ const optimizeTokenRefresh = () => {
     const expiresAt = session.expires_at
     const now = Math.floor(Date.now() / 1000)
     const timeUntilExpiry = expiresAt - now
-    
+
     if (timeUntilExpiry < 300) { // 5분 전
       supabase.auth.refreshSession()
     }
@@ -884,7 +884,7 @@ const generateErrorReport = () => {
     localStorage: localStorage.getItem('auth-storage'),
     networkStatus: navigator.onLine
   }
-  
+
   console.log('에러 리포트:', report)
   return report
 }
@@ -892,9 +892,9 @@ const generateErrorReport = () => {
 
 ### 3. 개발팀 연락처
 
-- **이메일**: dev@neimd.com
-- **슬랙**: #neimd-support
-- **GitHub Issues**: [프로젝트 저장소](https://github.com/your-org/neimd/issues)
+- **이메일**: dev@ndrop.com
+- **슬랙**: #ndrop-support
+- **GitHub Issues**: [프로젝트 저장소](https://github.com/your-org/ndrop/issues)
 
 ---
 
@@ -912,4 +912,4 @@ const generateErrorReport = () => {
 
 ---
 
-*이 문서는 Neimd 인증 시스템에서 발생할 수 있는 문제들을 해결하는 데 도움을 줍니다. 문제가 지속되면 개발팀에 문의해주세요.*
+*이 문서는 ndrop 인증 시스템에서 발생할 수 있는 문제들을 해결하는 데 도움을 줍니다. 문제가 지속되면 개발팀에 문의해주세요.*

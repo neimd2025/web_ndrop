@@ -39,12 +39,12 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
       // Supabase 클라이언트 생성
       const supabase = createClient()
 
-      // named.link 형식의 URL에서 카드 ID 추출
+      // ndrop.link 형식의 URL에서 카드 ID 추출
       let cardId = null
 
       if (qrData.includes('business-card/')) {
         cardId = qrData.split('business-card/')[1]
-      } else if (qrData.startsWith('named.link/')) {
+      } else if (qrData.startsWith('ndrop.link/')) {
         cardId = qrData.split('/').pop()
       }
 

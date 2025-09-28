@@ -13,8 +13,8 @@ async function seedDatabase() {
     console.log('📅 이벤트 데이터 추가 중...')
     const events = [
       {
-        title: 'Neimd 네트워킹 데모 이벤트',
-        description: 'Neimd 앱을 소개하는 네트워킹 이벤트입니다.',
+        title: 'ndrop 네트워킹 데모 이벤트',
+        description: 'ndrop 앱을 소개하는 네트워킹 이벤트입니다.',
         event_code: 'DEMO001',
         start_date: '2025-01-25T10:00:00Z',
         end_date: '2025-01-25T18:00:00Z',
@@ -65,7 +65,7 @@ async function seedDatabase() {
     const notifications = [
       {
         title: '새로운 이벤트가 등록되었습니다',
-        message: 'Neimd 네트워킹 데모 이벤트에 참가해보세요!',
+        message: 'ndrop 네트워킹 데모 이벤트에 참가해보세요!',
         target_type: 'all',
         sent_at: new Date().toISOString(),
         delivered_count: 0,

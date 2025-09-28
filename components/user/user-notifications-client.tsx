@@ -298,7 +298,7 @@ export function UserNotificationsClient({
 
   return (
     <div className="min-h-screen bg-white pb-24">
-      <MobileHeader title="최근 활동 및 알림" showMenuButton />
+      <MobileHeader title="최근 활동 및 알림"  />
 
       {/* 새로고침 버튼 */}
       <div className="px-4 py-2">

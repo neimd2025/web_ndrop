@@ -232,7 +232,7 @@ export default function NewEventPage() {
                 <Label htmlFor="title">이벤트 이름</Label>
                 <Input
                   {...register('title')}
-                  placeholder="예: Neimd 네트워킹 데모 이벤트"
+                  placeholder="예: ndrop 네트워킹 데모 이벤트"
                   className={`border-2 border-gray-200 focus:border-purple-500 rounded-xl ${errors.title ? 'border-red-500' : ''}`}
                 />
                 {errors.title && (

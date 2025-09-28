@@ -1,6 +1,6 @@
 // Admin 관련 상수
 export const ADMIN_EMAILS = [
-  'admin@neimd.com',
+  'admin@ndrop.com',
   'simjaehyeong@gmail.com',
   'test@admin.com'
 ]

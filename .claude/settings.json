@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "supabase-neimd": {
+    "supabase-ndrop": {
       "command": "npx",
       "args": [
         "-y",

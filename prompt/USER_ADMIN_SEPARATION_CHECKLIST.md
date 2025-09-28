@@ -17,7 +17,7 @@
 
 ### ✅ 새 관리자 Supabase 프로젝트 생성
 - [x] 새 Supabase 프로젝트 생성
-- [x] 프로젝트 이름: `neimd-admin-app`
+- [x] 프로젝트 이름: `ndrop-admin-app`
 - [x] 리전: `ap-northeast-1` (기존과 동일)
 - [x] 프로젝트 URL 및 키 확보
 

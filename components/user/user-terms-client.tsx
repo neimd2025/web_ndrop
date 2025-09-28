@@ -18,7 +18,7 @@ export function UserTermsClient({ user }: UserTermsClientProps) {
         return {
           title: '서비스 이용약관',
           content: `제1조 (목적)
-이 약관은 Neimd(이하 "회사")가 제공하는 디지털 명함 및 네트워킹 플랫폼 관련 서비스(이하 "서비스")의 이용과 관련하여, 회사와 이용자 간의 권리, 의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.
+이 약관은 ndrop(이하 "회사")가 제공하는 디지털 명함 및 네트워킹 플랫폼 관련 서비스(이하 "서비스")의 이용과 관련하여, 회사와 이용자 간의 권리, 의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.
 
 제2조 (정의)
 ① "이용자"란 본 약관에 따라 회사가 제공하는 서비스를 이용하는 자를 말합니다.
@@ -35,7 +35,7 @@ export function UserTermsClient({ user }: UserTermsClientProps) {
         return {
           title: '개인정보처리방침',
           content: `제1조 (개인정보의 처리목적)
-Neimd(이하 "회사")는 다음의 목적을 위하여 개인정보를 처리합니다.
+ndrop(이하 "회사")는 다음의 목적을 위하여 개인정보를 처리합니다.
 
 1. 서비스 제공
 - 디지털 명함 생성 및 관리
@@ -142,7 +142,7 @@ Neimd(이하 "회사")는 다음의 목적을 위하여 개인정보를 처리�
               약관 및 개인정보처리방침에 대한 문의사항이 있으시면 고객센터로 연락해 주세요.
             </p>
             <p className="text-sm text-gray-600 mt-2">
-              이메일: support@neimd.com
+              이메일: support@ndrop.com
             </p>
           </CardContent>
         </Card>

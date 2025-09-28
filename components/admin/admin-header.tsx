@@ -23,7 +23,7 @@ export default function AdminHeader() {
           <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-sm">NN</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900">Neimd Network</h1>
+          <h1 className="text-xl font-bold text-gray-900">ndrop Network</h1>
         </div>
 
         <div className="flex items-center space-x-2">

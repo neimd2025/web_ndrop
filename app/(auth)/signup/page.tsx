@@ -248,7 +248,7 @@ export default function SignupPage() {
             회원가입
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Neimd 계정을 만들어보세요
+            ndrop 계정을 만들어보세요
           </p>
         </div>
 
