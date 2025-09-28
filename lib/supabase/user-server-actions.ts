@@ -376,7 +376,14 @@ export async function getUserMyPageData(): Promise<{
   try {
     const supabase = await createClient()
 
-    const [businessCardsResult, participationsResult] = await Promise.all([
+    // 사용자 프로필 정보도 함께 가져오기
+    const [userProfileResult, businessCardsResult, participationsResult] = await Promise.all([
+      supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single(),
+
       supabase
         .from('business_cards')
         .select('*')
@@ -397,6 +404,9 @@ export async function getUserMyPageData(): Promise<{
     const businessCards = businessCardsResult.data || []
     const participatedEvents = participationsResult.data || []
 
+    // 사용자 프로필 데이터와 기본 사용자 데이터 병합
+    const enrichedUser = userProfileResult.data ? { ...user, ...userProfileResult.data } : user
+
     const stats = {
       totalEvents: participatedEvents.length,
       totalBusinessCards: businessCards.length,
@@ -404,7 +414,7 @@ export async function getUserMyPageData(): Promise<{
     }
 
     return {
-      user,
+      user: enrichedUser,
       businessCards,
       participatedEvents,
       stats

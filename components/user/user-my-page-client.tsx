@@ -51,18 +51,30 @@ export function UserMyPageClient({
   // 사용자 소개 가져오기
   const getUserIntroduction = () => {
     const primaryCard = businessCards.find(card => card.is_public) || businessCards[0]
-    return primaryCard?.bio || "하루하루 의미있게"
+    return primaryCard?.introduction || primaryCard?.bio || user?.introduction || "하루하루 의미있게"
   }
 
   // 사용자 회사/직책 정보 가져오기
   const getUserCompanyInfo = () => {
     const primaryCard = businessCards.find(card => card.is_public) || businessCards[0]
-    const role = primaryCard?.title || user?.role
-    const company = primaryCard?.company || (user as any)?.company
+    const role = primaryCard?.role || primaryCard?.title || user?.role
+    const company = primaryCard?.company || primaryCard?.affiliation || (user as any)?.company
     if (role && company) return `${role} / ${company}`
     if (role) return role
     if (company) return company
     return null
+  }
+
+  // 사용자 연락처 정보 가져오기
+  const getUserContact = () => {
+    const primaryCard = businessCards.find(card => card.is_public) || businessCards[0]
+    return primaryCard?.phone || primaryCard?.contact || (user as any)?.contact
+  }
+
+  // 사용자 MBTI 정보 가져오기
+  const getUserMBTI = () => {
+    const primaryCard = businessCards.find(card => card.is_public) || businessCards[0]
+    return primaryCard?.mbti || (user as any)?.mbti
   }
 
   return (
@@ -78,7 +90,7 @@ export function UserMyPageClient({
           {/* 프로필 섹션 */}
           <div className="text-center mb-6">
             {/* 프로필 이미지 */}
-            <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-5 flex items-center justify-center">
+            <div className="w-24 h-24 bg-purple-500 rounded-full mx-auto mb-5 flex items-center justify-center">
               {(user as any)?.profile_image_url ? (
                 <img
                   src={(user as any).profile_image_url}
@@ -86,7 +98,7 @@ export function UserMyPageClient({
                   className="w-24 h-24 rounded-full object-cover"
                 />
               ) : (
-                <User className="w-12 h-12 text-gray-600" />
+                <User className="w-12 h-12 text-white" />
               )}
             </div>
 
@@ -99,8 +111,10 @@ export function UserMyPageClient({
             </p>
 
             {/* 기본 정보 */}
-            <div className="space-y-2 text-sm text-gray-500">
+            <div className="space-y-1 text-sm text-gray-500">
+              {getUserMBTI() && <p>MBTI: {getUserMBTI()}</p>}
               {getUserCompanyInfo() && <p>{getUserCompanyInfo()}</p>}
+              {getUserContact() && <p>연락처: {getUserContact()}</p>}
             </div>
           </div>
 

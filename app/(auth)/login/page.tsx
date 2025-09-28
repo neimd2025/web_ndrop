@@ -148,7 +148,7 @@ export default function LoginPage() {
             {/* 환영 메시지 */}
             <div className="space-y-2">
               <h1 className="text-2xl font-bold text-gray-900">
-                {isAdminLogin ? '관리자 로그인' : '다시 만나서 반가워요!'}
+                {isAdminLogin ? '관리자 로그인' : '로그인'}
               </h1>
               <p className="text-base text-gray-600 leading-relaxed">
                 {isAdminLogin ? '관리자 계정으로 로그인해주세요' : '모두의 특별함이, 나답게 연결되는 시작'}
@@ -227,17 +227,17 @@ export default function LoginPage() {
               disabled={loading}
             />
 
-            <SocialLoginButton
+            {/* <SocialLoginButton
               provider="kakao"
               onClick={() => handleOAuthLogin('kakao')}
               disabled={loading}
-            />
+            /> */}
 
-            <SocialLoginButton
+            {/* <SocialLoginButton
               provider="naver"
               onClick={() => handleOAuthLogin('naver')}
               disabled={loading}
-            />
+            /> */}
           </div>
         </div>
 

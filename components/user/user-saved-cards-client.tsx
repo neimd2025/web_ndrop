@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { UserProfile } from '@/lib/supabase/user-server-actions'
-import { createClient } from '@/utils/supabase/client'
-import { ArrowLeft, Edit, Search, Star, User } from 'lucide-react'
+import { ArrowLeft, Search, Star, User } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -68,27 +67,36 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
 
   const handleToggleFavorite = async (cardId: string) => {
     try {
-      const supabase = createClient()
       const card = savedCards.find(c => c.id === cardId)
       if (!card) return
 
-      const { error } = await supabase
-        .from('collected_cards')
-        .update({ is_favorite: !card.is_favorite })
-        .eq('id', cardId)
+      const newFavoriteStatus = !card.is_favorite
 
-      if (error) {
-        console.error('즐겨찾기 업데이트 오류:', error)
-        alert('즐겨찾기 상태 변경에 실패했습니다.')
-        return
+      // 먼저 로컬 상태 업데이트 (즉시 반영)
+      card.is_favorite = newFavoriteStatus
+      setSavedCards([...savedCards])
+
+      // API 호출로 서버 상태 업데이트
+      const response = await fetch(`/api/user/saved-cards/${cardId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          is_favorite: newFavoriteStatus
+        })
+      })
+
+      if (!response.ok) {
+        // 실패시 롤백
+        card.is_favorite = !newFavoriteStatus
+        setSavedCards([...savedCards])
+        throw new Error('즐겨찾기 상태 변경에 실패했습니다.')
       }
 
-      // 로컬 상태 업데이트
-      card.is_favorite = !card.is_favorite
-      setSavedCards([...savedCards])
     } catch (error) {
       console.error('즐겨찾기 오류:', error)
-      alert('오류가 발생했습니다.')
+      alert('즐겨찾기 상태 변경에 실패했습니다.')
     }
   }
 
@@ -177,7 +185,11 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
               if (!businessCard) return null
 
               return (
-                <Card key={card.id} className="border border-gray-200 hover:border-purple-300 transition-colors">
+                <Card
+                  key={card.id}
+                  className="border border-gray-200 hover:border-purple-300 transition-colors cursor-pointer"
+                  onClick={() => router.push(`/client/saved-cards/${card.id}`)}
+                >
                   <CardContent className="p-4">
                     <div className="flex items-start space-x-3">
                       {/* 프로필 이미지 */}
@@ -194,8 +206,11 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleToggleFavorite(card.id)}
-                            className="p-1"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleToggleFavorite(card.id)
+                            }}
+                            className="p-1 hover:bg-gray-100"
                           >
                             <Star
                               className={`h-4 w-4 ${
@@ -216,18 +231,15 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
                         )}
 
                         <p className="text-xs text-gray-400 mt-2">
-                          저장일: {new Date(card.created_at).toLocaleDateString()}
+                          저장일: {new Date(card.collected_at || card.created_at).toLocaleDateString()}
                         </p>
                       </div>
 
-                      {/* 액션 버튼 */}
-                      <div className="flex flex-col space-y-1">
-                        <Link href={`/client/saved-cards/${card.id}`}>
-                          <Button variant="outline" size="sm">
-                            <Edit className="h-3 w-3 mr-1" />
-                            상세
-                          </Button>
-                        </Link>
+                      {/* 화살표 아이콘 */}
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
                     </div>
                   </CardContent>

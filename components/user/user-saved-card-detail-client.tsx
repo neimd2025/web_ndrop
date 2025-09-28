@@ -1,10 +1,11 @@
 "use client"
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { UserProfile } from '@/lib/supabase/user-server-actions'
 import { createClient } from '@/utils/supabase/client'
-import { ArrowLeft, Globe, Mail, Phone, Share, Star, Trash2 } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { ArrowLeft, Mail, Phone, Trash2, User } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -21,7 +22,7 @@ export function UserSavedCardDetailClient({ user, savedCard }: UserSavedCardDeta
   const businessCard = savedCard.business_card
 
   const getInitial = () => {
-    const name = businessCard?.name || 'U'
+    const name = businessCard?.full_name || businessCard?.name || 'U'
     return name.charAt(0).toUpperCase()
   }
 
@@ -74,7 +75,7 @@ export function UserSavedCardDetailClient({ user, savedCard }: UserSavedCardDeta
   }
 
   const handleShare = async () => {
-    const shareText = `${businessCard.name} - ${businessCard.title} / ${businessCard.company}`
+    const shareText = `${businessCard.full_name || businessCard.name} - ${businessCard.role || businessCard.title} / ${businessCard.company}`
 
     if (navigator.share) {
       try {
@@ -109,163 +110,179 @@ export function UserSavedCardDetailClient({ user, savedCard }: UserSavedCardDeta
   }
 
   return (
-    <div className="min-h-screen ">
+    <div className="min-h-screen bg-gray-100">
       {/* 헤더 */}
-      <div className="bg-white border-b border-gray-200 px-5 py-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white shadow-sm border-b px-4 py-4">
+        <div className="flex items-center justify-between max-w-md mx-auto">
           <Link href="/client/saved-cards">
             <Button variant="ghost" size="sm" className="p-2">
               <ArrowLeft className="w-4 h-4 text-gray-900" />
             </Button>
           </Link>
-          <h1 className="text-xl font-bold text-gray-900">명함 상세</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleToggleFavorite}
-              className="p-2"
-            >
-              <Star
-                className={`w-4 h-4 ${
-                  isFavorite ? 'text-yellow-500 fill-current' : 'text-gray-400'
-                }`}
-              />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleShare}
-              className="p-2"
-            >
-              <Share className="w-4 h-4 text-gray-400" />
-            </Button>
-          </div>
+          <h1 className="text-lg font-semibold text-center">명함 상세</h1>
+          <div className="w-10"></div>
         </div>
       </div>
 
       {/* 메인 콘텐츠 */}
-      <div className="max-w-md mx-auto px-4 py-6">
-        {/* 명함 카드 */}
-        <Card className="bg-white shadow-lg border-0 overflow-hidden mb-6">
-          <CardContent className="p-0">
-            {/* 헤더 배경 */}
-            <div className="bg-gradient-to-r from-purple-600 to-purple-500 h-24 relative">
-              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
-                <div className="w-16 h-16 bg-white rounded-full border-4 border-white flex items-center justify-center">
-                  <span className="text-purple-600 font-bold text-xl">{getInitial()}</span>
-                </div>
+      <div className="px-5 py-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="max-w-md mx-auto"
+        >
+          {/* 명함 카드 */}
+          <Card className="bg-white border border-gray-200 shadow-lg rounded-xl p-6 mb-6">
+            {/* 프로필 섹션 */}
+            <div className="text-center mb-6">
+              {/* 프로필 이미지 */}
+              <div className="w-24 h-24 bg-purple-500 rounded-full mx-auto mb-5 flex items-center justify-center">
+                {businessCard?.profile_image_url ? (
+                  <img
+                    src={businessCard.profile_image_url}
+                    alt={businessCard.full_name || businessCard.name || '사용자'}
+                    className="w-24 h-24 rounded-full object-cover"
+                  />
+                ) : (
+                  <User className="w-12 h-12 text-white" />
+                )}
+              </div>
+
+              {/* 이름과 소개 */}
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                {businessCard.full_name || businessCard.name || '이름 없음'}
+              </h2>
+              <p className="text-gray-600 text-base mb-4">
+                {businessCard.introduction || businessCard.bio || '하루하루 의미있게'}
+              </p>
+
+              {/* 기본 정보 */}
+              <div className="space-y-1 text-sm text-gray-500">
+                {businessCard.mbti && <p>MBTI: {businessCard.mbti}</p>}
+                {(businessCard.role || businessCard.title) && <p>{businessCard.role || businessCard.title}</p>}
+                {(businessCard.company || businessCard.affiliation) && <p>{businessCard.company || businessCard.affiliation}</p>}
+                {(businessCard.phone || businessCard.contact) && <p>연락처: {businessCard.phone || businessCard.contact}</p>}
               </div>
             </div>
 
-            {/* 명함 정보 */}
-            <div className="pt-10 pb-6 px-6 text-center">
-              <h2 className="text-xl font-bold text-gray-900 mb-1">
-                {businessCard.name}
-              </h2>
-              <p className="text-purple-600 font-medium mb-1">
-                {businessCard.title}
-              </p>
-              <p className="text-gray-600 text-sm mb-4">
-                {businessCard.company}
-              </p>
-
-              {/* 소개 */}
-              {businessCard.bio && (
-                <div className="mb-6">
-                  <p className="text-gray-700 text-sm leading-relaxed">
-                    {businessCard.bio}
-                  </p>
-                </div>
-              )}
-
-              {/* 연락처 정보 */}
-              <div className="space-y-3 mb-6">
-                {/* 이메일 */}
-                <div className="flex items-center justify-center gap-3 text-sm">
-                  <Mail className="w-4 h-4 text-gray-500" />
-                  <a
-                    href={`mailto:${businessCard.email}`}
-                    className="text-gray-700 hover:text-purple-600"
-                  >
-                    {businessCard.email}
-                  </a>
-                </div>
-
-                {/* 전화번호 */}
-                {businessCard.phone && (
-                  <div className="flex items-center justify-center gap-3 text-sm">
-                    <Phone className="w-4 h-4 text-gray-500" />
-                    <a
-                      href={`tel:${businessCard.phone}`}
-                      className="text-gray-700 hover:text-purple-600"
-                    >
-                      {businessCard.phone}
-                    </a>
-                  </div>
+            {/* 성격 섹션 */}
+            <div className="mb-6">
+              <h3 className="text-center text-lg font-semibold text-gray-900 mb-3">성격</h3>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {(businessCard.personality_keywords && businessCard.personality_keywords.length > 0) ? (
+                  businessCard.personality_keywords.slice(0, 3).map((keyword, index) => (
+                    <span key={index} className="bg-[#7C3BED] text-white border-purple-200 px-3 py-1 rounded-full text-sm">
+                      {keyword}
+                    </span>
+                  ))
+                ) : (businessCard.keywords && businessCard.keywords.length > 0) ? (
+                  businessCard.keywords.slice(0, 3).map((keyword, index) => (
+                    <span key={index} className="bg-[#7C3BED] text-white border-purple-200 px-3 py-1 rounded-full text-sm">
+                      {keyword}
+                    </span>
+                  ))
+                ) : (
+                  <div className="text-gray-400 text-sm">정보 없음</div>
                 )}
+              </div>
+            </div>
 
-                {/* 웹사이트 */}
-                {businessCard.website && (
-                  <div className="flex items-center justify-center gap-3 text-sm">
-                    <Globe className="w-4 h-4 text-gray-500" />
+            {/* 관심사 섹션 */}
+            <div className="mb-6">
+              <h3 className="text-center text-lg font-semibold text-gray-900 mb-3">관심사</h3>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {(businessCard.interest_keywords && businessCard.interest_keywords.length > 0) ? (
+                  businessCard.interest_keywords.slice(0, 3).map((keyword, index) => (
+                    <span key={index} className="bg-white text-gray-800 border-gray-200 px-3 py-1 rounded-full text-sm">
+                      {keyword}
+                    </span>
+                  ))
+                ) : (
+                  <div className="text-gray-400 text-sm">정보 없음</div>
+                )}
+              </div>
+            </div>
+
+            {/* 취미 섹션 */}
+            <div className="mb-6">
+              <h3 className="text-center text-lg font-semibold text-gray-900 mb-3">취미</h3>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {(businessCard.hobby_keywords && businessCard.hobby_keywords.length > 0) ? (
+                  businessCard.hobby_keywords.slice(0, 4).map((keyword, index) => (
+                    <span key={index} className="bg-white text-gray-800 border-gray-200 px-3 py-1 rounded-full text-sm">
+                      {keyword}
+                    </span>
+                  ))
+                ) : (
+                  <div className="text-gray-400 text-sm">정보 없음</div>
+                )}
+              </div>
+            </div>
+
+            {/* 외부 링크 섹션 */}
+            <div className="mb-6">
+              <h3 className="text-left text-lg font-semibold text-gray-900 mb-3">외부링크</h3>
+              <div className="border border-gray-200 rounded-xl p-4">
+                {(businessCard.external_link || businessCard.website) ? (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">
+                      - {businessCard.external_link ? '외부 링크' : '웹사이트'}
+                    </h4>
+                    <p className="text-gray-600 text-sm mb-2">
+                      {businessCard.external_link || businessCard.website}
+                    </p>
                     <a
-                      href={businessCard.website.startsWith('http') ? businessCard.website : `https://${businessCard.website}`}
+                      href={(businessCard.external_link || businessCard.website).startsWith('http') ? (businessCard.external_link || businessCard.website) : `https://${businessCard.external_link || businessCard.website}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-gray-700 hover:text-purple-600"
+                      className="text-purple-600 text-sm hover:underline"
                     >
-                      {businessCard.website}
+                      링크 열기
                     </a>
                   </div>
+                ) : (
+                  <div className="text-gray-400 text-sm">정보 없음</div>
                 )}
               </div>
-
-              {/* 저장 정보 */}
-              <div className="text-center mb-6">
-                <p className="text-gray-500 text-xs">
-                  저장일: {new Date(savedCard.collected_at || savedCard.created_at).toLocaleDateString()}
-                </p>
-              </div>
-
-              {/* 액션 버튼 */}
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => window.open(`mailto:${businessCard.email}`, '_blank')}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 border-gray-200"
-                  >
-                    <Mail className="w-4 h-4 mr-1" />
-                    이메일
-                  </Button>
-                  {businessCard.phone && (
-                    <Button
-                      onClick={() => window.open(`tel:${businessCard.phone}`, '_blank')}
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 border-gray-200"
-                    >
-                      <Phone className="w-4 h-4 mr-1" />
-                      전화
-                    </Button>
-                  )}
-                </div>
-
-                <Button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  variant="outline"
-                  className="w-full border-red-200 text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  {isDeleting ? '삭제 중...' : '명함 삭제'}
-                </Button>
-              </div>
             </div>
-          </CardContent>
-        </Card>
+          </Card>
+
+          {/* 액션 버튼들 */}
+          <div className="space-y-3 flex flex-col gap-1">
+            {businessCard.email && (
+              <Button
+                onClick={() => window.open(`mailto:${businessCard.email}`, '_blank')}
+                variant="outline"
+                className="w-full h-12 border-gray-200 hover:bg-white"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                이메일 보내기
+              </Button>
+            )}
+
+            {businessCard.phone && (
+              <Button
+                onClick={() => window.open(`tel:${businessCard.phone}`, '_blank')}
+                variant="outline"
+                className="w-full h-12 border-gray-200 hover:bg-white"
+              >
+                <Phone className="w-4 h-4 mr-2" />
+                전화 걸기
+              </Button>
+            )}
+
+            <Button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              variant="outline"
+              className="w-full h-12 border-red-200 text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {isDeleting ? '삭제 중...' : '명함 삭제'}
+            </Button>
+          </div>
+        </motion.div>
       </div>
     </div>
   )
