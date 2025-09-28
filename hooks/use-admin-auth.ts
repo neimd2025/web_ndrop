@@ -9,6 +9,11 @@ interface AdminUser {
   name: string
   role: string
   role_id: number
+  profile_image_url?: string
+  email?: string
+  company?: string
+  phone?: string
+  introduction?: string
 }
 
 export const useAdminAuth = () => {

@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         organizer_email: `${decoded.username}@admin.local`,
         organizer_phone: '02-1234-5678',
         organizer_kakao: '@neimed_official',
-        created_by: null, // 관리자가 생성하므로 null로 설정
+        created_by: adminAccountId, // 생성한 관리자 ID로 설정
         status: 'upcoming',
         current_participants: 0,
         // 새로운 필드들

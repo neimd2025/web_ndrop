@@ -3,11 +3,12 @@
 import type React from "react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
-import { ArrowLeft, Camera, Eye, EyeOff, Save, User } from "lucide-react"
+import { ArrowLeft, Camera, Save, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -15,8 +16,6 @@ import { toast } from "sonner"
 export default function AdminProfilePage() {
   const router = useRouter()
   const { admin, signOut } = useAdminAuth()
-  const [showPassword, setShowPassword] = useState(false)
-  const [showNewPassword, setShowNewPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState("")
   const [messageType, setMessageType] = useState<"success" | "error" | "">("")
@@ -94,19 +93,29 @@ export default function AdminProfilePage() {
   }
 
   const [formData, setFormData] = useState({
-    name: admin?.name || "",
-    email: admin?.username ? `${admin.username}@admin.local` : "",
+    name: "",
+    email: "",
     company: "",
-    currentPassword: "",
-    newPassword: "",
-    confirmNewPassword: ""
+    role: "",
+    phone: "",
+    introduction: ""
   })
 
-  // 관리자 프로필 이미지 초기화
+  // 관리자 프로필 이미지 및 데이터 초기화
   useEffect(() => {
     if (admin) {
       // 관리자 프로필 이미지가 있다면 설정
-      setProfileImage((admin as any).profile_image_url || null)
+      setProfileImage(admin.profile_image_url || null)
+
+      // 관리자 데이터로 폼 초기화
+      setFormData({
+        name: admin.name || "",
+        email: admin.email || (admin.username ? `${admin.username}@admin.local` : ""),
+        company: admin.company || "",
+        role: admin.role || "",
+        phone: admin.phone || "",
+        introduction: admin.introduction || ""
+      })
     }
   }, [admin])
 
@@ -119,27 +128,6 @@ export default function AdminProfilePage() {
     e.preventDefault()
     setMessage("")
     setMessageType("")
-
-    // 비밀번호 변경 시 유효성 검사
-    if (formData.newPassword) {
-      if (formData.newPassword !== formData.confirmNewPassword) {
-        setMessage("새 비밀번호가 일치하지 않습니다.")
-        setMessageType("error")
-        return
-      }
-
-      if (formData.newPassword.length < 6) {
-        setMessage("새 비밀번호는 최소 6자 이상이어야 합니다.")
-        setMessageType("error")
-        return
-      }
-
-      if (!formData.currentPassword) {
-        setMessage("현재 비밀번호를 입력해주세요.")
-        setMessageType("error")
-        return
-      }
-    }
 
     setIsLoading(true)
 
@@ -161,8 +149,12 @@ export default function AdminProfilePage() {
         },
         body: JSON.stringify({
           name: formData.name,
-          currentPassword: formData.currentPassword || undefined,
-          newPassword: formData.newPassword || undefined
+          email: formData.email,
+          company: formData.company,
+          role: formData.role,
+          phone: formData.phone,
+          introduction: formData.introduction,
+          profile_image_url: profileImage
         })
       })
 
@@ -177,20 +169,21 @@ export default function AdminProfilePage() {
       setMessage(result.message || "프로필이 성공적으로 업데이트되었습니다.")
       setMessageType("success")
 
-      // 비밀번호 필드 초기화
-      setFormData(prev => ({
-        ...prev,
-        currentPassword: "",
-        newPassword: "",
-        confirmNewPassword: ""
-      }))
-
-      // 로컬 스토리지의 관리자 정보도 업데이트
+      // 로컬 스토리지와 쿠키의 관리자 정보도 업데이트
       const adminUser = localStorage.getItem('admin_user')
       if (adminUser) {
         const adminData = JSON.parse(adminUser)
         adminData.name = formData.name
+        adminData.email = formData.email
+        adminData.company = formData.company
+        adminData.role = formData.role
+        adminData.phone = formData.phone
+        adminData.introduction = formData.introduction
+        adminData.profile_image_url = profileImage
         localStorage.setItem('admin_user', JSON.stringify(adminData))
+
+        // 쿠키도 업데이트
+        document.cookie = `admin_user=${encodeURIComponent(JSON.stringify(adminData))}; path=/; max-age=604800`
       }
 
     } catch (error) {
@@ -219,60 +212,34 @@ export default function AdminProfilePage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Button variant="ghost" size="sm" onClick={() => router.back()} className="p-2">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
-              <User className="h-5 w-5 text-white" />
-            </div>
-            <h1 className="text-xl font-bold text-gray-900">관리자 프로필</h1>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleLogout} className="text-red-600 border-red-200 hover:bg-red-50">
-            로그아웃
+      <div className="bg-white border-b border-gray-200 px-5 py-4">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="p-2"
+          >
+            <ArrowLeft className="w-4 h-4 text-gray-900" />
           </Button>
+          <h1 className="text-xl font-bold text-gray-900">프로필 설정</h1>
         </div>
       </div>
 
       <div className="px-6 py-8">
         <div className="max-w-2xl mx-auto space-y-6">
-          {/* 현재 관리자 정보 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <User className="h-5 w-5" />
-                <span>현재 관리자 정보</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* 프로필 이미지 섹션 */}
-              <div className="flex items-center space-x-4 mb-6">
-                <div
-                  className="relative w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden cursor-pointer hover:bg-gray-200 transition-colors"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    if (fileInputRef.current && !isUploadingImage) {
-                      fileInputRef.current.click()
-                    }
-                  }}
-                >
-                  {profileImage ? (
-                    <img
-                      src={profileImage}
-                      alt="프로필 이미지"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User className="w-10 h-10 text-gray-600" />
-                  )}
-                  <Button
-                    size="sm"
-                    className="absolute bottom-0 right-0 w-6 h-6 bg-purple-600 hover:bg-purple-700 rounded-full"
+          {/* 프로필 사진 섹션 */}
+          <Card className="bg-white border border-gray-200 shadow-sm rounded-xl">
+            <CardContent className="p-8">
+              <h2 className="text-lg font-bold text-gray-900 mb-6">프로필 사진</h2>
+
+              <div className="flex flex-col items-center gap-4">
+                {/* 프로필 이미지 */}
+                <div className="relative">
+                  <div
+                    className="w-28 h-28 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
@@ -280,168 +247,147 @@ export default function AdminProfilePage() {
                         fileInputRef.current.click()
                       }
                     }}
-                    disabled={isUploadingImage}
                   >
-                    <Camera className="w-3 h-3 text-white" />
-                  </Button>
+                    {profileImage ? (
+                      <img
+                        src={profileImage}
+                        alt="프로필 이미지"
+                        className="w-28 h-28 rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-14 h-14 text-white" />
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">프로필 이미지</p>
-                  <p className="text-xs text-gray-500">
-                    {isUploadingImage ? '업로드 중...' : '클릭하여 이미지 변경'}
-                  </p>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">이름</Label>
-                  <p className="text-gray-900 font-medium">{admin.name}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">사용자명</Label>
-                  <p className="text-gray-900 font-medium">{admin.username}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">이메일</Label>
-                  <p className="text-gray-900 font-medium">{admin.username}@admin.local</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">회사/조직</Label>
-                  <p className="text-gray-900 font-medium">-</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">권한</Label>
-                  <p className="text-gray-900 font-medium">관리자</p>
+                {/* 사진 변경 버튼 */}
+                <div className="flex flex-col items-center gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2 border-gray-300"
+                    disabled={isUploadingImage}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (fileInputRef.current && !isUploadingImage) {
+                        fileInputRef.current.click()
+                      }
+                    }}
+                  >
+                    <Camera className="w-4 h-4" />
+                    사진 변경
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                  <p className="text-sm text-gray-500 text-center">
+                    JPG, PNG 파일만 가능합니다. 최대 10MB
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* 프로필 수정 폼 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>프로필 수정</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleUpdateProfile} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-gray-700 font-medium">
-                      이름
-                    </Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange("name", e.target.value)}
-                      className="h-11 border-2 border-gray-200 focus:border-purple-500 rounded-lg"
-                    />
-                  </div>
+          {/* 기본 정보 섹션 */}
+          <Card className="bg-white border border-gray-200 shadow-sm rounded-xl">
+            <CardContent className="p-8">
+              <h2 className="text-lg font-bold text-gray-900 mb-6">기본 정보</h2>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-gray-700 font-medium">
-                      이메일
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                      className="h-11 border-2 border-gray-200 focus:border-purple-500 rounded-lg"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="company" className="text-gray-700 font-medium">
-                      회사/조직
-                    </Label>
-                    <Input
-                      id="company"
-                      type="text"
-                      value={formData.company}
-                      onChange={(e) => handleInputChange("company", e.target.value)}
-                      className="h-11 border-2 border-gray-200 focus:border-purple-500 rounded-lg"
-                    />
-                  </div>
+              <form onSubmit={handleUpdateProfile} className="space-y-5">
+                {/* 이름 - 필수 */}
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-sm font-medium text-gray-900">
+                    이름 <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    placeholder="홍길동"
+                    className="border-gray-300 rounded-xl"
+                    required
+                  />
                 </div>
 
-                {/* 비밀번호 변경 섹션 */}
-                <div className="border-t pt-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">비밀번호 변경</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="currentPassword" className="text-gray-700 font-medium">
-                        현재 비밀번호
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          id="currentPassword"
-                          type={showPassword ? "text" : "password"}
-                          value={formData.currentPassword}
-                          onChange={(e) => handleInputChange("currentPassword", e.target.value)}
-                          className="h-11 border-2 border-gray-200 focus:border-purple-500 rounded-lg pr-12"
-                          placeholder="변경 시에만 입력"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="newPassword" className="text-gray-700 font-medium">
-                        새 비밀번호
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          id="newPassword"
-                          type={showNewPassword ? "text" : "password"}
-                          value={formData.newPassword}
-                          onChange={(e) => handleInputChange("newPassword", e.target.value)}
-                          className="h-11 border-2 border-gray-200 focus:border-purple-500 rounded-lg pr-12"
-                          placeholder="변경 시에만 입력"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                        >
-                          {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmNewPassword" className="text-gray-700 font-medium">
-                        새 비밀번호 확인
-                      </Label>
-                      <Input
-                        id="confirmNewPassword"
-                        type="password"
-                        value={formData.confirmNewPassword}
-                        onChange={(e) => handleInputChange("confirmNewPassword", e.target.value)}
-                        className="h-11 border-2 border-gray-200 focus:border-purple-500 rounded-lg"
-                        placeholder="새 비밀번호를 다시 입력"
-                      />
-                    </div>
-                  </div>
+                {/* 이메일 */}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-900">
+                    이메일
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    placeholder="your@example.com"
+                    className="border-gray-300 rounded-xl"
+                  />
                 </div>
+
+                {/* 회사/소속 */}
+                <div className="space-y-2">
+                  <Label htmlFor="company" className="text-sm font-medium text-gray-900">
+                    회사/소속
+                  </Label>
+                  <Input
+                    id="company"
+                    type="text"
+                    value={formData.company}
+                    onChange={(e) => handleInputChange("company", e.target.value)}
+                    placeholder="Neimed Network"
+                    className="border-gray-300 rounded-xl"
+                  />
+                </div>
+
+                {/* 직책 */}
+                <div className="space-y-2">
+                  <Label htmlFor="role" className="text-sm font-medium text-gray-900">
+                    직책
+                  </Label>
+                  <Input
+                    id="role"
+                    type="text"
+                    value={formData.role}
+                    onChange={(e) => handleInputChange("role", e.target.value)}
+                    placeholder="관리자"
+                    className="border-gray-300 rounded-xl"
+                  />
+                </div>
+
+                {/* 전화번호 */}
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-sm font-medium text-gray-900">
+                    전화번호
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
+                    placeholder="'-' 없이 숫자만 입력해주세요"
+                    className="border-gray-300 rounded-xl"
+                  />
+                </div>
+
+                {/* 소개 */}
+                <div className="space-y-2">
+                  <Label htmlFor="introduction" className="text-sm font-medium text-gray-900">
+                    소개
+                  </Label>
+                  <Textarea
+                    id="introduction"
+                    value={formData.introduction}
+                    onChange={(e) => handleInputChange("introduction", e.target.value)}
+                    placeholder="간단한 소개를 입력해주세요"
+                    className="border-gray-300 rounded-xl min-h-[120px] resize-none"
+                  />
+                </div>
+
 
                 {/* 메시지 표시 */}
                 {message && (
@@ -454,23 +400,30 @@ export default function AdminProfilePage() {
                   </div>
                 )}
 
-                <Button
-                  type="submit"
-                  className="w-full h-12 bg-purple-600 hover:bg-purple-700 rounded-lg text-lg font-semibold"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      업데이트 중...
-                    </div>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      프로필 업데이트
-                    </>
-                  )}
-                </Button>
+                {/* 버튼 섹션 */}
+                <div className="flex justify-end gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.back()}
+                    className="border-gray-300"
+                    disabled={isLoading}
+                  >
+                    취소
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    {isLoading ? '저장 중...' : '저장'}
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>

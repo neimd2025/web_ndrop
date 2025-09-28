@@ -18,10 +18,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // 관리자 계정 조회
+    // 관리자 계정 조회 (프로필 정보 포함)
     const { data: adminData, error: adminError } = await supabase
       .from('admin_accounts')
-      .select('id, username, password_hash, full_name, role, role_id, is_active')
+      .select('id, username, password_hash, full_name, role, role_id, is_active, profile_image_url, email')
       .eq('username', username)
       .eq('is_active', true)
       .single()
@@ -60,6 +60,13 @@ export async function POST(request: NextRequest) {
       .update({ last_login_at: new Date().toISOString() })
       .eq('id', adminData.id)
 
+    // user_profiles에서 추가 프로필 정보 가져오기
+    const { data: profileData } = await supabase
+      .from('user_profiles')
+      .select('company, contact, introduction, profile_image_url')
+      .eq('id', adminData.id)
+      .single()
+
     console.log('✅ 관리자 로그인 성공:', {
       id: adminData.id,
       username: adminData.username,
@@ -75,7 +82,12 @@ export async function POST(request: NextRequest) {
         username: adminData.username,
         name: adminData.full_name,
         role: adminData.role,
-        role_id: adminData.role_id
+        role_id: adminData.role_id,
+        profile_image_url: adminData.profile_image_url || profileData?.profile_image_url,
+        email: adminData.email,
+        company: profileData?.company,
+        phone: profileData?.contact,
+        introduction: profileData?.introduction
       }
     })
 
