@@ -4,7 +4,7 @@ import DeleteAccountModal from '@/components/delete-account-modal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { LogOut, Settings, Shield, Trash2, User, UserCheck } from 'lucide-react'
+import { ArrowLeft, LogOut, Settings, Shield, Trash2, User } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -67,7 +67,18 @@ export default function AdminMyPage() {
     <div className="min-h-screen">
       {/* 헤더 */}
       <div className="bg-white border-b border-gray-200 px-5 py-4">
-        <h1 className="text-xl font-bold text-gray-900">관리자 마이페이지</h1>
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="p-2"
+          >
+            <ArrowLeft className="w-4 h-4 text-gray-900" />
+          </Button>
+          <h1 className="text-xl font-bold text-gray-900">마이페이지</h1>
+          <div className="w-10"></div>
+        </div>
       </div>
 
       <div className="p-5 space-y-6">
@@ -116,7 +127,7 @@ export default function AdminMyPage() {
           </Link>
 
           {/* 일반 사용자 페이지로 전환 버튼 */}
-          <div
+          {/* <div
             onClick={handleSwitchToUser}
             className="w-full justify-start cursor-pointer hover:bg-blue-50 p-4 rounded-lg
             flex items-center border border-blue-200 bg-gradient-to-r from-blue-50 to-purple-50"
@@ -126,7 +137,7 @@ export default function AdminMyPage() {
               <span className="font-medium text-blue-700">일반 사용자 페이지로</span>
               <span className="text-xs text-blue-500">홈 화면으로 이동하여 일반 사용자 모드로 전환</span>
             </div>
-          </div>
+          </div> */}
 
           <div
             onClick={handleLogout}

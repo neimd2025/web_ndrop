@@ -453,7 +453,7 @@ export default function NewEventPage() {
           </Card>
 
           {/* Action Buttons */}
-          <div className="flex space-x-4">
+          <div className="flex space-x-4 mt-5">
             <Button
               type="button"
               variant="outline"

@@ -28,11 +28,11 @@ export async function GET(request: NextRequest) {
     // JWT 토큰에서 관리자 ID 가져오기
     const adminId = decoded.adminId
 
-    // 해당 관리자가 생성한 이벤트만 가져오기 (created_by가 null이거나 adminId와 일치)
+    // 해당 관리자가 생성한 이벤트만 가져오기
     const { data: events, error } = await supabase
       .from('events')
       .select('*')
-      .or(`created_by.is.null,created_by.eq.${adminId}`)
+      .eq('created_by', adminId)
       .order('created_at', { ascending: false })
 
     if (error) {

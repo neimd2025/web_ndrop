@@ -9,10 +9,10 @@ import { calculateEventStatus } from "@/lib/supabase/database"
 import { logError } from "@/lib/utils"
 import { AnimatePresence, motion } from "framer-motion"
 import { Bell, Calendar, Copy, Eye, FileText, MapPin, MoreVertical, Plus, Save, Share, Users, X } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-
 interface Participant {
   id: string
   name: string
@@ -79,10 +79,12 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
     }
   }
 
-  // 컴포넌트 마운트 시 이벤트 목록 가져오기
+  // 컴포넌트 마운트 시 이벤트 목록 가져오기 (초기 데이터가 없을 때만)
   useEffect(() => {
-    fetchEvents()
-  }, [])
+    if (initialEvents.length === 0) {
+      fetchEvents()
+    }
+  }, [initialEvents.length])
 
   // 참여자 데이터 가져오기
   const fetchParticipants = async (eventId: string) => {
@@ -304,11 +306,9 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-sm">NN</span>
-              </div>
+              <Image src="/images/logo.png" alt="ndrop" width={40} height={40} />
               <div>
-                <span className="text-xl font-bold text-gray-900">ndrop Network</span>
+                <span className="text-xl font-bold text-gray-900">ndrop</span>
                 <div className="text-xs text-gray-500">이벤트 관리</div>
               </div>
             </div>
@@ -317,7 +317,7 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
             <Link href="/admin/events/new">
               <Button className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md">
                 <Plus className="h-4 w-4 mr-2" />
-                새 이벤트 만들기
+                새 이벤트
               </Button>
             </Link>
             <Link href="/admin/my-page">
@@ -613,7 +613,7 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                 </div>
 
                 <div className="text-center mb-6">
-                  <div className="w-56 h-56 bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-inner">
+                  <div className="w-56 h-56 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-inner">
                     {qrData ? (
                       <img
                         src={qrData.dataUrl}
