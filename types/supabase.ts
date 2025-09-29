@@ -57,10 +57,12 @@ export type Database = {
           full_name: string
           hobby_keywords: string[] | null
           id: string
+          interest_keywords: string[] | null
           introduction: string | null
           is_public: boolean | null
           keywords: string[] | null
           mbti: string | null
+          personality_keywords: string[] | null
           profile_image_url: string | null
           qr_code_url: string | null
           role: string | null
@@ -78,10 +80,12 @@ export type Database = {
           full_name: string
           hobby_keywords?: string[] | null
           id?: string
+          interest_keywords?: string[] | null
           introduction?: string | null
           is_public?: boolean | null
           keywords?: string[] | null
           mbti?: string | null
+          personality_keywords?: string[] | null
           profile_image_url?: string | null
           qr_code_url?: string | null
           role?: string | null
@@ -99,10 +103,12 @@ export type Database = {
           full_name?: string
           hobby_keywords?: string[] | null
           id?: string
+          interest_keywords?: string[] | null
           introduction?: string | null
           is_public?: boolean | null
           keywords?: string[] | null
           mbti?: string | null
+          personality_keywords?: string[] | null
           profile_image_url?: string | null
           qr_code_url?: string | null
           role?: string | null

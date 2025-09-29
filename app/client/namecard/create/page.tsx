@@ -189,7 +189,11 @@ export default function CreateNamecardPage() {
             contact: createdProfile.contact,
             mbti: createdProfile.mbti,
             keywords: createdProfile.personality_keywords,
+            personality_keywords: createdProfile.personality_keywords,
+            interest_keywords: createdProfile.interest_keywords,
+            hobby_keywords: createdProfile.hobby_keywords,
             external_link: createdProfile.external_link,
+            profile_image_url: createdProfile.profile_image_url,
             is_public: true
           }
 
