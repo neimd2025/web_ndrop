@@ -8,7 +8,7 @@ import { AdminEvent } from "@/lib/supabase/admin-server-actions"
 import { calculateEventStatus } from "@/lib/supabase/database"
 import { logError } from "@/lib/utils"
 import { AnimatePresence, motion } from "framer-motion"
-import { Bell, Calendar, Copy, Eye, FileText, MapPin, MoreVertical, Plus, Save, Share, Users, X } from "lucide-react"
+import { Bell, Calendar, Copy, Edit, Eye, FileText, MapPin, MoreVertical, Plus, Save, Share, Trash2, Users, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -44,6 +44,9 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
   const [qrData, setQrData] = useState<any>(null)
   const [events, setEvents] = useState<AdminEvent[]>(initialEvents)
   const [eventsLoading, setEventsLoading] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [eventToDelete, setEventToDelete] = useState<AdminEvent | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   // 이벤트 목록 가져오기
   const fetchEvents = async () => {
@@ -299,6 +302,58 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
     }
   }
 
+  // 이벤트 삭제 함수
+  const handleDeleteEvent = async () => {
+    if (!eventToDelete) return
+
+    try {
+      setDeleteLoading(true)
+
+      // JWT 토큰 가져오기
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
+        return
+      }
+
+      // 관리자용 이벤트 삭제 API 호출
+      const response = await fetch(`/api/admin/delete-event/${eventToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        }
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('이벤트 삭제 오류:', result)
+        toast.error(result.error || '이벤트 삭제에 실패했습니다.')
+        return
+      }
+
+      toast.success('이벤트가 성공적으로 삭제되었습니다.')
+
+      // 이벤트 목록에서 제거
+      setEvents(prevEvents => prevEvents.filter(event => event.id !== eventToDelete.id))
+
+      // 모달 닫기
+      setShowDeleteModal(false)
+      setEventToDelete(null)
+    } catch (error) {
+      console.error('이벤트 삭제 오류:', error)
+      toast.error('이벤트 삭제 중 오류가 발생했습니다.')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
+  // 삭제 확인 모달 열기
+  const handleDeleteClick = (event: AdminEvent) => {
+    setEventToDelete(event)
+    setShowDeleteModal(true)
+  }
+
   return (
     <>
       {/* Header */}
@@ -442,37 +497,63 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                       </div>
 
                       {/* 액션 버튼 */}
-                      <div className="grid grid-cols-3 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-2 hover:bg-blue-50 hover:border-blue-200"
-                          onClick={() => handleViewParticipants(event)}
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span className="hidden sm:inline">참여자 보기</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-2 hover:bg-green-50 hover:border-green-200"
-                          onClick={() => {
-                            setSelectedEvent(event)
-                            setShowNoticeModal(true)
-                          }}
-                        >
-                          <Bell className="h-4 w-4" />
-                          <span className="hidden sm:inline">공지 전송</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-2 hover:bg-purple-50 hover:border-purple-200"
-                          onClick={() => handleViewQR(event)}
-                        >
-                          <FileText className="h-4 w-4" />
-                          <span className="hidden sm:inline">리포트 받기</span>
-                        </Button>
+                      <div className="space-y-3">
+                        {/* 기본 액션 버튼 */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2 hover:bg-blue-50 hover:border-blue-200"
+                            onClick={() => handleViewParticipants(event)}
+                          >
+                            <Eye className="h-4 w-4" />
+                            <span className="hidden sm:inline">참여자 보기</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2 hover:bg-green-50 hover:border-green-200"
+                            onClick={() => {
+                              setSelectedEvent(event)
+                              setShowNoticeModal(true)
+                            }}
+                          >
+                            <Bell className="h-4 w-4" />
+                            <span className="hidden sm:inline">공지 전송</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2 hover:bg-purple-50 hover:border-purple-200"
+                            onClick={() => handleViewQR(event)}
+                          >
+                            <FileText className="h-4 w-4" />
+                            <span className="hidden sm:inline">리포트 받기</span>
+                          </Button>
+                        </div>
+
+                        {/* 관리 액션 버튼 */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <Link href={`/admin/events/edit/${event.id}`}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2 hover:bg-orange-50 hover:border-orange-200 w-full"
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span className="hidden sm:inline">수정</span>
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2 hover:bg-red-50 hover:border-red-200 text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteClick(event)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="hidden sm:inline">삭제</span>
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -754,6 +835,96 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
           </>
         )}
       </AnimatePresence>
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteModal && eventToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center">
+                    <Trash2 className="h-5 w-5 text-white" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-gray-900">이벤트 삭제</h2>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowDeleteModal(false)
+                    setEventToDelete(null)
+                  }}
+                  className="hover:bg-gray-100"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    <span className="font-medium text-red-800">삭제할 이벤트</span>
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-1">{eventToDelete.title}</h3>
+                  <p className="text-sm text-gray-600">
+                    {formatDateTime(eventToDelete.start_date)} • {eventToDelete.current_participants || 0}명 참여
+                  </p>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
+                    <div>
+                      <p className="font-medium text-yellow-800 mb-1">삭제 시 주의사항</p>
+                      <ul className="text-sm text-yellow-700 space-y-1">
+                        <li>• 이벤트와 관련된 모든 데이터가 삭제됩니다</li>
+                        <li>• 참여자 정보와 피드백이 모두 삭제됩니다</li>
+                        <li>• 삭제된 데이터는 복구할 수 없습니다</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-700">
+                    정말로 이 이벤트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-8">
+                <Button
+                  variant="outline"
+                  className="flex-1 py-3"
+                  onClick={() => {
+                    setShowDeleteModal(false)
+                    setEventToDelete(null)
+                  }}
+                  disabled={deleteLoading}
+                >
+                  취소
+                </Button>
+                <Button
+                  className="flex-1 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                  onClick={handleDeleteEvent}
+                  disabled={deleteLoading}
+                >
+                  {deleteLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      삭제 중...
+                    </div>
+                  ) : (
+                    '삭제하기'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
