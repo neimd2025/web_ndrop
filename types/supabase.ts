@@ -7,44 +7,107 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
   }
   public: {
     Tables: {
-      roles: {
+      admin_accounts: {
         Row: {
-          id: number
-          name: string
-          description: string | null
+          company: string | null
           created_at: string | null
+          email: string | null
+          full_name: string
+          id: string
+          introduction: string | null
+          is_active: boolean | null
+          last_login_at: string | null
+          password_hash: string
+          phone: string | null
+          profile_image_url: string | null
+          role: string | null
+          role_id: number | null
           updated_at: string | null
+          username: string
         }
         Insert: {
-          id?: number
-          name: string
-          description?: string | null
+          company?: string | null
           created_at?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          introduction?: string | null
+          is_active?: boolean | null
+          last_login_at?: string | null
+          password_hash: string
+          phone?: string | null
+          profile_image_url?: string | null
+          role?: string | null
+          role_id?: number | null
           updated_at?: string | null
+          username: string
         }
         Update: {
-          id?: number
-          name?: string
-          description?: string | null
+          company?: string | null
           created_at?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          introduction?: string | null
+          is_active?: boolean | null
+          last_login_at?: string | null
+          password_hash?: string
+          phone?: string | null
+          profile_image_url?: string | null
+          role?: string | null
+          role_id?: number | null
           updated_at?: string | null
+          username?: string
         }
         Relationships: [
           {
-            foreignKeyName: "user_profiles_role_id_fkey"
-            columns: ["id"]
+            foreignKeyName: "admin_accounts_role_id_fkey"
+            columns: ["role_id"]
             isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["role_id"]
-          }
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      admin_profiles: {
+        Row: {
+          created_at: string | null
+          department: string | null
+          email: string
+          full_name: string
+          id: string
+          phone: string | null
+          position: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department?: string | null
+          email: string
+          full_name: string
+          id: string
+          phone?: string | null
+          position?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          position?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       business_cards: {
         Row: {
@@ -60,6 +123,7 @@ export type Database = {
           interest_keywords: string[] | null
           introduction: string | null
           is_public: boolean | null
+          job_title: string | null
           keywords: string[] | null
           mbti: string | null
           personality_keywords: string[] | null
@@ -83,6 +147,7 @@ export type Database = {
           interest_keywords?: string[] | null
           introduction?: string | null
           is_public?: boolean | null
+          job_title?: string | null
           keywords?: string[] | null
           mbti?: string | null
           personality_keywords?: string[] | null
@@ -106,6 +171,7 @@ export type Database = {
           interest_keywords?: string[] | null
           introduction?: string | null
           is_public?: boolean | null
+          job_title?: string | null
           keywords?: string[] | null
           mbti?: string | null
           personality_keywords?: string[] | null
@@ -147,7 +213,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "business_cards"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       event_participants: {
@@ -182,7 +248,14 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "events"
             referencedColumns: ["id"]
-          }
+          },
+          {
+            foreignKeyName: "event_participants_user_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       events: {
@@ -201,8 +274,11 @@ export type Database = {
           organizer_kakao: string | null
           organizer_name: string | null
           organizer_phone: string | null
+          overview_points: string[] | null
+          special_benefits: string[] | null
           start_date: string
           status: string | null
+          target_audience: string[] | null
           title: string
           updated_at: string | null
         }
@@ -221,8 +297,11 @@ export type Database = {
           organizer_kakao?: string | null
           organizer_name?: string | null
           organizer_phone?: string | null
+          overview_points?: string[] | null
+          special_benefits?: string[] | null
           start_date: string
           status?: string | null
+          target_audience?: string[] | null
           title: string
           updated_at?: string | null
         }
@@ -241,65 +320,191 @@ export type Database = {
           organizer_kakao?: string | null
           organizer_name?: string | null
           organizer_phone?: string | null
+          overview_points?: string[] | null
+          special_benefits?: string[] | null
           start_date?: string
           status?: string | null
+          target_audience?: string[] | null
           title?: string
           updated_at?: string | null
         }
         Relationships: []
       }
-      notifications: {
+      feedback: {
         Row: {
           created_at: string | null
-          delivered_count: number | null
+          event_id: string | null
+          feedback: string | null
           id: string
-          message: string
-          read_count: number | null
-          sent_at: string | null
-          sent_by: string | null
-          status: string | null
-          target_event_id: string | null
-          target_ids: string[] | null
-          target_type: string
-          title: string
+          rating: number
+          updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
-          delivered_count?: number | null
+          event_id?: string | null
+          feedback?: string | null
           id?: string
-          message: string
-          read_count?: number | null
-          sent_at?: string | null
-          sent_by?: string | null
-          status?: string | null
-          target_event_id?: string | null
-          target_ids?: string[] | null
-          target_type: string
-          title: string
+          rating: number
+          updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
-          delivered_count?: number | null
+          event_id?: string | null
+          feedback?: string | null
           id?: string
-          message?: string
-          read_count?: number | null
-          sent_at?: string | null
-          sent_by?: string | null
-          status?: string | null
-          target_event_id?: string | null
-          target_ids?: string[] | null
-          target_type?: string
-          title?: string
+          rating?: number
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "feedback_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          notification_type: string | null
+          read_at: string | null
+          related_business_card_id: string | null
+          related_event_id: string | null
+          related_user_id: string | null
+          sent_by: string | null
+          target_event_id: string | null
+          target_type: string
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          notification_type?: string | null
+          read_at?: string | null
+          related_business_card_id?: string | null
+          related_event_id?: string | null
+          related_user_id?: string | null
+          sent_by?: string | null
+          target_event_id?: string | null
+          target_type: string
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          notification_type?: string | null
+          read_at?: string | null
+          related_business_card_id?: string | null
+          related_event_id?: string | null
+          related_user_id?: string | null
+          sent_by?: string | null
+          target_event_id?: string | null
+          target_type?: string
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_related_event_id_fkey"
+            columns: ["related_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_target_event_id_fkey"
             columns: ["target_event_id"]
             isOneToOne: false
             referencedRelation: "events"
             referencedColumns: ["id"]
-          }
+          },
         ]
+      }
+      notifications_backup: {
+        Row: {
+          created_at: string | null
+          delivered_count: number | null
+          id: string | null
+          message: string | null
+          read_count: number | null
+          sent_at: string | null
+          sent_by: string | null
+          status: string | null
+          target_event_id: string | null
+          target_ids: string[] | null
+          target_type: string | null
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivered_count?: number | null
+          id?: string | null
+          message?: string | null
+          read_count?: number | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string | null
+          target_event_id?: string | null
+          target_ids?: string[] | null
+          target_type?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delivered_count?: number | null
+          id?: string | null
+          message?: string | null
+          read_count?: number | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string | null
+          target_event_id?: string | null
+          target_ids?: string[] | null
+          target_type?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      roles: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: number
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       user_profiles: {
         Row: {
@@ -312,10 +517,12 @@ export type Database = {
           email: string
           external_link: string | null
           full_name: string | null
+          has_business_card: boolean | null
           hobby_keywords: string[] | null
           id: string
           interest_keywords: string[] | null
           introduction: string | null
+          job_title: string | null
           keywords: string[] | null
           mbti: string | null
           nickname: string | null
@@ -323,7 +530,7 @@ export type Database = {
           profile_image_url: string | null
           qr_code_url: string | null
           role: string | null
-          role_id: number | null
+          role_id: number
           updated_at: string | null
           work_field: string | null
         }
@@ -337,10 +544,12 @@ export type Database = {
           email: string
           external_link?: string | null
           full_name?: string | null
+          has_business_card?: boolean | null
           hobby_keywords?: string[] | null
           id: string
           interest_keywords?: string[] | null
           introduction?: string | null
+          job_title?: string | null
           keywords?: string[] | null
           mbti?: string | null
           nickname?: string | null
@@ -348,7 +557,7 @@ export type Database = {
           profile_image_url?: string | null
           qr_code_url?: string | null
           role?: string | null
-          role_id?: number | null
+          role_id: number
           updated_at?: string | null
           work_field?: string | null
         }
@@ -362,10 +571,12 @@ export type Database = {
           email?: string
           external_link?: string | null
           full_name?: string | null
+          has_business_card?: boolean | null
           hobby_keywords?: string[] | null
           id?: string
           interest_keywords?: string[] | null
           introduction?: string | null
+          job_title?: string | null
           keywords?: string[] | null
           mbti?: string | null
           nickname?: string | null
@@ -373,7 +584,7 @@ export type Database = {
           profile_image_url?: string | null
           qr_code_url?: string | null
           role?: string | null
-          role_id?: number | null
+          role_id?: number
           updated_at?: string | null
           work_field?: string | null
         }
@@ -384,52 +595,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "roles"
             referencedColumns: ["id"]
-          }
-        ]
-      }
-      feedback: {
-        Row: {
-          id: string
-          user_id: string | null
-          event_id: string | null
-          rating: number
-          feedback: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id?: string | null
-          event_id?: string | null
-          rating: number
-          feedback?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string | null
-          event_id?: string | null
-          rating?: number
-          feedback?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "feedback_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          }
         ]
       }
     }
@@ -437,7 +603,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      handle_new_user_signup: {
+        Args: { user_email: string; user_id: string; user_name?: string }
+        Returns: Json
+      }
+      send_notification_to_event_participants: {
+        Args: {
+          event_id: string
+          notification_message: string
+          notification_title: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
@@ -461,7 +638,7 @@ export type Tables<
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -489,7 +666,7 @@ export type TablesInsert<
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -514,7 +691,7 @@ export type TablesUpdate<
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -539,7 +716,7 @@ export type Enums<
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -556,7 +733,7 @@ export type CompositeTypes<
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -567,6 +744,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {}
-  }
+    Enums: {},
+  },
 } as const

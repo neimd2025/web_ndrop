@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Camera, Eye, EyeOff, Lock, User } from "lucide-react"
+import { Eye, EyeOff, Lock, User } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useRef, useState } from "react"
+import { useState } from "react"
 import { useForm } from 'react-hook-form'
 import { toast } from "sonner"
 import { z } from 'zod'
@@ -31,39 +31,6 @@ export default function AdminSignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // 프로필 이미지 업로드 관련 상태
-  const [profileImage, setProfileImage] = useState<string | null>(null)
-  const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
-  const [isUploadingImage, setIsUploadingImage] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // 프로필 이미지 업로드 함수
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      // 파일 크기 확인 (5MB 제한)
-      const maxSize = 5 * 1024 * 1024 // 5MB
-      if (file.size > maxSize) {
-        toast.error('파일 크기는 5MB를 초과할 수 없습니다.')
-        return
-      }
-
-      // 파일 형식 확인
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-      if (!allowedTypes.includes(file.type)) {
-        toast.error('지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP만 허용)')
-        return
-      }
-
-      // 파일 저장 및 미리보기용 URL 생성
-      setProfileImageFile(file)
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setProfileImage(e.target?.result as string)
-      }
-      reader.readAsDataURL(file)
-    }
-  }
 
   const {
     register,
@@ -97,33 +64,6 @@ export default function AdminSignupPage() {
         return
       }
 
-      // 2. 프로필 이미지가 있다면 업로드
-      if (profileImageFile && signupResult.admin) {
-        setIsUploadingImage(true)
-
-        try {
-          const formData = new FormData()
-          formData.append('file', profileImageFile)
-          formData.append('adminId', signupResult.admin.id)
-
-          const imageResponse = await fetch('/api/admin/upload-profile-image', {
-            method: 'POST',
-            body: formData
-          })
-
-          const imageResult = await imageResponse.json()
-
-          if (!imageResponse.ok) {
-            console.warn('프로필 이미지 업로드 실패:', imageResult.error)
-            // 이미지 업로드 실패해도 회원가입은 성공으로 처리
-          }
-        } catch (imageError) {
-          console.warn('프로필 이미지 업로드 오류:', imageError)
-          // 이미지 업로드 실패해도 회원가입은 성공으로 처리
-        } finally {
-          setIsUploadingImage(false)
-        }
-      }
 
       if (signupResult.success) {
         toast.success('관리자 계정이 성공적으로 생성되었습니다!', {
@@ -158,54 +98,6 @@ export default function AdminSignupPage() {
 
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          {/* 프로필 이미지 섹션 */}
-          <div className="text-center mb-6">
-            <div
-              className="relative w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center  cursor-pointer hover:bg-gray-200 transition-colors"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                if (fileInputRef.current && !isUploadingImage) {
-                  fileInputRef.current.click()
-                }
-              }}
-            >
-              {profileImage ? (
-                <img
-                  src={profileImage}
-                  alt="프로필 이미지"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User className="w-12 h-12 text-gray-600" />
-              )}
-              <Button
-                type="button"
-                size="sm"
-                className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 hover:bg-purple-700 rounded-full"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  if (fileInputRef.current && !isUploadingImage) {
-                    fileInputRef.current.click()
-                  }
-                }}
-                disabled={isUploadingImage}
-              >
-                <Camera className="w-4 h-4 text-white" />
-              </Button>
-            </div>
-            <p className="text-purple-600 text-sm font-medium">
-              {isUploadingImage ? '업로드 중...' : '프로필 사진 추가(선택)'}
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-              onChange={handleImageSelect}
-              className="hidden"
-            />
-          </div>
 
           <div className="space-y-4">
             <div>

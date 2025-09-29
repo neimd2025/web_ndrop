@@ -8,7 +8,7 @@ import { AdminEvent } from "@/lib/supabase/admin-server-actions"
 import { calculateEventStatus } from "@/lib/supabase/database"
 import { logError } from "@/lib/utils"
 import { AnimatePresence, motion } from "framer-motion"
-import { Bell, Calendar, Copy, Edit, Eye, FileText, MapPin, MoreVertical, Plus, Save, Share, Trash2, Users, X } from "lucide-react"
+import { Bell, Calendar, Copy, Edit, Eye, FileText, MapPin, Plus, Save, Share, Trash2, Users, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -448,11 +448,6 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                       {/* 오버레이 및 상태 배지 */}
                       <div className="absolute top-3 left-3 flex items-center gap-2">
                         {getStatusBadge(event)}
-                      </div>
-                      <div className="absolute top-3 right-3">
-                        <Button variant="ghost" size="sm" className="bg-black bg-opacity-20 hover:bg-opacity-30 text-white">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
                       </div>
                       <div className="absolute bottom-3 left-3 right-3">
                         <div className="flex items-center gap-2 text-white">

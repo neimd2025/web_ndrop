@@ -52,17 +52,17 @@ export function UserMyNamecardClient({ user, businessCards }: UserMyNamecardClie
   // 직책/회사 정보
   const getWorkInfo = () => {
     const workField = userCard?.work_field || user?.work_field || ""
-    const role = userCard?.title || user?.role || ""
+    const jobTitle = userCard?.job_title || user?.job_title || "" // job_title 사용
     const company = userCard?.company || userCard?.affiliation || user?.company || user?.affiliation || ""
 
-    if (workField && role) {
-      return `${workField} / ${role}`
-    } else if (role && company) {
-      return `${role} / ${company}`
+    if (workField && jobTitle) {
+      return `${workField} / ${jobTitle}`
+    } else if (jobTitle && company) {
+      return `${jobTitle} / ${company}`
     } else if (workField) {
       return workField
-    } else if (role) {
-      return role
+    } else if (jobTitle) {
+      return jobTitle
     }
     return ""
   }

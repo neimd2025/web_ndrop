@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const { data: events, error } = await supabase
       .from('events')
       .select('*')
-      .eq('created_by', adminId)
+      .eq('admin_created_by', adminId)
       .order('created_at', { ascending: false })
 
     if (error) {

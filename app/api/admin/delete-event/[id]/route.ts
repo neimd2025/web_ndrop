@@ -46,7 +46,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // 이벤트 생성자 확인 (자신이 생성한 이벤트만 삭제 가능)
-    if (existingEvent.created_by !== decoded.adminId) {
+    if (existingEvent.admin_created_by !== decoded.adminId) {
       return NextResponse.json({
         error: '이 이벤트를 삭제할 권한이 없습니다.'
       }, { status: 403 })

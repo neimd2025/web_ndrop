@@ -58,7 +58,7 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
     const searchFields = [
       businessCard.full_name || businessCard.name,
       businessCard.company || businessCard.affiliation,
-      businessCard.role || businessCard.title,
+      businessCard.job_title || businessCard.title,
       businessCard.email || businessCard.contact
     ].filter(Boolean).join(' ').toLowerCase()
 
@@ -223,7 +223,7 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
                         </div>
 
                         <p className="text-sm text-gray-600 mb-1">
-                          {businessCard.role || businessCard.title} / {businessCard.company || businessCard.affiliation}
+                          {businessCard.job_title || businessCard.title} / {businessCard.company || businessCard.affiliation}
                         </p>
 
                         {(businessCard.email || businessCard.contact) && (
