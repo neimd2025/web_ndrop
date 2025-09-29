@@ -1,4 +1,4 @@
-import { ROLE_NAMES, isAdminEmail } from '@/lib/constants'
+import { ROLE_IDS, ROLE_NAMES, isAdminEmail } from '@/lib/constants'
 import { createClient } from '@/utils/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
 
         if (!existingProfile) {
           const userRole = isAdminEmail(data.user.email || '') ? ROLE_NAMES.ADMIN : ROLE_NAMES.USER
+          const userRoleId = isAdminEmail(data.user.email || '') ? ROLE_IDS.ADMIN : ROLE_IDS.USER
 
           // 사용자 프로필 생성
           await userProfileAPI.createUserProfile({
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
             contact: '', // Changed from phone
             company: '',
             role: userRole, // role 설정
+            role_id: userRoleId, // role_id 필수 필드 추가
             introduction: '', // Changed from bio
             mbti: '',
             keywords: [],

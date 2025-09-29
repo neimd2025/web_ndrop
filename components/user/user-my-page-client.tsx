@@ -57,8 +57,8 @@ export function UserMyPageClient({
   // 사용자 회사/직책 정보 가져오기
   const getUserCompanyInfo = () => {
     const primaryCard = businessCards.find(card => card.is_public) || businessCards[0]
-    const jobTitle = primaryCard?.job_title || primaryCard?.title || user?.job_title
-    const company = primaryCard?.company || primaryCard?.affiliation || (user as any)?.company
+    const jobTitle = primaryCard?.job_title || primaryCard?.title || (user && 'job_title' in user ? user.job_title : undefined)
+    const company = primaryCard?.company || primaryCard?.affiliation || (user && 'company' in user ? user.company : undefined)
     if (jobTitle && company) return `${jobTitle} / ${company}`
     if (jobTitle) return jobTitle
     if (company) return company
