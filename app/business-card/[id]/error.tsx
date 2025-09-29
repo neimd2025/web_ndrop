@@ -88,7 +88,7 @@ export default function BusinessCardError({ error, reset }: ErrorProps) {
 
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-xs text-gray-500">
-              Powered by Neimed
+              Powered by ndrop
             </p>
           </div>
         </CardContent>

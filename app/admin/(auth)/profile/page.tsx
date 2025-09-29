@@ -339,7 +339,7 @@ export default function AdminProfilePage() {
                     type="text"
                     value={formData.company}
                     onChange={(e) => handleInputChange("company", e.target.value)}
-                    placeholder="Neimed Network"
+                    placeholder="ndrop Network"
                     className="border-gray-300 rounded-xl"
                   />
                 </div>

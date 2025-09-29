@@ -1,4 +1,4 @@
-name: Deploy web-neimed
+name: Deploy web-ndrop
 
 on:
   push:

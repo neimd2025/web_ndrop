@@ -255,10 +255,10 @@ export default function AdminEventEditPage() {
           location: data.location,
           max_participants: parseInt(data.maxParticipants),
           image_url: imageUrl,
-          organizer_name: admin?.name || 'Neimed 팀',
-          organizer_email: admin?.email || 'support@neimed.com',
+          organizer_name: admin?.name || 'ndrop 팀',
+          organizer_email: admin?.email || 'support@ndrop.com',
           organizer_phone: admin?.phone || '02-1234-5678',
-          organizer_kakao: '@neimed_official',
+          organizer_kakao: '@ndrop_official',
           overview_points: overviewPoints,
           target_audience: targetAudience,
           special_benefits: specialBenefits

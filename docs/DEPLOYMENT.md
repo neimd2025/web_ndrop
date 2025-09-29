@@ -29,7 +29,7 @@ QR 코드가 올바른 도메인을 사용하도록 설정:
    - `NEXT_PUBLIC_SITE_URL`을 `https://your-netlify-domain.netlify.app`로 설정
 
 3. **커스텀 도메인 사용 시**:
-   - `NEXT_PUBLIC_SITE_URL`을 실제 도메인으로 설정 (예: `https://neimed.com`)
+   - `NEXT_PUBLIC_SITE_URL`을 실제 도메인으로 설정 (예: `https://ndrop.com`)
 
 ### 3. 개발 환경 설정
 

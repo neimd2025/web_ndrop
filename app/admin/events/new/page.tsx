@@ -365,7 +365,7 @@ export default function NewEventPage() {
                 <Label htmlFor="specialBenefits">특별 혜택 (선택사항)</Label>
                 <Textarea
                   {...register('specialBenefits')}
-                  placeholder="각 줄에 하나씩 입력하세요&#10;예:&#10;Neimed 앱 사용법 가이드 제공&#10;네트워킹 노하우 공유 세션&#10;참가자 전용 커뮤니티 초대"
+                  placeholder="각 줄에 하나씩 입력하세요&#10;예:&#10;ndrop 앱 사용법 가이드 제공&#10;네트워킹 노하우 공유 세션&#10;참가자 전용 커뮤니티 초대"
                   rows={3}
                   className={`border-2 border-gray-200 focus:border-purple-500 rounded-xl ${errors.specialBenefits ? 'border-red-500' : ''}`}
                 />
@@ -447,7 +447,7 @@ export default function NewEventPage() {
                 <p><strong>사용자명:</strong> {admin.username}</p>
                 <p><strong>이메일:</strong> {admin.username}@admin.local</p>
                 <p><strong>연락처:</strong> 02-1234-5678</p>
-                <p><strong>카카오톡:</strong> @neimed_official</p>
+                <p><strong>카카오톡:</strong> @ndrop_official</p>
               </div>
             </CardContent>
           </Card>

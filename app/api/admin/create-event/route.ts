@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         organizer_name: adminName || decoded.username || '관리자',
         organizer_email: `${decoded.username}@admin.local`,
         organizer_phone: '02-1234-5678',
-        organizer_kakao: '@neimed_official',
+        organizer_kakao: '@ndrop_official',
         created_by: null, // 일반 사용자가 생성한 이벤트가 아니므로 null
         admin_created_by: adminAccountId, // 생성한 관리자 ID로 설정
         status: 'upcoming',
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
         organizer_name: adminName || decoded.username || '관리자',
         organizer_email: `${decoded.username}@admin.local`,
         organizer_phone: '02-1234-5678',
-        organizer_kakao: '@neimed_official',
+        organizer_kakao: '@ndrop_official',
         created_by: null,
         status: 'upcoming',
         current_participants: 0
