@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/use-auth'
+import { ROLE_IDS } from '@/lib/constants'
 import { userProfileAPI } from '@/lib/supabase/database'
 import { createClient } from '@/utils/supabase/client'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -166,7 +167,7 @@ export default function CreateNamecardPage() {
         profile_image_url: profileImageUrl,
         nickname: data.full_name,
         qr_code_url: null,
-        role_id: 1, // 클라이언트 사용자
+        role_id: ROLE_IDS.USER, // 기본 사용자 역할 설정
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
