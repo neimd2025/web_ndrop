@@ -110,7 +110,7 @@ export default function AdminProfilePage() {
       // 관리자 데이터로 폼 초기화
       setFormData({
         name: admin.name || "",
-        email: admin.email || (admin.username ? `${admin.username}@admin.local` : ""),
+        email: admin.email || (admin.username ? `${admin.username}` : ""),
         company: admin.company || "",
         role: admin.role || "",
         phone: admin.phone || "",
@@ -339,7 +339,7 @@ export default function AdminProfilePage() {
                     type="text"
                     value={formData.company}
                     onChange={(e) => handleInputChange("company", e.target.value)}
-                    placeholder="Neimed Network"
+                    placeholder="ndrop Network"
                     className="border-gray-300 rounded-xl"
                   />
                 </div>

@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
         role: adminData.role,
         role_id: adminData.role_id,
         profile_image_url: adminData.profile_image_url,
-        email: adminData.email || `${adminData.username}@admin.local`,
+        email: adminData.email || `${adminData.username}`,
         company: adminData.company,
         phone: adminData.phone,
         introduction: adminData.introduction

@@ -183,6 +183,8 @@ export default function NewEventPage() {
           imageUrl: imageUrl,
           adminId: admin.id,
           adminName: admin.name,
+          adminEmail: admin.email,
+          adminPhone: admin.phone,
           adminUsername: admin.username,
           // 새로운 필드들 - 줄바꿈으로 구분된 문자열을 배열로 변환
           overviewPoints: data.overviewPoints ? data.overviewPoints.split('\n').filter(line => line.trim()) : [],
@@ -365,7 +367,7 @@ export default function NewEventPage() {
                 <Label htmlFor="specialBenefits">특별 혜택 (선택사항)</Label>
                 <Textarea
                   {...register('specialBenefits')}
-                  placeholder="각 줄에 하나씩 입력하세요&#10;예:&#10;Neimed 앱 사용법 가이드 제공&#10;네트워킹 노하우 공유 세션&#10;참가자 전용 커뮤니티 초대"
+                  placeholder="각 줄에 하나씩 입력하세요&#10;예:&#10;ndrop 앱 사용법 가이드 제공&#10;네트워킹 노하우 공유 세션&#10;참가자 전용 커뮤니티 초대"
                   rows={3}
                   className={`border-2 border-gray-200 focus:border-purple-500 rounded-xl ${errors.specialBenefits ? 'border-red-500' : ''}`}
                 />
@@ -443,11 +445,10 @@ export default function NewEventPage() {
                 </div>
               </div>
               <div className="space-y-2 text-sm text-blue-800">
-                <p><strong>이름:</strong> {admin.name || admin.username || '관리자'}</p>
-                <p><strong>사용자명:</strong> {admin.username}</p>
-                <p><strong>이메일:</strong> {admin.username}@admin.local</p>
-                <p><strong>연락처:</strong> 02-1234-5678</p>
-                <p><strong>카카오톡:</strong> @neimed_official</p>
+                <p><strong>이름:</strong> {admin.name || admin.username || ''}</p>
+                <p><strong>사용자명:</strong> {admin.username || ''}</p>
+                <p><strong>이메일:</strong> {admin.email || ''}</p>
+                <p><strong>연락처:</strong> {admin.phone || ''}</p>
               </div>
             </CardContent>
           </Card>

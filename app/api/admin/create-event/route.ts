@@ -35,6 +35,8 @@ export async function POST(request: NextRequest) {
       imageUrl,
       adminId,
       adminName,
+      adminEmail,
+      adminPhone,
       adminUsername,
       overviewPoints,
       targetAudience,
@@ -58,6 +60,18 @@ export async function POST(request: NextRequest) {
     // JWT 토큰에서 관리자 ID 가져오기
     const adminAccountId = decoded.adminId // admin_accounts의 ID (user_profiles에도 동일한 ID로 저장됨)
 
+    // 관리자 정보 조회 (실제 설정된 값들 가져오기)
+    const { data: adminData, error: adminError } = await supabase
+      .from('admin_accounts')
+      .select('full_name, email, phone, introduction')
+      .eq('id', adminAccountId)
+      .single()
+
+    if (adminError) {
+      console.error('관리자 정보 조회 오류:', adminError)
+      return NextResponse.json({ error: '관리자 정보를 찾을 수 없습니다.' }, { status: 404 })
+    }
+
     // 이벤트 생성 (관리자 ID를 created_by에 저장)
     const { data: event, error: eventError } = await supabase
       .from('events')
@@ -70,16 +84,17 @@ export async function POST(request: NextRequest) {
         max_participants: parseInt(maxParticipants),
         event_code: eventCode,
         image_url: imageUrl,
-        organizer_name: adminName || decoded.username || '관리자',
-        organizer_email: `${decoded.username}@admin.local`,
-        organizer_phone: '02-1234-5678',
-        organizer_kakao: '@neimed_official',
+        organizer_name: adminName || adminData.full_name || decoded.username || '관리자',
+        organizer_email: adminEmail || adminData.email || `${decoded.username}`,
+        organizer_phone: adminPhone || adminData.phone || '',
+        organizer_kakao: '@ndrop_official', // 기본값
         created_by: null, // 일반 사용자가 생성한 이벤트가 아니므로 null
         admin_created_by: adminAccountId, // 생성한 관리자 ID로 설정
         status: 'upcoming',
         current_participants: 0,
         // 새로운 필드들
         overview_points: overviewPoints || [],
+
         target_audience: targetAudience || [],
         special_benefits: specialBenefits || []
       })
@@ -98,9 +113,9 @@ export async function POST(request: NextRequest) {
         event_code: eventCode,
         image_url: imageUrl,
         organizer_name: adminName || decoded.username || '관리자',
-        organizer_email: `${decoded.username}@admin.local`,
-        organizer_phone: '02-1234-5678',
-        organizer_kakao: '@neimed_official',
+        organizer_email: `${decoded.username}`,
+        organizer_phone: `${decoded.phone}`,
+        organizer_kakao: `${decoded.kakao}`,
         created_by: null,
         status: 'upcoming',
         current_participants: 0

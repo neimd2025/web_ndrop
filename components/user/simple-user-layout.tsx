@@ -121,7 +121,7 @@ export function SimpleUserLayout({ children }: { children: React.ReactNode }) {
           {/* <div className="bg-white shadow-sm border-b px-6 py-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
-                Neimed
+                ndrop
               </h2>
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-600">
