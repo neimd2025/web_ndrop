@@ -21,12 +21,13 @@ export async function POST(request: NextRequest) {
     // 관리자 계정 조회 (프로필 정보 포함)
     const { data: adminData, error: adminError } = await supabase
       .from('admin_accounts')
-      .select('id, username, password_hash, full_name, role, role_id, is_active, profile_image_url, email')
+      .select('id, username, password_hash, full_name, role, role_id, is_active, profile_image_url, email, company, phone, introduction')
       .eq('username', username)
       .eq('is_active', true)
       .single()
 
     if (adminError || !adminData) {
+      console.log('❌ 관리자 계정 조회 실패:', { adminError, adminData, username })
       return NextResponse.json(
         { error: '사용자명 또는 비밀번호가 올바르지 않습니다.' },
         { status: 401 }
@@ -60,12 +61,6 @@ export async function POST(request: NextRequest) {
       .update({ last_login_at: new Date().toISOString() })
       .eq('id', adminData.id)
 
-    // user_profiles에서 추가 프로필 정보 가져오기
-    const { data: profileData } = await supabase
-      .from('user_profiles')
-      .select('company, contact, introduction, profile_image_url')
-      .eq('id', adminData.id)
-      .single()
 
     console.log('✅ 관리자 로그인 성공:', {
       id: adminData.id,
@@ -83,11 +78,11 @@ export async function POST(request: NextRequest) {
         name: adminData.full_name,
         role: adminData.role,
         role_id: adminData.role_id,
-        profile_image_url: adminData.profile_image_url || profileData?.profile_image_url,
-        email: adminData.email,
-        company: profileData?.company,
-        phone: profileData?.contact,
-        introduction: profileData?.introduction
+        profile_image_url: adminData.profile_image_url,
+        email: adminData.email || `${adminData.username}@admin.local`,
+        company: adminData.company,
+        phone: adminData.phone,
+        introduction: adminData.introduction
       }
     })
 

@@ -51,7 +51,7 @@ export function UserMyPageClient({
   // 사용자 소개 가져오기
   const getUserIntroduction = () => {
     const primaryCard = businessCards.find(card => card.is_public) || businessCards[0]
-    return primaryCard?.introduction || primaryCard?.bio || user?.introduction || "하루하루 의미있게"
+    return primaryCard?.introduction || primaryCard?.bio || (user as any)?.introduction || "하루하루 의미있게"
   }
 
   // 사용자 회사/직책 정보 가져오기
