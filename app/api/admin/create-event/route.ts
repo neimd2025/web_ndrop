@@ -56,9 +56,9 @@ export async function POST(request: NextRequest) {
     const endDateTime = new Date(`${endDate}T${endTime}:00+09:00`).toISOString()
 
     // JWT 토큰에서 관리자 ID 가져오기
-    const adminAccountId = decoded.adminId // admin_accounts의 ID
+    const adminAccountId = decoded.adminId // admin_accounts의 ID (user_profiles에도 동일한 ID로 저장됨)
 
-    // 이벤트 생성 (관리자가 생성하므로 created_by는 null로 설정)
+    // 이벤트 생성 (관리자 ID를 created_by에 저장)
     const { data: event, error: eventError } = await supabase
       .from('events')
       .insert({
@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
         organizer_email: `${decoded.username}@admin.local`,
         organizer_phone: '02-1234-5678',
         organizer_kakao: '@neimed_official',
-        created_by: adminAccountId, // 생성한 관리자 ID로 설정
+        created_by: null, // 일반 사용자가 생성한 이벤트가 아니므로 null
+        admin_created_by: adminAccountId, // 생성한 관리자 ID로 설정
         status: 'upcoming',
         current_participants: 0,
         // 새로운 필드들

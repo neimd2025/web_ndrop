@@ -65,13 +65,25 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       .single()
 
     if (fetchError || !existingEvent) {
+      console.error('이벤트 조회 오류:', fetchError)
       return NextResponse.json({
         error: '이벤트를 찾을 수 없습니다.'
       }, { status: 404 })
     }
 
+    console.log('이벤트 수정 권한 확인:', {
+      eventId: id,
+      eventAdminCreatedBy: existingEvent.admin_created_by,
+      currentAdminId: decoded.adminId,
+      isAuthorized: existingEvent.admin_created_by === decoded.adminId
+    })
+
     // 이벤트 생성자 확인 (자신이 생성한 이벤트만 수정 가능)
-    if (existingEvent.created_by !== decoded.adminId) {
+    if (existingEvent.admin_created_by !== decoded.adminId) {
+      console.error('권한 없음:', {
+        eventAdminCreatedBy: existingEvent.admin_created_by,
+        currentAdminId: decoded.adminId
+      })
       return NextResponse.json({
         error: '이 이벤트를 수정할 권한이 없습니다.'
       }, { status: 403 })

@@ -74,34 +74,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 기존 시스템과 호환을 위해 user_profiles에도 생성
-    const { error: profileError } = await supabase
-      .from('user_profiles')
-      .insert({
-        id: adminData.id, // admin_accounts와 동일한 ID 사용
-        email: `${username}@admin.local`, // 관리자 식별용 이메일
-        full_name: name,
-        role_id: 2, // 관리자 role_id
-        role: 'admin',
-        work_field: null,
-        contact: '',
-        company: '',
-        introduction: '',
-        mbti: '',
-        keywords: [],
-        profile_image_url: null,
-        qr_code_url: null
-      })
-
-    if (profileError) {
-      console.error('관리자 프로필 생성 오류:', profileError)
-      // admin_accounts는 이미 생성되었으므로 롤백
-      await supabase.from('admin_accounts').delete().eq('id', adminData.id)
-      return NextResponse.json(
-        { error: '관리자 프로필 생성에 실패했습니다.', details: profileError.message },
-        { status: 500 }
-      )
-    }
+    // 관리자 계정은 admin_accounts 테이블에만 저장 (user_profiles와 완전 분리)
 
     console.log('✅ 관리자 계정 생성 성공:', {
       id: adminData.id,
