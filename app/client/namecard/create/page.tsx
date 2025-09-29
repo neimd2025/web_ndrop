@@ -151,7 +151,7 @@ export default function CreateNamecardPage() {
         birth_date: data.birth_date || null,
         affiliation_type: data.affiliation_type,
         affiliation: data.affiliation_type === '소속' ? (data.affiliation || null) : null,
-        role: data.affiliation_type === '소속' ? (data.role || null) : null,
+        job_title: data.affiliation_type === '소속' ? (data.role || null) : null,
         work_field: data.affiliation_type === '미소속' ? (data.work_field || null) : null,
         contact: data.contact || null,
         mbti: data.mbti && data.mbti.trim() !== '' ? data.mbti : null,
@@ -171,46 +171,78 @@ export default function CreateNamecardPage() {
         updated_at: new Date().toISOString()
       }
 
-      // 프로필 업데이트 (이미 기본 프로필이 존재하므로)
-      const createdProfile = await userProfileAPI.updateUserProfile(user.id, cleanedData)
+      // 프로필 생성 또는 업데이트
+      let createdProfile
+      try {
+        // 먼저 업데이트 시도 (기존 프로필이 있는 경우)
+        createdProfile = await userProfileAPI.updateUserProfile(user.id, cleanedData)
+        console.log('프로필 업데이트 성공:', createdProfile)
+      } catch (updateError) {
+        console.log('프로필 업데이트 실패, 생성 시도:', updateError)
+        // 업데이트 실패 시 생성 시도 (새 사용자의 경우)
+        createdProfile = await userProfileAPI.createUserProfile({
+          id: user.id,
+          ...cleanedData
+        })
+        console.log('프로필 생성 성공:', createdProfile)
+      }
+
+      if (!createdProfile) {
+        throw new Error('프로필 생성/업데이트에 실패했습니다.')
+      }
+
       toast.success('명함이 성공적으로 생성되었습니다!')
 
-      // 명함 생성
+      // 명함 생성 (프로필이 성공적으로 생성된 경우에만)
       if (createdProfile) {
         try {
           const supabase = createClient()
-          const businessCardData = {
-            user_id: user.id,
-            full_name: createdProfile.full_name || '이름 없음',
-            introduction: createdProfile.introduction || '안녕하세요!',
-            company: createdProfile.affiliation,
-            role: createdProfile.role,
-            work_field: createdProfile.work_field,
-            contact: createdProfile.contact,
-            mbti: createdProfile.mbti,
-            keywords: createdProfile.personality_keywords,
-            personality_keywords: createdProfile.personality_keywords,
-            interest_keywords: createdProfile.interest_keywords,
-            hobby_keywords: createdProfile.hobby_keywords,
-            external_link: createdProfile.external_link,
-            profile_image_url: createdProfile.profile_image_url,
-            is_public: true
-          }
 
-          const { data: businessCard, error } = await supabase
+          // 기존 명함이 있는지 확인
+          const { data: existingCard } = await supabase
             .from('business_cards')
-            .insert(businessCardData)
-            .select()
+            .select('id')
+            .eq('user_id', user.id)
             .single()
 
-          if (error) {
-            throw error
-          }
+          if (!existingCard) {
+            // 명함이 없으면 새로 생성
+            const businessCardData = {
+              user_id: user.id,
+              full_name: createdProfile.full_name || '이름 없음',
+              introduction: createdProfile.introduction || '안녕하세요!',
+              company: createdProfile.affiliation,
+              job_title: createdProfile.job_title,
+              work_field: createdProfile.work_field,
+              contact: createdProfile.contact,
+              mbti: createdProfile.mbti,
+              keywords: createdProfile.personality_keywords,
+              personality_keywords: createdProfile.personality_keywords,
+              interest_keywords: createdProfile.interest_keywords,
+              hobby_keywords: createdProfile.hobby_keywords,
+              external_link: createdProfile.external_link,
+              profile_image_url: createdProfile.profile_image_url,
+              is_public: true
+            }
 
-          console.log('명함 생성 성공:', businessCard)
+            const { data: businessCard, error } = await supabase
+              .from('business_cards')
+              .insert(businessCardData)
+              .select()
+              .single()
+
+            if (error) {
+              console.error('명함 생성 오류:', error)
+              toast.warning('프로필은 생성되었지만 명함 생성에 실패했습니다.')
+            } else {
+              console.log('명함 생성 성공:', businessCard)
+            }
+          } else {
+            console.log('기존 명함이 이미 존재합니다:', existingCard.id)
+          }
         } catch (cardError) {
-          console.error('명함 생성 오류:', cardError)
-          toast.error('일부 정보 저장에 실패했습니다.')
+          console.error('명함 생성 중 오류:', cardError)
+          toast.warning('프로필은 생성되었지만 명함 생성에 실패했습니다.')
         }
       }
 

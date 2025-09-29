@@ -96,10 +96,10 @@ export function UserMyQRClient({ user, businessCards }: UserMyQRClientProps) {
   }
 
   const getUserCompanyInfo = () => {
-    const role = userCard?.title || user?.role
+    const jobTitle = userCard?.job_title || userCard?.title || user?.job_title
     const company = userCard?.company || user?.company
-    if (role && company) return `${role} / ${company}`
-    if (role) return role
+    if (jobTitle && company) return `${jobTitle} / ${company}`
+    if (jobTitle) return jobTitle
     if (company) return company
     return "직책 / 회사"
   }

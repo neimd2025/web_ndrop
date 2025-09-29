@@ -75,7 +75,7 @@ export function UserSavedCardDetailClient({ user, savedCard }: UserSavedCardDeta
   }
 
   const handleShare = async () => {
-    const shareText = `${businessCard.full_name || businessCard.name} - ${businessCard.role || businessCard.title} / ${businessCard.company}`
+    const shareText = `${businessCard.full_name || businessCard.name} - ${businessCard.job_title || businessCard.title} / ${businessCard.company}`
 
     if (navigator.share) {
       try {
@@ -160,7 +160,7 @@ export function UserSavedCardDetailClient({ user, savedCard }: UserSavedCardDeta
               {/* 기본 정보 */}
               <div className="space-y-1 text-sm text-gray-500">
                 {businessCard.mbti && <p>MBTI: {businessCard.mbti}</p>}
-                {(businessCard.role || businessCard.title) && <p>{businessCard.role || businessCard.title}</p>}
+                {(businessCard.job_title || businessCard.title) && <p>{businessCard.job_title || businessCard.title}</p>}
                 {(businessCard.company || businessCard.affiliation) && <p>{businessCard.company || businessCard.affiliation}</p>}
                 {(businessCard.phone || businessCard.contact) && <p>연락처: {businessCard.phone || businessCard.contact}</p>}
               </div>

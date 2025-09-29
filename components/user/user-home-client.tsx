@@ -336,8 +336,8 @@ export function UserHomeClient({
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">{getDisplayName()}</h3>
                   <p className="text-sm text-gray-600">
-                    {userCard?.role && userCard?.company
-                      ? `${userCard.role} / ${userCard.company}`
+                    {userCard?.job_title && userCard?.company
+                      ? `${userCard.job_title} / ${userCard.company}`
                       : userCard?.work_field
                         ? userCard.work_field
                         : '프로필을 완성해주세요'

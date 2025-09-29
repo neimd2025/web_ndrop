@@ -1,15 +1,36 @@
-import { createClient } from '@/utils/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    // Supabase 클라이언트 생성 (사용자 세션 기반)
-    const supabase = await createClient()
+    const cookieStore = await cookies()
+
+    // 사용자 세션 기반 클라이언트 생성
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+            } catch {
+              // Server Component에서 호출되는 경우 무시
+            }
+          },
+        },
+      },
+    )
 
     // 사용자 인증 확인
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
+      console.error('인증 오류:', authError)
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
     }
 

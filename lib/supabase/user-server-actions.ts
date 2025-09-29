@@ -7,6 +7,7 @@ export interface UserProfile {
   email: string
   company?: string
   role?: string
+  job_title?: string // ✅ job_title 필드 추가
   profile_image_url?: string
   created_at: string
   // 추가 필드들
@@ -47,6 +48,7 @@ export interface UserBusinessCard {
   company: string
   affiliation?: string
   title: string
+  job_title?: string // ✅ job_title 필드 추가
   email: string
   phone?: string
   website?: string

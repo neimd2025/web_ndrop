@@ -317,38 +317,50 @@ export const businessCardAPI = {
   async getUserBusinessCard(userId: string): Promise<BusinessCard | null> {
     const supabase = createClient()
 
-    const { data, error } = await supabase
-      .from('business_cards')
-      .select('*')
-      .eq('user_id', userId)
-      .limit(1)
-      .single()
+    try {
+      const { data, error } = await supabase
+        .from('business_cards')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle()
 
-    if (error) {
-      console.error('Error fetching business card:', error)
+      if (error) {
+        console.error('Error fetching business card:', error)
 
-      // 여러 행이 있는 경우 중복 정리
-      if (error.code === 'PGRST116' && error.details?.includes('5 rows')) {
-        console.log('🔄 중복 비즈니스 카드 발견, 정리 중...')
-        await this.cleanupDuplicateBusinessCards(userId)
-
-        // 정리 후 다시 시도
-        const { data: retryData, error: retryError } = await supabase
-          .from('business_cards')
-          .select('*')
-          .eq('user_id', userId)
-          .limit(1)
-          .single()
-
-        if (!retryError && retryData) {
-          return retryData
+        // 406 오류인 경우 로그를 더 자세히 출력
+        if (error.code === 'PGRST301' || error.message?.includes('406')) {
+          console.error('RLS 정책 오류 - 비즈니스 카드 조회 실패:', {
+            userId,
+            error: error.message,
+            code: error.code
+          })
         }
+
+        // 여러 행이 있는 경우 중복 정리
+        if (error.code === 'PGRST116' && error.details?.includes('5 rows')) {
+          console.log('🔄 중복 비즈니스 카드 발견, 정리 중...')
+          await this.cleanupDuplicateBusinessCards(userId)
+
+          // 정리 후 다시 시도
+          const { data: retryData, error: retryError } = await supabase
+            .from('business_cards')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle()
+
+          if (!retryError && retryData) {
+            return retryData
+          }
+        }
+
+        return null
       }
 
+      return data
+    } catch (err) {
+      console.error('Unexpected error in getUserBusinessCard:', err)
       return null
     }
-
-    return data
   },
 
   // 공개 명함 가져오기

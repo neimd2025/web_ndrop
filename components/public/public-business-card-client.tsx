@@ -120,17 +120,17 @@ export function PublicBusinessCardClient({ businessCard }: PublicBusinessCardCli
   // 직책/회사 정보
   const getWorkInfo = () => {
     const workField = businessCard?.work_field || ""
-    const role = businessCard?.role || businessCard?.title || ""
+    const jobTitle = businessCard?.job_title || businessCard?.title || "" // job_title 우선 사용
     const company = businessCard?.company || businessCard?.affiliation || ""
 
-    if (workField && role) {
-      return `${workField} / ${role}`
-    } else if (role && company) {
-      return `${role} / ${company}`
+    if (workField && jobTitle) {
+      return `${workField} / ${jobTitle}`
+    } else if (jobTitle && company) {
+      return `${jobTitle} / ${company}`
     } else if (workField) {
       return workField
-    } else if (role) {
-      return role
+    } else if (jobTitle) {
+      return jobTitle
     }
     return ""
   }

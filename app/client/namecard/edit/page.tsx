@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/use-auth'
 import { useBusinessCards } from '@/hooks/use-business-cards'
 import { useUserProfile } from '@/hooks/use-user-profile'
+import { userProfileAPI } from '@/lib/supabase/database'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Camera, User } from 'lucide-react'
+import { ArrowLeft, Camera, User, X } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
@@ -108,6 +109,22 @@ export default function EditNamecardPage() {
     }
   }
 
+  // 이미지 제거 핸들러
+  const handleRemoveImage = () => {
+    setProfileImage(null)
+    // 프로필에서 이미지 URL 제거 (선택사항)
+    if (profile?.id) {
+      userProfileAPI.updateUserProfile(profile.id, { profile_image_url: null })
+        .then(() => {
+          toast.success('프로필 이미지가 제거되었습니다.')
+        })
+        .catch((error) => {
+          console.error('이미지 제거 오류:', error)
+          toast.error('이미지 제거에 실패했습니다.')
+        })
+    }
+  }
+
   const {
     register,
     handleSubmit,
@@ -133,28 +150,31 @@ export default function EditNamecardPage() {
     }
   })
 
-  // 기존 프로필 데이터 로드
+  // 기존 데이터 로드 (명함 데이터 우선, 없으면 프로필 데이터 사용)
   useEffect(() => {
-    if (profile) {
-      setValue('full_name', profile.full_name || '')
-      setValue('birth_date', profile.birth_date || '')
-      setValue('affiliation_type', (profile.affiliation_type as '소속' | '미소속') || '소속')
-      setValue('affiliation', profile.affiliation || '')
-      setValue('role', profile.role || '')
-      setValue('work_field', profile.work_field || '')
-      setValue('contact', profile.contact || '')
-      setValue('mbti', profile.mbti || '')
+    if (profile || userCard) {
+      // 명함 데이터가 있으면 우선 사용, 없으면 프로필 데이터 사용
+      const dataSource = userCard || profile
+
+      setValue('full_name', dataSource?.full_name || '')
+      setValue('birth_date', profile?.birth_date || '') // 생년월일은 프로필에서만
+      setValue('affiliation_type', (profile?.affiliation_type as '소속' | '미소속') || '소속')
+      setValue('affiliation', dataSource?.affiliation || dataSource?.company || '')
+      setValue('role', dataSource?.job_title || '') // 명함의 job_title 우선 사용
+      setValue('work_field', dataSource?.work_field || '')
+      setValue('contact', dataSource?.contact || '')
+      setValue('mbti', dataSource?.mbti || '')
       // 기존 keywords를 personality_keywords로 마이그레이션
-      setValue('personality_keywords', profile.personality_keywords || profile.keywords || [])
-      setValue('interest_keywords', profile.interest_keywords || [])
-      setValue('hobby_keywords', profile.hobby_keywords || [])
-      setValue('introduction', profile.introduction || '')
-      setValue('external_link', profile.external_link || '')
+      setValue('personality_keywords', dataSource?.personality_keywords || dataSource?.keywords || [])
+      setValue('interest_keywords', dataSource?.interest_keywords || [])
+      setValue('hobby_keywords', dataSource?.hobby_keywords || [])
+      setValue('introduction', dataSource?.introduction || '')
+      setValue('external_link', dataSource?.external_link || '')
 
       // 프로필 이미지 초기화
-      setProfileImage(profile.profile_image_url || null)
+      setProfileImage(dataSource?.profile_image_url || null)
     }
-  }, [profile, setValue])
+  }, [profile, userCard, setValue])
 
   const mbtiTypes = [
     'INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
@@ -183,13 +203,15 @@ export default function EditNamecardPage() {
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
+      console.log('📝 폼 제출 데이터:', data) // 디버깅 로그 추가
+
       // 빈 문자열들을 null로 변환
       const cleanedData = {
         full_name: data.full_name,
         birth_date: data.birth_date || null,
         affiliation_type: data.affiliation_type,
         affiliation: data.affiliation_type === '소속' ? (data.affiliation || null) : null,
-        role: data.affiliation_type === '소속' ? (data.role || null) : null,
+        job_title: data.affiliation_type === '소속' ? (data.role || null) : null,
         work_field: data.affiliation_type === '미소속' ? (data.work_field || null) : null,
         contact: data.contact || null,
         mbti: data.mbti && data.mbti.trim() !== '' ? data.mbti : null,
@@ -204,7 +226,9 @@ export default function EditNamecardPage() {
         profile_image_url: profileImage,
         nickname: data.full_name,
         qr_code_url: null,
-        role_id: null,
+        role: 'user', // 시스템 역할
+        role_id: 1, // 기본 사용자 역할
+        has_business_card: true, // 명함 보유 여부
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
@@ -227,7 +251,7 @@ export default function EditNamecardPage() {
             full_name: updatedProfile.full_name || '이름 없음',
             introduction: updatedProfile.introduction || '안녕하세요!',
             company: updatedProfile.affiliation,
-            role: updatedProfile.role,
+            job_title: updatedProfile.job_title,
             work_field: updatedProfile.work_field,
             contact: updatedProfile.contact,
             mbti: updatedProfile.mbti,
@@ -252,7 +276,7 @@ export default function EditNamecardPage() {
             full_name: updatedProfile.full_name || null,
             introduction: updatedProfile.introduction || null,
             company: updatedProfile.affiliation || null,
-            role: updatedProfile.role || null,
+            job_title: updatedProfile.job_title || null,
             work_field: updatedProfile.work_field || null,
             contact: updatedProfile.contact || null,
             mbti: updatedProfile.mbti && updatedProfile.mbti.trim() !== '' ? updatedProfile.mbti : null,
@@ -378,39 +402,27 @@ export default function EditNamecardPage() {
           >
             {/* 프로필 사진 섹션 */}
             <div className="text-center mb-8">
-              <div
-                className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center relative overflow-hidden cursor-pointer hover:bg-gray-200 transition-colors"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  if (fileInputRef.current && !isUploadingImage) {
-                    fileInputRef.current.click()
-                  }
-                }}
-              >
+              <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center relative">
                 {profileImage ? (
-                  <img
-                    src={profileImage}
-                    alt="프로필 이미지"
-                    className="w-full h-full object-cover"
-                  />
+                  <>
+                    <img
+                      src={profileImage}
+                      alt="프로필 이미지"
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                    <button
+                      onClick={handleRemoveImage}
+                      className="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center"
+                    >
+                      <X className="w-3 h-3 text-white" />
+                    </button>
+                  </>
                 ) : (
                   <User className="w-12 h-12 text-gray-600" />
                 )}
-                <Button
-                  size="sm"
-                  className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 hover:bg-purple-700 rounded-full"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    if (fileInputRef.current && !isUploadingImage) {
-                      fileInputRef.current.click()
-                    }
-                  }}
-                  disabled={isUploadingImage}
-                >
+                <label className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 hover:bg-purple-700 rounded-full cursor-pointer flex items-center justify-center">
                   <Camera className="w-4 h-4 text-white" />
-                </Button>
+                </label>
               </div>
               <p className="text-purple-600 text-sm font-medium">
                 {isUploadingImage ? '업로드 중...' : '프로필 사진 추가(선택)'}
