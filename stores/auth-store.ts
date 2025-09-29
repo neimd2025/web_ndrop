@@ -12,6 +12,8 @@ interface UserProfile {
   company: string | null
   contact: string | null
   profile_image_url: string | null
+  introduction?: string | null
+  role?: string | null
 }
 
 interface AdminProfile {

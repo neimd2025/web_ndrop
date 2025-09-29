@@ -171,13 +171,13 @@ export function UserSavedCardDetailClient({ user, savedCard }: UserSavedCardDeta
               <h3 className="text-center text-lg font-semibold text-gray-900 mb-3">성격</h3>
               <div className="flex flex-wrap gap-2 justify-center">
                 {(businessCard.personality_keywords && businessCard.personality_keywords.length > 0) ? (
-                  businessCard.personality_keywords.slice(0, 3).map((keyword, index) => (
+                  businessCard.personality_keywords.slice(0, 3).map((keyword: string, index: number) => (
                     <span key={index} className="bg-[#7C3BED] text-white border-purple-200 px-3 py-1 rounded-full text-sm">
                       {keyword}
                     </span>
                   ))
                 ) : (businessCard.keywords && businessCard.keywords.length > 0) ? (
-                  businessCard.keywords.slice(0, 3).map((keyword, index) => (
+                  businessCard.keywords.slice(0, 3).map((keyword: string, index: number) => (
                     <span key={index} className="bg-[#7C3BED] text-white border-purple-200 px-3 py-1 rounded-full text-sm">
                       {keyword}
                     </span>
@@ -193,7 +193,7 @@ export function UserSavedCardDetailClient({ user, savedCard }: UserSavedCardDeta
               <h3 className="text-center text-lg font-semibold text-gray-900 mb-3">관심사</h3>
               <div className="flex flex-wrap gap-2 justify-center">
                 {(businessCard.interest_keywords && businessCard.interest_keywords.length > 0) ? (
-                  businessCard.interest_keywords.slice(0, 3).map((keyword, index) => (
+                  businessCard.interest_keywords.slice(0, 3).map((keyword: string, index: number) => (
                     <span key={index} className="bg-white text-gray-800 border-gray-200 px-3 py-1 rounded-full text-sm">
                       {keyword}
                     </span>
@@ -209,7 +209,7 @@ export function UserSavedCardDetailClient({ user, savedCard }: UserSavedCardDeta
               <h3 className="text-center text-lg font-semibold text-gray-900 mb-3">취미</h3>
               <div className="flex flex-wrap gap-2 justify-center">
                 {(businessCard.hobby_keywords && businessCard.hobby_keywords.length > 0) ? (
-                  businessCard.hobby_keywords.slice(0, 4).map((keyword, index) => (
+                  businessCard.hobby_keywords.slice(0, 4).map((keyword: string, index: number) => (
                     <span key={index} className="bg-white text-gray-800 border-gray-200 px-3 py-1 rounded-full text-sm">
                       {keyword}
                     </span>

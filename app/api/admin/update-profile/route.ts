@@ -70,9 +70,14 @@ export async function POST(request: NextRequest) {
       const saltRounds = 12
       const newPasswordHash = await bcrypt.hash(newPassword, saltRounds)
 
-      // 비밀번호와 프로필 정보 업데이트 (admin_accounts 테이블의 기본 필드만)
+      // 비밀번호와 프로필 정보 업데이트 (admin_accounts 테이블의 모든 필드)
       const updateData: any = {
         full_name: name,
+        email: email,
+        company: company,
+        phone: phone,
+        introduction: introduction,
+        profile_image_url: profile_image_url,
         password_hash: newPasswordHash,
         updated_at: new Date().toISOString()
       }
@@ -87,9 +92,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: '프로필 업데이트 중 오류가 발생했습니다.' }, { status: 500 })
       }
     } else {
-      // 프로필 정보 업데이트 (admin_accounts 테이블의 기본 필드만)
+      // 프로필 정보 업데이트 (admin_accounts 테이블의 모든 필드)
       const updateData: any = {
         full_name: name,
+        email: email,
+        company: company,
+        phone: phone,
+        introduction: introduction,
+        profile_image_url: profile_image_url,
         updated_at: new Date().toISOString()
       }
 
