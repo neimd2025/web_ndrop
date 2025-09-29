@@ -309,7 +309,7 @@ export function EventDetailCard({
             <h2 className="text-xl font-semibold text-gray-900 mb-4">주최자 정보</h2>
             <div className="space-y-3">
               <div>
-                <p className="text-sm text-gray-500">주최</p>
+                <p className="text-sm text-gray-500">주최자</p>
                 <p className="font-medium">{event.organizer_name}</p>
               </div>
 
