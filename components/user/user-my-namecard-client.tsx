@@ -3,6 +3,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { UserBusinessCard, UserProfile } from '@/lib/supabase/user-server-actions'
+import { getSiteUrl } from '@/lib/utils'
 import { motion } from 'framer-motion'
 import { Edit, QrCode, User } from 'lucide-react'
 import Link from 'next/link'
@@ -138,8 +139,8 @@ export function UserMyNamecardClient({ user, businessCards }: UserMyNamecardClie
   // 공유 링크 생성
   const getShareLink = () => {
     if (userCard?.id) {
-      // 개발 환경에서는 항상 localhost 사용
-      const siteUrl = "http://localhost:3000"
+      // 환경변수에서 사이트 URL 가져오기
+      const siteUrl = getSiteUrl()
       return `${siteUrl}/business-card/${userCard.id}`
     }
     return "naimd.link/1s2v"
