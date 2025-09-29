@@ -232,7 +232,11 @@ export default function EditNamecardPage() {
             contact: updatedProfile.contact,
             mbti: updatedProfile.mbti,
             keywords: updatedProfile.personality_keywords,
+            personality_keywords: updatedProfile.personality_keywords,
+            interest_keywords: updatedProfile.interest_keywords,
+            hobby_keywords: updatedProfile.hobby_keywords,
             external_link: updatedProfile.external_link,
+            profile_image_url: updatedProfile.profile_image_url,
             is_public: true
           }
 
@@ -253,7 +257,10 @@ export default function EditNamecardPage() {
             contact: updatedProfile.contact || null,
             mbti: updatedProfile.mbti && updatedProfile.mbti.trim() !== '' ? updatedProfile.mbti : null,
             keywords: updatedProfile.personality_keywords || null,
-            external_link: updatedProfile.external_link || null
+            interest_keywords: updatedProfile.interest_keywords || null,
+            hobby_keywords: updatedProfile.hobby_keywords || null,
+            external_link: updatedProfile.external_link || null,
+            profile_image_url: updatedProfile.profile_image_url || null
           }
 
           // 서버 API를 통해 명함 업데이트

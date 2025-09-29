@@ -83,6 +83,8 @@ export async function PUT(request: NextRequest) {
         if (cleanedUpdates.keywords) businessCardUpdates.keywords = cleanedUpdates.keywords
         if (cleanedUpdates.work_field) businessCardUpdates.work_field = cleanedUpdates.work_field
         if (cleanedUpdates.hobby_keywords) businessCardUpdates.hobby_keywords = cleanedUpdates.hobby_keywords
+        if (cleanedUpdates.interest_keywords) businessCardUpdates.interest_keywords = cleanedUpdates.interest_keywords
+        if (cleanedUpdates.personality_keywords) businessCardUpdates.personality_keywords = cleanedUpdates.personality_keywords
         if (cleanedUpdates.profile_image_url) businessCardUpdates.profile_image_url = cleanedUpdates.profile_image_url
 
         if (Object.keys(businessCardUpdates).length > 0) {
