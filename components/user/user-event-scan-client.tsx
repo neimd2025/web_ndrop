@@ -84,12 +84,14 @@ export function UserEventScanClient({ user }: UserEventScanClientProps) {
             })
 
             const result = await response.json()
+            console.log('QR 스캔 이벤트 참가 응답:', result)
 
-            if (result.success) {
+            if (response.ok && result.success) {
               alert('이벤트에 참가했습니다!')
               router.push(`/client/events/${event.id}`)
             } else {
-              alert(result.message || '이벤트 참가에 실패했습니다.')
+              console.error('이벤트 참가 실패:', result)
+              alert(result.message || result.error || '이벤트 참가에 실패했습니다.')
               setIsScanning(true)
             }
           } else {

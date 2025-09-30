@@ -222,24 +222,25 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
 
   const handleCopyLink = () => {
     if (selectedEvent) {
-      const link = qrData?.url || `${window.location.origin}/events/${selectedEvent.id}`
-      navigator.clipboard.writeText(link)
-      toast.success('링크가 복사되었습니다.')
+      const eventCode = qrData?.eventCode || selectedEvent.event_code
+      navigator.clipboard.writeText(eventCode)
+      toast.success('이벤트 코드가 복사되었습니다.')
     }
   }
 
   const handleShare = () => {
     if (selectedEvent) {
-      const link = qrData?.url || `${window.location.origin}/events/${selectedEvent.id}`
+      const eventCode = qrData?.eventCode || selectedEvent.event_code
+      const shareText = `${selectedEvent.title} 이벤트에 참여해보세요!\n이벤트 코드: ${eventCode}`
+
       if (navigator.share) {
         navigator.share({
           title: selectedEvent.title,
-          text: `${selectedEvent.title} 이벤트에 참여해보세요!`,
-          url: link
+          text: shareText
         })
       } else {
-        navigator.clipboard.writeText(link)
-        toast.success('링크가 복사되었습니다.')
+        navigator.clipboard.writeText(shareText)
+        toast.success('이벤트 정보가 복사되었습니다.')
       }
     }
   }
@@ -706,12 +707,12 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                     )}
                   </div>
                   <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                    이 QR 코드를 스캔하거나<br />
-                    아래 링크로 접속해 명함을 제출할 수 있어요
+                    이 QR 코드를 스캔하면<br />
+                    자동으로 이벤트에 참여할 수 있어요
                   </p>
                   <div className=" rounded-xl p-4 mb-6 border border-gray-200">
                     <p className="text-xs text-gray-600 break-all font-mono">
-                      {qrData?.url || `${window.location.origin}/events/${selectedEvent.id}`}
+                      이벤트 코드: {qrData?.eventCode || selectedEvent.event_code}
                     </p>
                   </div>
                 </div>
@@ -719,7 +720,7 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                 <div className="grid grid-cols-3 gap-2 mb-6">
                   <Button variant="outline" size="sm" onClick={handleCopyLink} className="flex items-center gap-2">
                     <Copy className="h-4 w-4" />
-                    <span className="hidden sm:inline">링크 복사</span>
+                    <span className="hidden sm:inline">코드 복사</span>
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleShare} className="flex items-center gap-2">
                     <Share className="h-4 w-4" />
