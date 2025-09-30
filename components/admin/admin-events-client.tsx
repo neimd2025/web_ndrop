@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { AdminEvent } from "@/lib/supabase/admin-server-actions"
 import { calculateEventStatus } from "@/lib/supabase/database"
-import { logError } from "@/lib/utils"
+import { getSiteUrl, logError } from "@/lib/utils"
 import { AnimatePresence, motion } from "framer-motion"
 import { Bell, Calendar, Copy, Edit, Eye, FileText, MapPin, Plus, Save, Share, Trash2, Users, X } from "lucide-react"
 import Image from "next/image"
@@ -230,18 +230,12 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
 
   const handleShare = () => {
     if (selectedEvent) {
-      const eventCode = qrData?.eventCode || selectedEvent.event_code
-      const shareText = `${selectedEvent.title} 이벤트에 참여해보세요!\n이벤트 코드: ${eventCode}`
+      // 이벤트 상세 페이지 URL만 복사
+      const baseUrl = getSiteUrl()
+      const eventDetailUrl = `${baseUrl}/client/events/${selectedEvent.id}`
 
-      if (navigator.share) {
-        navigator.share({
-          title: selectedEvent.title,
-          text: shareText
-        })
-      } else {
-        navigator.clipboard.writeText(shareText)
-        toast.success('이벤트 정보가 복사되었습니다.')
-      }
+      navigator.clipboard.writeText(eventDetailUrl)
+      toast.success('이벤트 링크가 복사되었습니다.')
     }
   }
 
@@ -257,6 +251,30 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
       toast.success('QR 코드가 저장되었습니다.')
     } else {
       toast.error('QR 코드를 먼저 생성해주세요.')
+    }
+  }
+
+  const handleCopyJoinUrl = () => {
+    if (selectedEvent) {
+      const baseUrl = getSiteUrl()
+      const eventJoinUrl = `${baseUrl}/client/events/join`
+
+      navigator.clipboard.writeText(eventJoinUrl)
+      toast.success('참여 페이지 링크가 복사되었습니다.')
+    }
+  }
+
+  const handleCopyAll = () => {
+    if (selectedEvent) {
+      const baseUrl = getSiteUrl()
+      const eventCode = qrData?.eventCode || selectedEvent.event_code
+      const eventDetailUrl = `${baseUrl}/client/events/${selectedEvent.id}`
+      const eventJoinUrl = `${baseUrl}/client/events/join`
+
+      const allInfo = `이벤트 코드: ${eventCode}\n이벤트 상세: ${eventDetailUrl}\n참여 페이지: ${eventJoinUrl}`
+
+      navigator.clipboard.writeText(allInfo)
+      toast.success('모든 정보가 복사되었습니다.')
     }
   }
 
@@ -707,24 +725,49 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                     )}
                   </div>
                   <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                    이 QR 코드를 스캔하면<br />
-                    자동으로 이벤트에 참여할 수 있어요
+                    행사 참여에서 QR 코드를 스캔하면<br />자동으로 이벤트에 참여할 수 있어요<br />
+                    또는 아래 코드를 직접 입력해도 됩니다
                   </p>
-                  <div className=" rounded-xl p-4 mb-6 border border-gray-200">
-                    <p className="text-xs text-gray-600 break-all font-mono">
-                      이벤트 코드: {qrData?.eventCode || selectedEvent.event_code}
-                    </p>
+                  <div className="space-y-3 mb-6">
+                    {/* 이벤트 코드 */}
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500 mb-1">이벤트 코드</p>
+                        <p className="text-sm font-mono text-gray-900">{qrData?.eventCode || selectedEvent.event_code}</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={handleCopyLink} className="ml-3">
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* 이벤트 상세 */}
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500 mb-1">이벤트 상세</p>
+                        <p className="text-xs text-gray-600 break-all">{getSiteUrl()}/client/events/{selectedEvent.id}</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={handleShare} className="ml-3">
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* 참여 페이지 */}
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500 mb-1">참여 페이지</p>
+                        <p className="text-xs text-gray-600 break-all">{getSiteUrl()}/client/events/join</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={handleCopyJoinUrl} className="ml-3">
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 mb-6">
-                  <Button variant="outline" size="sm" onClick={handleCopyLink} className="flex items-center gap-2">
-                    <Copy className="h-4 w-4" />
-                    <span className="hidden sm:inline">코드 복사</span>
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleShare} className="flex items-center gap-2">
+                <div className="grid grid-cols-2 gap-2 mb-6">
+                  <Button variant="outline" size="sm" onClick={handleCopyAll} className="flex items-center gap-2">
                     <Share className="h-4 w-4" />
-                    <span className="hidden sm:inline">공유하기</span>
+                    <span className="hidden sm:inline">모든 정보 복사</span>
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleSaveQR} className="flex items-center gap-2">
                     <Save className="h-4 w-4" />
