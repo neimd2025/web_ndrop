@@ -95,15 +95,17 @@ export function UserEventsAvailableClient({ user, availableEvents: initialEvents
       })
 
       const result = await response.json()
+      console.log('이벤트 참가 응답:', result)
 
-      if (result.success) {
+      if (response.ok && result.success) {
         alert('이벤트에 성공적으로 참가했습니다!')
         setShowCodeInput(false)
         setEventCode(['', '', '', '', '', ''])
         // 페이지 새로고침하여 참가한 이벤트 목록 업데이트
         router.refresh()
       } else {
-        alert(result.error || '이벤트 참가에 실패했습니다.')
+        console.error('이벤트 참가 실패:', result)
+        alert(result.message || result.error || '이벤트 참가에 실패했습니다.')
       }
     } catch (error) {
       console.error('이벤트 참가 오류:', error)
@@ -129,13 +131,15 @@ export function UserEventsAvailableClient({ user, availableEvents: initialEvents
       })
 
       const result = await response.json()
+      console.log('직접 이벤트 참가 응답:', result)
 
-      if (result.success) {
+      if (response.ok && result.success) {
         alert('이벤트에 성공적으로 참가했습니다!')
         // 페이지 새로고침하여 참가한 이벤트 목록 업데이트
         router.refresh()
       } else {
-        alert(result.error || '이벤트 참가에 실패했습니다.')
+        console.error('이벤트 참가 실패:', result)
+        alert(result.message || result.error || '이벤트 참가에 실패했습니다.')
       }
     } catch (error) {
       console.error('이벤트 참가 오류:', error)

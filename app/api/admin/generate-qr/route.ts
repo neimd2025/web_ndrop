@@ -1,3 +1,4 @@
+import { getSiteUrl } from '@/lib/utils'
 import { createClient } from '@/utils/supabase/server'
 import jwt from 'jsonwebtoken'
 import { NextRequest, NextResponse } from 'next/server'
@@ -44,11 +45,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '이벤트를 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // QR 코드 URL 생성
-    const qrUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/client/events/${eventId}/join`
-
-    // 실제 QR 코드 생성
-    const qrDataUrl = await QRCode.toDataURL(qrUrl, {
+    // QR 코드 생성 (이벤트 코드를 직접 사용)
+    const qrDataUrl = await QRCode.toDataURL(event.event_code, {
       width: 200,
       margin: 2,
       color: {
@@ -60,7 +58,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       qr: {
-        url: qrUrl,
+        url: `${getSiteUrl()}/client/events/scan`, // QR 스캔 페이지 URL
         dataUrl: qrDataUrl,
         eventCode: event.event_code,
         eventTitle: event.title,
