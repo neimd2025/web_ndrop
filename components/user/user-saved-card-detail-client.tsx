@@ -331,7 +331,14 @@ export function UserSavedCardDetailClient({ user, savedCard }: UserSavedCardDeta
                   <>
                     <h4 className="font-semibold text-gray-900 mb-2">- {getExternalLink()?.title}</h4>
                     <p className="text-gray-600 text-sm mb-2">{getExternalLink()?.description}</p>
-                    <p className="text-gray-500 text-sm">{getExternalLink()?.url}</p>
+                    <a
+                      href={getExternalLink()?.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 text-sm break-all underline"
+                    >
+                      {getExternalLink()?.url}
+                    </a>
                   </>
                 ) : (
                   <div className="text-gray-400 text-sm">정보 없음</div>
