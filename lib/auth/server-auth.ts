@@ -116,7 +116,7 @@ export async function requireAdminAuth(): Promise<AdminUser> {
   const adminUser = await getAdminAuth()
 
   if (!adminUser) {
-    redirect('/login?type=admin&returnTo=/admin/dashboard')
+    redirect('/login?type=admin&returnTo=/admin')
   }
 
   return adminUser
@@ -127,7 +127,7 @@ export async function redirectIfAuthenticated(userType: 'user' | 'admin' = 'user
   if (userType === 'admin') {
     const admin = await getAdminAuth()
     if (admin) {
-      redirect('/admin/dashboard')
+      redirect('/admin')
     }
   } else {
     const user = await getServerAuth()
@@ -144,7 +144,7 @@ export async function handleLoginPageAuth(searchParams: { type?: string, returnT
   if (userType === 'admin') {
     const admin = await getAdminAuth()
     if (admin) {
-      const returnTo = searchParams.returnTo || '/admin/dashboard'
+      const returnTo = searchParams.returnTo || '/admin'
       redirect(returnTo)
     }
   } else {

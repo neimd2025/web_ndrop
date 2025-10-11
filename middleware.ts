@@ -76,7 +76,7 @@ export async function middleware(req: NextRequest) {
     }
 
     if (userRole === 2) {
-      return NextResponse.redirect(new URL('/admin/dashboard', req.url))
+      return NextResponse.redirect(new URL('/admin', req.url))
     } else {
       return NextResponse.redirect(new URL('/client/home', req.url))
     }
@@ -118,7 +118,7 @@ export async function middleware(req: NextRequest) {
         const userData = JSON.parse(adminUser)
         if (userData.role_id === 2) {
           const returnToUrl = req.nextUrl.searchParams.get('returnTo')
-          return NextResponse.redirect(new URL(returnToUrl || '/admin/dashboard', req.url))
+          return NextResponse.redirect(new URL(returnToUrl || '/admin', req.url))
         }
       } catch (error) {
         // 토큰 파싱 오류 시 무시하고 로그인 페이지로
@@ -138,7 +138,7 @@ export async function middleware(req: NextRequest) {
     const returnToUrl = req.nextUrl.searchParams.get('returnTo')
 
     if (userRole === 2) {
-      return NextResponse.redirect(new URL(returnToUrl || '/admin/dashboard', req.url))
+      return NextResponse.redirect(new URL(returnToUrl || '/admin', req.url))
     } else {
       return NextResponse.redirect(new URL(returnToUrl || '/client/home', req.url))
     }

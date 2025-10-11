@@ -245,11 +245,11 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
     let redirectPath = returnTo || urlParams.get('returnTo')
 
     if (!redirectPath) {
-      redirectPath = type === 'admin' ? '/admin/dashboard' : '/user/home'
+      redirectPath = type === 'admin' ? '/admin' : '/client/home'
     }
 
     if (type === 'user' && redirectPath.startsWith('/admin')) {
-      redirectPath = '/user/home'
+      redirectPath = '/client/home'
     }
 
     const userRequest = type === 'user' ? '&userRequest=true' : ''

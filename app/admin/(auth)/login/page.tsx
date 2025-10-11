@@ -26,7 +26,7 @@ export default function AdminLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
-  const returnTo = searchParams.get('returnTo') || '/admin/events'
+  const returnTo = searchParams.get('returnTo') || '/admin'
 
   const {
     register,
