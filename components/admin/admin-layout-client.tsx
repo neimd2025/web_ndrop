@@ -32,7 +32,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
         <div className="max-w-md w-full text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">관리자 로그인이 필요합니다</h2>
           <p className="text-gray-600 mb-4">관리자 페이지에 접근하려면 로그인해주세요.</p>
-          <a href="/login?type=admin&returnTo=/admin/dashboard" className="inline-block">
+          <a href="/login?type=admin&returnTo=/admin" className="inline-block">
             <button className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
               관리자 로그인
             </button>

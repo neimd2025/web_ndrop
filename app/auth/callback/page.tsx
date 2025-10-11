@@ -50,7 +50,7 @@ export default function AuthCallbackPage() {
 
             // URL 파라미터에서 관리자/사용자 요청 확인
             const urlParams = new URLSearchParams(window.location.search)
-            const returnTo = urlParams.get('returnTo') || '/user/home'
+            const returnTo = urlParams.get('returnTo') || '/client/home'
             const adminRequest = urlParams.get('adminRequest') === 'true'
             const userRequest = urlParams.get('userRequest') === 'true'
 
@@ -92,7 +92,7 @@ export default function AuthCallbackPage() {
 
           // returnTo 파라미터 확인
           const urlParams = new URLSearchParams(window.location.search)
-          let returnTo = urlParams.get('returnTo') || '/user/home'
+          let returnTo = urlParams.get('returnTo') || '/client/home'
           const adminRequest = urlParams.get('adminRequest') === 'true'
           const userRequest = urlParams.get('userRequest') === 'true'
 
@@ -103,7 +103,7 @@ export default function AuthCallbackPage() {
               returnTo = url.pathname + url.search + url.hash
             } catch (e) {
               console.error('잘못된 returnTo URL:', returnTo)
-              returnTo = '/user/home'
+              returnTo = '/client/home'
             }
           }
 
@@ -123,7 +123,7 @@ export default function AuthCallbackPage() {
             if (userProfile?.role_id !== 2) {
               console.log('❌ 관리자 권한 없음 - 사용자 홈으로 리다이렉트')
               toast.warning('관리자 권한이 없습니다. 사용자 홈으로 이동합니다.')
-              returnTo = '/user/home'
+              returnTo = '/client/home'
             } else {
               console.log('✅ 관리자 로그인 성공')
               toast.success('관리자로 로그인되었습니다!')
@@ -136,9 +136,9 @@ export default function AuthCallbackPage() {
               .single()
 
             if (userProfile?.role_id !== 1) {
-              console.log('❌ 사용자 권한 없음 - 관리자 대시보드로 리다이렉트')
-              toast.warning('사용자 권한이 없습니다. 관리자 대시보드로 이동합니다.')
-              returnTo = '/admin/dashboard'
+              console.log('❌ 사용자 권한 없음 - 관리자 페이지로 리다이렉트')
+              toast.warning('사용자 권한이 없습니다. 관리자 페이지로 이동합니다.')
+              returnTo = '/admin'
             } else {
               console.log('✅ 사용자 로그인 성공')
               toast.success('로그인되었습니다!')

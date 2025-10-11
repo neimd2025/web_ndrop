@@ -69,7 +69,7 @@ export default function SignupPage() {
   // 이미 로그인된 경우 홈으로 리다이렉트
   useEffect(() => {
     if (user && !authLoading) {
-      router.push('/home')
+      router.push('/client/home')
     }
   }, [user, authLoading, router])
 

@@ -54,7 +54,7 @@ export default function LoginPage() {
       // 리다이렉트 전에 잠시 대기하여 상태가 안정화되도록 함
       const timer = setTimeout(() => {
         if (isAdminLogin) {
-          const redirectUrl = returnTo || '/admin/dashboard'
+          const redirectUrl = returnTo || '/admin'
           window.location.href = redirectUrl
         } else {
           const redirectUrl = returnTo || '/client/home'
@@ -92,7 +92,7 @@ export default function LoginPage() {
         // 리다이렉트 전에 잠시 대기하여 상태가 안정화되도록 함
         setTimeout(() => {
           if (isAdminLogin) {
-            window.location.href = returnTo || '/admin/dashboard'
+            window.location.href = returnTo || '/admin'
           } else {
             window.location.href = returnTo || '/client/home'
           }
