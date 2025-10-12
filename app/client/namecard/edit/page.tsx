@@ -49,80 +49,38 @@ export default function EditNamecardPage() {
 
   // 프로필 이미지 업로드 관련 상태
   const [profileImage, setProfileImage] = useState<string | null>(null)
-  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // 프로필 이미지 업로드 함수
-  const handleImageUpload = async (file: File) => {
-    if (!user) {
-      toast.error('로그인이 필요합니다.')
-      return
-    }
-
-    setIsUploadingImage(true)
-
-    try {
-      // 파일 크기 확인 (5MB 제한)
-      const maxSize = 5 * 1024 * 1024 // 5MB
-      if (file.size > maxSize) {
-        toast.error('파일 크기는 5MB를 초과할 수 없습니다.')
-        return
-      }
-
-      // 파일 형식 확인
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-      if (!allowedTypes.includes(file.type)) {
-        toast.error('지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP만 허용)')
-        return
-      }
-
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const response = await fetch('/api/user/upload-profile-image', {
-        method: 'POST',
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || '이미지 업로드에 실패했습니다.')
-      }
-
-      setProfileImage(result.publicUrl)
-      toast.success('프로필 이미지가 업로드되었습니다!')
-
-    } catch (error) {
-      console.error('이미지 업로드 오류:', error)
-      toast.error(error instanceof Error ? error.message : '이미지 업로드에 실패했습니다.')
-    } finally {
-      setIsUploadingImage(false)
-    }
-  }
 
   // 이미지 선택 핸들러
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      handleImageUpload(file)
+    if (!file) return
+
+    // 파일 크기 체크 (5MB 제한)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('파일 크기는 5MB 이하여야 합니다.')
+      return
     }
+
+    // 파일 타입 체크
+    if (!file.type.startsWith('image/')) {
+      toast.error('이미지 파일만 업로드 가능합니다.')
+      return
+    }
+
+    setSelectedFile(file)
+
+    // 미리보기를 위한 URL 생성
+    const imageUrl = URL.createObjectURL(file)
+    setProfileImage(imageUrl)
   }
 
   // 이미지 제거 핸들러
   const handleRemoveImage = () => {
     setProfileImage(null)
-    // 프로필에서 이미지 URL 제거 (선택사항)
-    if (profile?.id) {
-      userProfileAPI.updateUserProfile(profile.id, { profile_image_url: null })
-        .then(() => {
-          toast.success('프로필 이미지가 제거되었습니다.')
-        })
-        .catch((error) => {
-          console.error('이미지 제거 오류:', error)
-          toast.error('이미지 제거에 실패했습니다.')
-        })
-    }
+    setSelectedFile(null)
   }
 
   const {
@@ -205,6 +163,40 @@ export default function EditNamecardPage() {
     try {
       console.log('📝 폼 제출 데이터:', data) // 디버깅 로그 추가
 
+      let profileImageUrl = profileImage
+
+      // 이미지가 선택된 경우 업로드
+      if (selectedFile) {
+        setIsUploading(true)
+        try {
+          const formData = new FormData()
+          formData.append('file', selectedFile)
+
+          const response = await fetch('/api/user/upload-profile-image', {
+            method: 'POST',
+            body: formData
+          })
+
+          const result = await response.json()
+
+          if (!response.ok) {
+            throw new Error(result.error || '이미지 업로드에 실패했습니다.')
+          }
+
+          profileImageUrl = result.publicUrl
+          console.log('이미지 업로드 성공:', profileImageUrl)
+        } catch (error) {
+          console.error('이미지 업로드 오류:', error)
+          console.error('오류 상세:', JSON.stringify(error, null, 2))
+
+          // 이미지 업로드 실패해도 명함 수정은 계속 진행
+          toast.warning('이미지 업로드에 실패했지만 명함 수정은 계속됩니다.')
+          profileImageUrl = profileImage // 기존 이미지 URL 유지
+        } finally {
+          setIsUploading(false)
+        }
+      }
+
       // 빈 문자열들을 null로 변환
       const cleanedData = {
         full_name: data.full_name,
@@ -223,7 +215,7 @@ export default function EditNamecardPage() {
         email: user?.email || '',
         company: data.affiliation_type === '소속' ? (data.affiliation || null) : null,
         keywords: data.personality_keywords.length > 0 ? data.personality_keywords : null,
-        profile_image_url: profileImage,
+        profile_image_url: profileImageUrl,
         nickname: data.full_name,
         qr_code_url: null,
         role: 'user', // 시스템 역할
@@ -420,19 +412,24 @@ export default function EditNamecardPage() {
                 ) : (
                   <User className="w-12 h-12 text-gray-600" />
                 )}
-                <label className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 hover:bg-purple-700 rounded-full cursor-pointer flex items-center justify-center">
+                <label
+                  htmlFor="profile-image-input"
+                  className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 hover:bg-purple-700 rounded-full cursor-pointer flex items-center justify-center"
+                >
                   <Camera className="w-4 h-4 text-white" />
                 </label>
               </div>
               <p className="text-purple-600 text-sm font-medium">
-                {isUploadingImage ? '업로드 중...' : '프로필 사진 추가(선택)'}
+                {isUploading ? '업로드 중...' : '프로필 사진 추가(선택)'}
               </p>
               <input
+                id="profile-image-input"
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/jpg,image/png,image/webp"
+                accept="image/*"
                 onChange={handleImageSelect}
                 className="hidden"
+                disabled={isUploading}
               />
             </div>
 
