@@ -408,12 +408,12 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
       <div className="px-6 py-8">
         {/* 필터 버튼 */}
         <div className="mb-6">
-          <div className="bg-gray-100 rounded-lg p-1 inline-flex">
+          <div className="w-full bg-gray-100 rounded-lg p-1 flex justify-between">
             {(["ongoing", "upcoming", "completed"] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
-                className={`px-8 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                className={`flex-1 px-8 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                   filter === status
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-600 hover:text-gray-900"

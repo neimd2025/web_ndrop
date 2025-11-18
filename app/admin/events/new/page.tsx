@@ -13,6 +13,7 @@ import { useState } from "react"
 import { useForm } from 'react-hook-form'
 import { toast } from "sonner"
 import { z } from 'zod'
+import { v4 as uuidv4 } from 'uuid'
 
 // Zod 스키마 정의
 const eventSchema = z.object({
@@ -98,51 +99,43 @@ export default function NewEventPage() {
     }
   }
 
-  const uploadImage = async (file: File, eventCode: string, startDate: string): Promise<string | null> => {
-    try {
-      // JWT 토큰 가져오기
-      const adminToken = localStorage.getItem('admin_token')
-      if (!adminToken) {
-        console.error('인증 토큰이 없습니다.')
-        return null
-      }
-
-      const fileExt = file.name.split('.').pop()
-
-      // 이벤트 코드와 날짜를 포함한 구조화된 경로 생성
-      const dateStr = startDate.replace(/-/g, '') // YYYYMMDD 형식
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '').slice(0, -5) // YYYYMMDDTHHMMSS 형식
-
-      const fileName = `${eventCode}_${dateStr}_${timestamp}.${fileExt}`
-      const filePath = `events/${eventCode}/${fileName}`
-
-      // FormData 생성
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('path', filePath)
-
-      // 관리자용 이미지 업로드 API 호출
-      const response = await fetch('/api/admin/upload-image', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`
-        },
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        console.error('이미지 업로드 오류:', result)
-        return null
-      }
-
-      return result.publicUrl
-    } catch (error) {
-      console.error('이미지 업로드 오류:', error)
+const uploadImage = async (file: File): Promise<string | null> => {
+  try {
+    const adminToken = localStorage.getItem('admin_token')
+    if (!adminToken) {
+      console.error('인증 토큰이 없습니다.')
       return null
     }
+
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${uuidv4()}.${fileExt}`
+    const filePath = `events/${fileName}`
+
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('path', filePath)
+
+    const response = await fetch('/api/admin/upload-image', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: formData
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      console.error('이미지 업로드 오류:', result)
+      return null
+    }
+
+    return result.publicUrl
+  } catch (error) {
+    console.error('이미지 업로드 오류:', error)
+    return null
   }
+}
 
   const onSubmit = async (data: EventFormData) => {
     setIsLoading(true)
@@ -159,9 +152,7 @@ export default function NewEventPage() {
       // 이미지 업로드 (이벤트 코드는 서버에서 생성)
       let imageUrl = null
       if (imageFile) {
-        // 임시 이벤트 코드로 이미지 업로드 (서버에서 실제 코드 생성)
-        const tempEventCode = 'TEMP'
-        imageUrl = await uploadImage(imageFile, tempEventCode, data.startDate)
+        imageUrl = await uploadImage(imageFile)
       }
 
       // 관리자용 이벤트 생성 API 호출
@@ -374,8 +365,6 @@ export default function NewEventPage() {
                 <p className="text-sm text-gray-500">각 줄에 하나씩 입력하세요</p>
               </div>
 
-
-
               <div className="space-y-2">
                 <Label htmlFor="description">이벤트 설명</Label>
                 <Textarea
@@ -391,7 +380,7 @@ export default function NewEventPage() {
           </Card>
 
           {/* 이벤트 이미지 업로드 */}
-          <Card className="border-0 shadow-lg">
+          <Card className="border-0 shadow-lg mt-5">
             <CardContent className="p-6">
               <Label className="text-gray-700 font-medium mb-4 block">이벤트 이미지</Label>
               <div className="space-y-4">
@@ -433,7 +422,7 @@ export default function NewEventPage() {
           </Card>
 
                     {/* 주최자 정보 안내 */}
-          <Card className="border-0 shadow-lg bg-blue-50">
+          <Card className="border-0 shadow-lg bg-blue-50 mt-5">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
