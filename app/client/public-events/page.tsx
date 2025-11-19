@@ -312,6 +312,7 @@ const EventsPage = () => {
                 onJoinEvent={handleJoinEvent}
                 actionLoading={actionLoading}
                 currentUser={currentUser}
+                getActionButton={getActionButton}
                 getStatusBadge={getStatusBadge}
               />
             ))}
