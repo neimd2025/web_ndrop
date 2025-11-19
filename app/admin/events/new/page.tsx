@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ArrowLeft, Calendar, Clock, Upload, User } from "lucide-react"
+import { ArrowLeft, Calendar, Clock, Upload, User, Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useForm } from 'react-hook-form'
@@ -42,7 +42,7 @@ const eventSchema = z.object({
   overviewPoints: z.string().optional(),
   targetAudience: z.string().optional(),
   specialBenefits: z.string().optional(),
-
+  is_public: z.boolean().default(true) // 공개 여부 필드 추가
 }).refine((data) => {
   const startDateTime = new Date(`${data.startDate}T${data.startTime}`)
   const endDateTime = new Date(`${data.endDate}T${data.endTime}`)
@@ -64,10 +64,17 @@ export default function NewEventPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
+    watch,
+    setValue
   } = useForm<EventFormData>({
-    resolver: zodResolver(eventSchema)
+    resolver: zodResolver(eventSchema),
+    defaultValues: {
+      is_public: true // 기본값을 공개로 설정
+    }
   })
+
+  const isPublic = watch('is_public')
 
   // 관리자 권한 확인
   if (authLoading) {
@@ -99,43 +106,43 @@ export default function NewEventPage() {
     }
   }
 
-const uploadImage = async (file: File): Promise<string | null> => {
-  try {
-    const adminToken = localStorage.getItem('admin_token')
-    if (!adminToken) {
-      console.error('인증 토큰이 없습니다.')
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        console.error('인증 토큰이 없습니다.')
+        return null
+      }
+
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${uuidv4()}.${fileExt}`
+      const filePath = `events/${fileName}`
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('path', filePath)
+
+      const response = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('이미지 업로드 오류:', result)
+        return null
+      }
+
+      return result.publicUrl
+    } catch (error) {
+      console.error('이미지 업로드 오류:', error)
       return null
     }
-
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${uuidv4()}.${fileExt}`
-    const filePath = `events/${fileName}`
-
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('path', filePath)
-
-    const response = await fetch('/api/admin/upload-image', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${adminToken}`
-      },
-      body: formData
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      console.error('이미지 업로드 오류:', result)
-      return null
-    }
-
-    return result.publicUrl
-  } catch (error) {
-    console.error('이미지 업로드 오류:', error)
-    return null
   }
-}
 
   const onSubmit = async (data: EventFormData) => {
     setIsLoading(true)
@@ -180,7 +187,8 @@ const uploadImage = async (file: File): Promise<string | null> => {
           // 새로운 필드들 - 줄바꿈으로 구분된 문자열을 배열로 변환
           overviewPoints: data.overviewPoints ? data.overviewPoints.split('\n').filter(line => line.trim()) : [],
           targetAudience: data.targetAudience ? data.targetAudience.split('\n').filter(line => line.trim()) : [],
-          specialBenefits: data.specialBenefits ? data.specialBenefits.split('\n').filter(line => line.trim()) : []
+          specialBenefits: data.specialBenefits ? data.specialBenefits.split('\n').filter(line => line.trim()) : [],
+          is_public: data.is_public // 공개 여부 추가
         })
       })
 
@@ -193,7 +201,7 @@ const uploadImage = async (file: File): Promise<string | null> => {
       }
 
       console.log('이벤트 생성 성공:', result.event)
-      toast.success(result.message || '이벤트가 성공적으로 생성되었습니다!')
+      toast.success(result.message || `이벤트가 성공적으로 ${data.is_public ? '공개' : '비공개'} 생성되었습니다!`)
 
       // 성공 시 이벤트 목록으로 이동
       router.push('/admin/events')
@@ -219,6 +227,48 @@ const uploadImage = async (file: File): Promise<string | null> => {
 
       <div className="px-4 py-6 space-y-6">
         <form onSubmit={handleSubmit(onSubmit)}>
+          {/* 공개/비공개 설정 카드 */}
+          <Card className="border-0 shadow-lg">
+            <CardContent className="p-6">
+              <Label className="text-gray-700 font-medium mb-4 block">이벤트 공개 설정</Label>
+              <div className="grid grid-cols-2 gap-4">
+                {/* 공개 이벤트 */}
+                <div 
+                  className={`flex items-center justify-center p-6 border-2 rounded-xl transition-all cursor-pointer ${
+                    isPublic 
+                      ? 'border-purple-500 bg-purple-50 shadow-sm' 
+                      : 'border-gray-200 hover:border-purple-300 bg-white'
+                  }`}
+                  onClick={() => setValue('is_public', true)}
+                >
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className={`p-3 rounded-full ${isPublic ? 'bg-green-100' : 'bg-gray-100'}`}>
+                      <Eye className={`h-6 w-6 ${isPublic ? 'text-green-600' : 'text-gray-400'}`} />
+                    </div>
+                    <span className="font-medium text-gray-900">공개 이벤트</span>
+                  </div>
+                </div>
+
+                {/* 비공개 이벤트 */}
+                <div 
+                  className={`flex items-center justify-center p-6 border-2 rounded-xl transition-all cursor-pointer ${
+                    !isPublic 
+                      ? 'border-purple-500 bg-purple-50 shadow-sm' 
+                      : 'border-gray-200 hover:border-purple-300 bg-white'
+                  }`}
+                  onClick={() => setValue('is_public', false)}
+                >
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className={`p-3 rounded-full ${!isPublic ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                      <EyeOff className={`h-6 w-6 ${!isPublic ? 'text-blue-600' : 'text-gray-400'}`} />
+                    </div>
+                    <span className="font-medium text-gray-900">비공개 이벤트</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="border-0 shadow-lg">
             <CardContent className="p-6 space-y-6">
               <div className="space-y-2">
@@ -421,7 +471,7 @@ const uploadImage = async (file: File): Promise<string | null> => {
             </CardContent>
           </Card>
 
-                    {/* 주최자 정보 안내 */}
+          {/* 주최자 정보 안내 */}
           <Card className="border-0 shadow-lg bg-blue-50 mt-5">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
@@ -458,7 +508,7 @@ const uploadImage = async (file: File): Promise<string | null> => {
               className="flex-1 bg-purple-600 hover:bg-purple-700 py-3 rounded-xl"
               disabled={isLoading}
             >
-              {isLoading ? "생성 중..." : "이벤트 생성"}
+              {isLoading ? "생성 중..." : `이벤트 ${isPublic ? '공개' : '비공개'} 생성`}
             </Button>
           </div>
         </form>

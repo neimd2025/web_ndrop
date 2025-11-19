@@ -17,7 +17,7 @@ export default function UserMyCardDetailPage({ user, businessCards = [] }: MyCar
 
   return (
     <div className="min-h-screen">
-      <div className="bg-white bg-[#242E3A] border-0 px-5 py-4">
+      <div className="bg-[#242E3A] border-0 px-5 py-4">
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"

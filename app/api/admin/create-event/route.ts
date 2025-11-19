@@ -40,7 +40,8 @@ export async function POST(request: NextRequest) {
       adminUsername,
       overviewPoints,
       targetAudience,
-      specialBenefits
+      specialBenefits,
+      is_public = true // 기본값을 true로 설정
     } = body
 
     if (!title || !description || !startDate || !startTime || !endDate || !endTime || !location || !maxParticipants) {
@@ -92,9 +93,9 @@ export async function POST(request: NextRequest) {
         admin_created_by: adminAccountId, // 생성한 관리자 ID로 설정
         status: 'upcoming',
         current_participants: 0,
+        is_public: Boolean(is_public), // 공개 여부 필드 추가
         // 새로운 필드들
         overview_points: overviewPoints || [],
-
         target_audience: targetAudience || [],
         special_benefits: specialBenefits || []
       })
@@ -118,54 +119,57 @@ export async function POST(request: NextRequest) {
         organizer_kakao: `${decoded.kakao}`,
         created_by: null,
         status: 'upcoming',
-        current_participants: 0
+        current_participants: 0,
+        is_public: Boolean(is_public)
       })
       return NextResponse.json({ error: `이벤트 생성 중 오류가 발생했습니다: ${eventError.message}` }, { status: 500 })
     }
 
-    // 새로운 이벤트 알림을 모든 사용자에게 전송
-    try {
-      const { data: allUsers } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .limit(100) // 성능을 위해 최대 100명에게만 전송
+    // 새로운 이벤트 알림을 모든 사용자에게 전송 (공개 이벤트인 경우에만)
+    if (is_public) {
+      try {
+        const { data: allUsers } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .limit(100) // 성능을 위해 최대 100명에게만 전송
 
-      if (allUsers && allUsers.length > 0) {
-        const notifications = allUsers.map(user => ({
-          title: '새로운 네트워킹 이벤트',
-          message: `${event.title}이 ${new Date(event.start_date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}에 열립니다. 지금 참가신청하세요!`,
-          notification_type: 'event_created',
-          target_type: 'specific',
-          user_id: user.id,
-          related_event_id: event.id,
-          metadata: {
-            event_title: event.title,
-            event_date: new Date(event.start_date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }),
-            action: 'created'
-          },
-          sent_by: null
-        }))
+        if (allUsers && allUsers.length > 0) {
+          const notifications = allUsers.map(user => ({
+            title: '새로운 네트워킹 이벤트',
+            message: `${event.title}이 ${new Date(event.start_date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}에 열립니다. 지금 참가신청하세요!`,
+            notification_type: 'event_created',
+            target_type: 'specific',
+            user_id: user.id,
+            related_event_id: event.id,
+            metadata: {
+              event_title: event.title,
+              event_date: new Date(event.start_date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }),
+              action: 'created'
+            },
+            sent_by: null
+          }))
 
-        const { error: notificationError } = await supabase
-          .from('notifications')
-          .insert(notifications)
+          const { error: notificationError } = await supabase
+            .from('notifications')
+            .insert(notifications)
 
-        if (notificationError) {
-          console.error('새 이벤트 알림 생성 오류:', notificationError)
-          // 알림 생성 실패해도 이벤트 생성은 성공으로 처리
-        } else {
-          console.log(`${allUsers.length}명에게 새 이벤트 알림 전송 완료`)
+          if (notificationError) {
+            console.error('새 이벤트 알림 생성 오류:', notificationError)
+            // 알림 생성 실패해도 이벤트 생성은 성공으로 처리
+          } else {
+            console.log(`${allUsers.length}명에게 새 이벤트 알림 전송 완료`)
+          }
         }
+      } catch (notificationError) {
+        console.error('새 이벤트 알림 생성 오류:', notificationError)
+        // 알림 생성 실패해도 이벤트 생성은 성공으로 처리
       }
-    } catch (notificationError) {
-      console.error('새 이벤트 알림 생성 오류:', notificationError)
-      // 알림 생성 실패해도 이벤트 생성은 성공으로 처리
     }
 
     return NextResponse.json({
       success: true,
       event,
-      message: '이벤트가 성공적으로 생성되었습니다!'
+      message: `이벤트가 성공적으로 ${is_public ? '공개' : '비공개'} 생성되었습니다!`
     })
 
   } catch (error) {
