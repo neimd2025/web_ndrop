@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Bookmark, Home, User } from "lucide-react"
+import { Calendar, Bookmark, Home, User } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -33,9 +33,9 @@ export default function MobileBottomNav() {
 
   const navItems = [
     { href: "/client/home", icon: Home, label: "홈" },
-    { href: "/client/saved-cards", icon: Bookmark, label: "저장된 명함" },
-    { href: "/client/notifications", icon: Bell, label: "알림" },
-    { href: "/client/my-page", icon: User, label: "마이 메뉴" },
+    { href: "/client/card-books", icon: Bookmark, label: "명함첩" },
+    { href: "/client/public-events", icon: Calendar, label: "공식 행사" },
+    { href: "/client/my-page", icon: User, label: "마이 페이지" },
   ]
 
   return (

@@ -95,7 +95,7 @@ export function UserEventsHistoryClient({
       </div>
 
       {/* 검색바 */}
-      <div className="bg-white border-b border-gray-200 px-5 py-4">
+      <div className="bg-white px-5 pt-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
@@ -108,7 +108,7 @@ export function UserEventsHistoryClient({
       </div>
 
       {/* 메인 콘텐츠 */}
-      <div className="px-5 py-6">
+      <div className="px-5 py-5">
         {/* 토글 버튼들 */}
         <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
           {(['진행중', '예정', '종료'] as const).map((tab) => (
@@ -147,61 +147,75 @@ export function UserEventsHistoryClient({
             </div>
           ) : (
             getCurrentEvents().map((event) => (
-              <Card key={event.id} className="p-5 border border-gray-200 hover:border-purple-300 transition-colors">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Link href={`/client/events/${event.id}`}>
-                        <h3 className="text-lg font-semibold text-gray-900 hover:text-purple-600 transition-colors cursor-pointer">
-                          {event.title}
-                        </h3>
-                      </Link> 
-                      {getStatusBadge(event)}
+              <Card key={event.id} className="border border-gray-200 hover:border-purple-300 transition-colors rounded-lg overflow-hidden">
+                {/* 이미지 영역 */}
+                {event.image_url && (
+                  <div className="w-full h-48 overflow-hidden">
+                    <img
+                      src={event.image_url}
+                      alt={event.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                
+                {/* 콘텐츠 영역 */}
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Link href={`/client/events/${event.id}`}>
+                          <h3 className="text-lg font-semibold text-gray-900 hover:text-purple-600 transition-colors cursor-pointer">
+                            {event.title}
+                          </h3>
+                        </Link> 
+                        {getStatusBadge(event)}
+                      </div>
+                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">{event.description}</p>
                     </div>
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">{event.description}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Calendar className="w-4 h-4" />
-                    <span>
-                      {new Date(event.start_date).toLocaleDateString('ko-KR', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        weekday: 'short'
-                      })}
-                      {' '}
-                      {new Date(event.start_date).toLocaleTimeString('ko-KR', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
                   </div>
 
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <MapPin className="w-4 h-4" />
-                    <span>{event.location}</span>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Calendar className="w-4 h-4" />
+                      <span>
+                        {new Date(event.start_date).toLocaleDateString('ko-KR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          weekday: 'short'
+                        })}
+                        {' '}
+                        {new Date(event.start_date).toLocaleTimeString('ko-KR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <MapPin className="w-4 h-4" />
+                      <span>{event.location}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Users className="w-4 h-4" />
+                      <span>{event.current_participants || 0}/{event.max_participants}명 참가</span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Users className="w-4 h-4" />
-                    <span>{event.current_participants || 0}/{event.max_participants}명 참가</span>
+                  <div className="flex gap-2">
+                    <Link href={`/client/events/${event.id}`} className="flex-1">
+                      <Button variant="outline" className="w-full">
+                        상세보기
+                      </Button>
+                    </Link>
+                    {/* {calculateEventStatus(event) === 'completed' && (
+                      <Button variant="outline" className="text-purple-600 border-purple-200">
+                        후기작성
+                      </Button>
+                    )} */}
                   </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Link href={`/client/events/${event.id}`} className="flex-1">
-                    <Button variant="outline" className="w-full">
-                      상세보기
-                    </Button>
-                  </Link>
-                  {/* {calculateEventStatus(event) === 'completed' && (
-                    <Button variant="outline" className="text-purple-600 border-purple-200">
-                      후기작성
-                    </Button>
-                  )} */}
                 </div>
               </Card>
             ))

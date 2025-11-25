@@ -1,13 +1,10 @@
-import { getUserBusinessCardsData } from '@/lib/supabase/user-server-actions'
-import { UserMyNamecardClient } from '@/components/user/user-my-namecard-client'
+import { getUserMyPageData } from '@/lib/supabase/user-server-actions';
+import UserMyCardDetailPage from "@/components/user/user-my-card-detail";
 
-export default async function MyNamecardPage() {
-  const { user, businessCards } = await getUserBusinessCardsData()
+export default async function MyCardDetailPage() {
+  const { user, businessCards, participatedEvents, stats } = await getUserMyPageData();
 
   return (
-    <UserMyNamecardClient
-      user={user}
-      businessCards={businessCards}
-    />
-  )
+    <UserMyCardDetailPage user={user} businessCards={businessCards} />
+  );
 }

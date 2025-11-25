@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ArrowLeft, Calendar, Clock, Upload, User } from "lucide-react"
+import { ArrowLeft, Calendar, Clock, Upload, User, Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useForm } from 'react-hook-form'
 import { toast } from "sonner"
 import { z } from 'zod'
+import { v4 as uuidv4 } from 'uuid'
 
 // Zod 스키마 정의
 const eventSchema = z.object({
@@ -41,7 +42,7 @@ const eventSchema = z.object({
   overviewPoints: z.string().optional(),
   targetAudience: z.string().optional(),
   specialBenefits: z.string().optional(),
-
+  is_public: z.boolean().default(true) // 공개 여부 필드 추가
 }).refine((data) => {
   const startDateTime = new Date(`${data.startDate}T${data.startTime}`)
   const endDateTime = new Date(`${data.endDate}T${data.endTime}`)
@@ -63,10 +64,17 @@ export default function NewEventPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
+    watch,
+    setValue
   } = useForm<EventFormData>({
-    resolver: zodResolver(eventSchema)
+    resolver: zodResolver(eventSchema),
+    defaultValues: {
+      is_public: true // 기본값을 공개로 설정
+    }
   })
+
+  const isPublic = watch('is_public')
 
   // 관리자 권한 확인
   if (authLoading) {
@@ -98,9 +106,8 @@ export default function NewEventPage() {
     }
   }
 
-  const uploadImage = async (file: File, eventCode: string, startDate: string): Promise<string | null> => {
+  const uploadImage = async (file: File): Promise<string | null> => {
     try {
-      // JWT 토큰 가져오기
       const adminToken = localStorage.getItem('admin_token')
       if (!adminToken) {
         console.error('인증 토큰이 없습니다.')
@@ -108,20 +115,13 @@ export default function NewEventPage() {
       }
 
       const fileExt = file.name.split('.').pop()
+      const fileName = `${uuidv4()}.${fileExt}`
+      const filePath = `events/${fileName}`
 
-      // 이벤트 코드와 날짜를 포함한 구조화된 경로 생성
-      const dateStr = startDate.replace(/-/g, '') // YYYYMMDD 형식
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '').slice(0, -5) // YYYYMMDDTHHMMSS 형식
-
-      const fileName = `${eventCode}_${dateStr}_${timestamp}.${fileExt}`
-      const filePath = `events/${eventCode}/${fileName}`
-
-      // FormData 생성
       const formData = new FormData()
       formData.append('file', file)
       formData.append('path', filePath)
 
-      // 관리자용 이미지 업로드 API 호출
       const response = await fetch('/api/admin/upload-image', {
         method: 'POST',
         headers: {
@@ -159,9 +159,7 @@ export default function NewEventPage() {
       // 이미지 업로드 (이벤트 코드는 서버에서 생성)
       let imageUrl = null
       if (imageFile) {
-        // 임시 이벤트 코드로 이미지 업로드 (서버에서 실제 코드 생성)
-        const tempEventCode = 'TEMP'
-        imageUrl = await uploadImage(imageFile, tempEventCode, data.startDate)
+        imageUrl = await uploadImage(imageFile)
       }
 
       // 관리자용 이벤트 생성 API 호출
@@ -189,7 +187,8 @@ export default function NewEventPage() {
           // 새로운 필드들 - 줄바꿈으로 구분된 문자열을 배열로 변환
           overviewPoints: data.overviewPoints ? data.overviewPoints.split('\n').filter(line => line.trim()) : [],
           targetAudience: data.targetAudience ? data.targetAudience.split('\n').filter(line => line.trim()) : [],
-          specialBenefits: data.specialBenefits ? data.specialBenefits.split('\n').filter(line => line.trim()) : []
+          specialBenefits: data.specialBenefits ? data.specialBenefits.split('\n').filter(line => line.trim()) : [],
+          is_public: data.is_public // 공개 여부 추가
         })
       })
 
@@ -202,7 +201,7 @@ export default function NewEventPage() {
       }
 
       console.log('이벤트 생성 성공:', result.event)
-      toast.success(result.message || '이벤트가 성공적으로 생성되었습니다!')
+      toast.success(result.message || `이벤트가 성공적으로 ${data.is_public ? '공개' : '비공개'} 생성되었습니다!`)
 
       // 성공 시 이벤트 목록으로 이동
       router.push('/admin/events')
@@ -228,6 +227,48 @@ export default function NewEventPage() {
 
       <div className="px-4 py-6 space-y-6">
         <form onSubmit={handleSubmit(onSubmit)}>
+          {/* 공개/비공개 설정 카드 */}
+          <Card className="border-0 shadow-lg">
+            <CardContent className="p-6">
+              <Label className="text-gray-700 font-medium mb-4 block">이벤트 공개 설정</Label>
+              <div className="grid grid-cols-2 gap-4">
+                {/* 공개 이벤트 */}
+                <div 
+                  className={`flex items-center justify-center p-6 border-2 rounded-xl transition-all cursor-pointer ${
+                    isPublic 
+                      ? 'border-purple-500 bg-purple-50 shadow-sm' 
+                      : 'border-gray-200 hover:border-purple-300 bg-white'
+                  }`}
+                  onClick={() => setValue('is_public', true)}
+                >
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className={`p-3 rounded-full ${isPublic ? 'bg-green-100' : 'bg-gray-100'}`}>
+                      <Eye className={`h-6 w-6 ${isPublic ? 'text-green-600' : 'text-gray-400'}`} />
+                    </div>
+                    <span className="font-medium text-gray-900">공개 이벤트</span>
+                  </div>
+                </div>
+
+                {/* 비공개 이벤트 */}
+                <div 
+                  className={`flex items-center justify-center p-6 border-2 rounded-xl transition-all cursor-pointer ${
+                    !isPublic 
+                      ? 'border-purple-500 bg-purple-50 shadow-sm' 
+                      : 'border-gray-200 hover:border-purple-300 bg-white'
+                  }`}
+                  onClick={() => setValue('is_public', false)}
+                >
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className={`p-3 rounded-full ${!isPublic ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                      <EyeOff className={`h-6 w-6 ${!isPublic ? 'text-blue-600' : 'text-gray-400'}`} />
+                    </div>
+                    <span className="font-medium text-gray-900">비공개 이벤트</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="border-0 shadow-lg">
             <CardContent className="p-6 space-y-6">
               <div className="space-y-2">
@@ -374,8 +415,6 @@ export default function NewEventPage() {
                 <p className="text-sm text-gray-500">각 줄에 하나씩 입력하세요</p>
               </div>
 
-
-
               <div className="space-y-2">
                 <Label htmlFor="description">이벤트 설명</Label>
                 <Textarea
@@ -391,7 +430,7 @@ export default function NewEventPage() {
           </Card>
 
           {/* 이벤트 이미지 업로드 */}
-          <Card className="border-0 shadow-lg">
+          <Card className="border-0 shadow-lg mt-5">
             <CardContent className="p-6">
               <Label className="text-gray-700 font-medium mb-4 block">이벤트 이미지</Label>
               <div className="space-y-4">
@@ -432,8 +471,8 @@ export default function NewEventPage() {
             </CardContent>
           </Card>
 
-                    {/* 주최자 정보 안내 */}
-          <Card className="border-0 shadow-lg bg-blue-50">
+          {/* 주최자 정보 안내 */}
+          <Card className="border-0 shadow-lg bg-blue-50 mt-5">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -469,7 +508,7 @@ export default function NewEventPage() {
               className="flex-1 bg-purple-600 hover:bg-purple-700 py-3 rounded-xl"
               disabled={isLoading}
             >
-              {isLoading ? "생성 중..." : "이벤트 생성"}
+              {isLoading ? "생성 중..." : `이벤트 ${isPublic ? '공개' : '비공개'} 생성`}
             </Button>
           </div>
         </form>
