@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { UserProfile } from '@/lib/supabase/user-server-actions'
-import { ArrowLeft, Search, Star, User } from 'lucide-react'
+import { ArrowLeft, Search, Star, User, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
+import { createClient } from '@/utils/supabase/client'
 
 interface UserSavedCardsClientProps {
   user?: UserProfile
@@ -20,233 +21,310 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
   const [loading, setLoading] = useState(!initialUser)
   const [searchTerm, setSearchTerm] = useState('')
   const [showFavorites, setShowFavorites] = useState(false)
+  const [swipingCardId, setSwipingCardId] = useState<string | null>(null)
+  const [swipeOffset, setSwipeOffset] = useState(0)
   const router = useRouter()
+  const profileImage = user?.profile_image_url
+
+  // 터치 관련 ref
+  const touchStartX = useRef(0)
+  const currentCardId = useRef<string | null>(null)
 
   // 데이터 로딩
   useEffect(() => {
+    if (initialUser) return
     const loadData = async () => {
-      if (!initialUser) {
-        setLoading(true)
-        try {
-          // 클라이언트에서 데이터 로드
-          const response = await fetch('/api/user/saved-cards')
-          if (response.ok) {
-            const data = await response.json()
-            setUser(data.user)
-            setSavedCards(data.savedCards || [])
-          }
-        } catch (error) {
-          console.error('저장된 명함 데이터 로드 오류:', error)
-        } finally {
-          setLoading(false)
+      setLoading(true)
+      try {
+        const response = await fetch('/api/user/saved-cards')
+        if (response.ok) {
+          const data = await response.json()
+          setUser(data.user)
+          setSavedCards(data.savedCards || [])
         }
+      } catch (error) {
+        console.error('저장된 명함 데이터 로드 오류:', error)
+      } finally {
+        setLoading(false)
       }
     }
-
     loadData()
   }, [initialUser])
 
-  // 즐겨찾기된 명함 필터링
+  // 즐겨찾기 필터
   const favoriteCards = savedCards.filter(card => card.is_favorite)
 
-  // 검색어로 필터링
+  // 검색어 필터
   const filteredCards = (showFavorites ? favoriteCards : savedCards).filter(card => {
     if (!searchTerm) return true
     const businessCard = card.business_card
     if (!businessCard) return false
-
     const searchFields = [
       businessCard.full_name || businessCard.name,
       businessCard.company || businessCard.affiliation,
       businessCard.job_title || businessCard.title,
       businessCard.email || businessCard.contact
     ].filter(Boolean).join(' ').toLowerCase()
-
     return searchFields.includes(searchTerm.toLowerCase())
   })
 
   const handleToggleFavorite = async (cardId: string) => {
     try {
+      const supabase = createClient()
       const card = savedCards.find(c => c.id === cardId)
       if (!card) return
-
+      
       const newFavoriteStatus = !card.is_favorite
-
-      // 먼저 로컬 상태 업데이트 (즉시 반영)
+      
+      // UI 먼저 업데이트
       card.is_favorite = newFavoriteStatus
       setSavedCards([...savedCards])
 
-      // API 호출로 서버 상태 업데이트
-      const response = await fetch(`/api/user/saved-cards/${cardId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          is_favorite: newFavoriteStatus
-        })
-      })
+      // Supabase에 업데이트
+      const { error } = await supabase
+        .from('collected_cards')
+        .update({ is_favorite: newFavoriteStatus })
+        .eq('id', cardId)
 
-      if (!response.ok) {
-        // 실패시 롤백
+      if (error) {
+        // 실패 시 UI 롤백
         card.is_favorite = !newFavoriteStatus
         setSavedCards([...savedCards])
-        throw new Error('즐겨찾기 상태 변경에 실패했습니다.')
+        throw error
       }
-
     } catch (error) {
       console.error('즐겨찾기 오류:', error)
       alert('즐겨찾기 상태 변경에 실패했습니다.')
     }
   }
 
-  const getInitial = (name: string) => {
-    return name?.charAt(0)?.toUpperCase() || 'U'
+  // 카드 삭제 함수 - Supabase 직접 접근
+  const handleDeleteCard = async (cardId: string) => {
+    if (!confirm('정말 이 명함을 삭제하시겠습니까?')) {
+      resetSwipe()
+      return
+    }
+
+    try {
+      const supabase = createClient()
+
+      // collected_cards 테이블에서 삭제
+      const { error } = await supabase
+        .from('collected_cards')
+        .delete()
+        .eq('id', cardId)
+
+      if (error) {
+        console.error('명함 삭제 오류:', error)
+        alert('명함 삭제 중 오류가 발생했습니다.')
+        resetSwipe()
+        return
+      }
+
+      // 삭제 성공 시 UI에서 제거
+      setSavedCards(prev => prev.filter(card => card.id !== cardId))
+      
+    } catch (error) {
+      console.error('명함 삭제 오류:', error)
+      alert('명함 삭제 중 오류가 발생했습니다.')
+      resetSwipe()
+    }
   }
+
+  // 터치 시작
+  const handleTouchStart = useCallback((e: React.TouchEvent, cardId: string) => {
+    touchStartX.current = e.touches[0].clientX
+    currentCardId.current = cardId
+    setSwipingCardId(cardId)
+  }, [])
+
+  // 터치 이동
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!currentCardId.current) return
+
+    const currentX = e.touches[0].clientX
+    const diff = touchStartX.current - currentX
+
+    // 오른쪽으로 스와이프 방지, 왼쪽으로만 스와이프 가능
+    if (diff > 0) {
+      setSwipeOffset(Math.min(diff, 120)) // 최대 120px까지 스와이프
+    }
+  }, [])
+
+  // 터치 종료
+  const handleTouchEnd = useCallback(() => {
+    if (!currentCardId.current) return
+
+    // 스와이프 거리가 임계값(80px) 이상이면 삭제 확인
+    if (swipeOffset > 80) {
+      handleDeleteCard(currentCardId.current)
+    } else {
+      // 임계값 미만이면 원위치
+      resetSwipe()
+    }
+  }, [swipeOffset])
+
+  // 스와이프 초기화
+  const resetSwipe = useCallback(() => {
+    setSwipeOffset(0)
+    setSwipingCardId(null)
+    currentCardId.current = null
+  }, [])
+
+  // 카드 클릭 핸들러 (스와이프 중이 아닐 때만 동작)
+  const handleCardClick = useCallback((cardId: string, e: React.MouseEvent) => {
+    // 스와이프 중이거나 삭제 버튼을 클릭한 경우에는 네비게이션 막기
+    if (swipeOffset > 0 || (e.target as HTMLElement).closest('button')) {
+      e.preventDefault()
+      return
+    }
+    router.push(`/client/card-books/${cardId}`)
+  }, [swipeOffset, router])
 
   return (
     <div className="min-h-screen">
-      <div className="bg-white border-b border-gray-200 px-5 py-4">
-        <div className="flex items-center justify-between">
+      {/* 헤더 */}
+      <div className="bg-white border-b border-gray-200 px-5 py-4 flex items-center justify-between">
+        <Button variant="ghost" size="sm" className="p-2" onClick={() => router.back()}>
+          <ArrowLeft className="w-4 h-4 text-gray-900" />
+        </Button>
+        <h1 className="text-xl font-bold text-gray-900">명함첩</h1>
+        <div className="w-10" />
+      </div>
+
+      {/* 검색 및 필터 */}
+      <div className="px-5 py-6 space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="이름, 회사, 직책으로 검색..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-3 border-2 border-gray-200 focus:border-purple-500 rounded-xl"
+          />
+        </div>
+
+        <div className="flex gap-2">
           <Button
-            variant="ghost"
+            variant={!showFavorites ? "default" : "outline"}
             size="sm"
-            className="p-2"
-            onClick={() => router.back()}
+            onClick={() => setShowFavorites(false)}
+            className={!showFavorites ? "bg-purple-600 text-white" : ""}
           >
-            <ArrowLeft className="w-4 h-4 text-gray-900" />
+            전체 ({savedCards.length})
           </Button>
-          <h1 className="text-xl font-bold text-gray-900">명함첩</h1>
-          <div className="w-10"></div>
+          <Button
+            variant={showFavorites ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowFavorites(true)}
+            className={showFavorites ? "bg-purple-600 text-white" : ""}
+          >
+            <Star className="h-3 w-3 mr-1" />
+            즐겨찾기 ({favoriteCards.length})
+          </Button>
         </div>
-</div>
+      </div>
 
-      <div className="px-5 py-6">
-        {/* 검색 및 필터 */}
-        <div className="space-y-4 mb-6">
-          {/* 검색바 */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="이름, 회사, 직책으로 검색..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-3 border-2 border-gray-200 focus:border-purple-500 rounded-xl"
-            />
+      {/* 명함 목록 */}
+      <div className="px-5 pb-6 space-y-4">
+        {filteredCards.length === 0 ? (
+          <div className="text-center py-12">
+            <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {showFavorites ? '즐겨찾기한 명함이 없습니다' : '저장된 명함이 없습니다'}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {showFavorites ? '명함을 즐겨찾기에 추가해보세요' : 'QR 코드를 스캔해서 명함을 수집해보세요'}
+            </p>
+            {!showFavorites && (
+              <Link href="/client/scan-card">
+                <Button className="bg-purple-600 hover:bg-purple-700 text-white">명함 스캔하기</Button>
+              </Link>
+            )}
           </div>
+        ) : (
+          filteredCards.map((card) => {
+            const businessCard = card.business_card
+            if (!businessCard) return null
 
-          {/* 필터 버튼 */}
-          <div className="flex gap-2">
-            <Button
-              variant={!showFavorites ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowFavorites(false)}
-              className={!showFavorites ? "bg-purple-600" : ""}
-            >
-              전체 ({savedCards.length})
-            </Button>
-            <Button
-              variant={showFavorites ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowFavorites(true)}
-              className={showFavorites ? "bg-purple-600" : ""}
-            >
-              <Star className="h-3 w-3 mr-1" />
-              즐겨찾기 ({favoriteCards.length})
-            </Button>
-          </div>
-        </div>
+            const isSwiping = swipingCardId === card.id
+            const shouldShowDelete = swipeOffset > 40
 
-        {/* 명함 목록 */}
-        <div className="space-y-4">
-          {filteredCards.length === 0 ? (
-            <div className="text-center py-12">
-              <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                {showFavorites ? '즐겨찾기한 명함이 없습니다' : '저장된 명함이 없습니다'}
-              </h3>
-              <p className="text-gray-600 mb-6">
-                {showFavorites ? '명함을 즐겨찾기에 추가해보세요' : 'QR 코드를 스캔해서 명함을 수집해보세요'}
-              </p>
-              {!showFavorites && (
-                <Link href="/client/scan-card">
-                  <Button className="bg-purple-600 hover:bg-purple-700">
-                    명함 스캔하기
-                  </Button>
-                </Link>
-              )}
-            </div>
-          ) : (
-            filteredCards.map((card) => {
-              const businessCard = card.business_card
-              if (!businessCard) return null
-
-              return (
-                <Card
-                  key={card.id}
-                  className="border border-gray-200 hover:border-purple-300 transition-colors cursor-pointer"
-                  onClick={() => router.push(`/client/card-books/${card.id}`)}
+            return (
+              <div 
+                key={card.id}
+                className="relative overflow-hidden"
+                onTouchStart={(e) => handleTouchStart(e, card.id)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
+                {/* 삭제 버튼 배경 */}
+                <div 
+                  className="absolute right-0 top-0 bottom-0 bg-red-500 flex items-center justify-center transition-all duration-200"
+                  style={{ 
+                    width: `${Math.max(swipeOffset, 0)}px`,
+                    opacity: shouldShowDelete ? 1 : 0.7
+                  }}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-3">
-                      {/* 프로필 이미지 */}
-                      <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-white font-bold text-lg">
-                          {getInitial(businessCard.full_name || businessCard.name)}
-                        </span>
-                      </div>
+                  <Trash2 className="w-5 h-5 text-white" />
+                </div>
 
-                      {/* 명함 정보 */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-bold text-gray-900">{businessCard.full_name || businessCard.name}</h3>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleToggleFavorite(card.id)
-                            }}
-                            className="p-1 hover:bg-gray-100"
-                          >
-                            <Star
-                              className={`h-4 w-4 ${
-                                card.is_favorite
-                                  ? 'text-yellow-500 fill-current'
-                                  : 'text-gray-400'
-                              }`}
-                            />
-                          </Button>
-                        </div>
+                {/* 명함 카드 */}
+                <Card
+                  className="border border-gray-200 hover:border-purple-300 transition-all duration-200 cursor-pointer"
+                  style={{
+                    transform: `translateX(-${swipeOffset}px)`,
+                    transition: isSwiping ? 'none' : 'transform 0.2s ease-out'
+                  }}
+                  onClick={(e) => handleCardClick(card.id, e)}
+                >
+                  <CardContent className="p-4 flex items-start gap-1.5">
+                    {/* 즐겨찾기 별 */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); handleToggleFavorite(card.id) }}
+                      className="absolute top-2 right-3 p-1 hover:bg-gray-100 z-10"
+                    >
+                      <Star
+                        className={`h-4 w-4 ${card.is_favorite ? 'text-yellow-500 fill-current' : 'text-gray-400'}`}
+                      />
+                    </Button>
 
-                        <p className="text-sm text-gray-600 mb-1">
-                          {businessCard.job_title || businessCard.title} / {businessCard.company || businessCard.affiliation}
-                        </p>
+                    {/* 프로필 이미지 */}
+                    <div className="w-12 h-12 flex-shrink-0 rounded-full overflow-hidden bg-purple-600 flex items-center justify-center mt-1">
+                      {businessCard.profile_image_url ? (
+                        <img 
+                          src={businessCard.profile_image_url} 
+                          alt={businessCard.full_name || businessCard.name} 
+                          className="w-full h-full object-cover" 
+                        />
+                      ) : (
+                        <User className="w-8 h-8 text-white" />
+                      )}
+                    </div>
 
-                        {(businessCard.email || businessCard.contact) && (
-                          <p className="text-sm text-gray-500">{businessCard.email || businessCard.contact}</p>
-                        )}
-
-                        <p className="text-xs text-gray-400 mt-2">
-                          저장일: {new Date(card.collected_at || card.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-
-                      {/* 화살표 아이콘 */}
-                      <div className="flex items-center">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
+                    {/* 명함 정보 */}
+                    <div className="flex-1 ml-3">
+                      <h3 className="font-bold text-gray-900">{businessCard.full_name || businessCard.name}</h3>
+                      <p className="text-sm text-gray-600">
+                        {businessCard.job_title || businessCard.title} / {businessCard.company || businessCard.affiliation}
+                      </p>
+                      {(businessCard.email || businessCard.contact) && (
+                        <p className="text-sm text-gray-500">{businessCard.email || businessCard.contact}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">
+                        저장일: {new Date(card.collected_at || card.created_at).toLocaleDateString()}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
-              )
-            })
-          )}
-        </div>
+              </div>
+            )
+          })
+        )}
       </div>
-  </div>
+    </div>
   )
 }

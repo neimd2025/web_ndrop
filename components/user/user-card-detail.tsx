@@ -63,7 +63,7 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
         {/* 상단 배경 */}
         <div className="relative w-full bg-[#242E3A] h-60 flex flex-col items-center justify-end pb-6">
           {/* 프로필 이미지 */}
-          <div className="relative mt-8 w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-md border-4 border-white overflow-hidden">
+          <div className="relative mt-8 w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-md border-0 border-white overflow-hidden">
             {profileImage ? (
               <img
                 src={profileImage}
@@ -179,7 +179,7 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
           <div className="w-full border-t-2 border-gray-300 my-9"></div>
 
           {/* 외부 링크 섹션 - 항상 표시 */}
-          <div className="mt-6 px-1">
+          <div className="my-6 px-1">
             <h3 className="text-md font-semibold text-gray-800 mb-3">외부 링크</h3>
             {externalLinks.length > 0 ? (
               <SocialLinks links={externalLinks} />
@@ -190,8 +190,8 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
             )}
           </div>
 
-          {/* 두 개의 버튼으로 분리 */}
-          <div className="my-8 flex gap-3">
+          { user && (
+          <div className="my-6 flex gap-3">
             {/* 편집하기 버튼 - 왼쪽, 보라색 배경 */}
             <Link 
               href="/client/namecard/edit"
@@ -210,6 +210,7 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
               QR 보기
             </Link>
           </div>
+)}
         </div>
       </Card>
     </div>
