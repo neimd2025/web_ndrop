@@ -277,7 +277,7 @@ export function SocialLinks({ links }: SocialLinksProps) {
     if (lowerUrl.includes("twitter.com") || lowerUrl.includes("x.com")) return <FaTwitter size={24} className="text-black" />;
     if (lowerUrl.includes("tiktok.com")) return <FaTiktok size={24} className="text-black" />;
     if (lowerUrl.includes("github.com")) return <FaGithub size={24} className="text-gray-800" />;
-    if (lowerUrl.includes("notion.so") || lowerUrl.includes("notion.site")) return < size={24} className="text-black" />;
+    if (lowerUrl.includes("notion.so") || lowerUrl.includes("notion.site")) return <SiNotion size={24} className="text-black" />;
     if (lowerUrl.includes("figma.com")) return <FaFigma size={24} className="text-purple-600" />;
     if (lowerUrl.includes("behance.net")) return <FaBehance size={24} className="text-blue-800" />;
     if (lowerUrl.includes("dribbble.com")) return <FaDribbble size={24} className="text-pink-500" />;
