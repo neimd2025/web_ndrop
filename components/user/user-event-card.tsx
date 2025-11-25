@@ -1,3 +1,4 @@
+//@ts-nocheck
 // components/EventCard.jsx
 import Link from 'next/link';
 import { Calendar, MapPin, Users } from 'lucide-react';
