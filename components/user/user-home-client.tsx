@@ -284,31 +284,6 @@ export function UserHomeClient({
 
       {/* 메인 콘텐츠 */}
       <div className="px-5 py-6 space-y-6">
-        {/* 통계 카드들 */}
-        <div className="flex gap-3">
-          <Card className="flex-1 bg-white border border-gray-200 shadow-md">
-            <CardContent className="p-4 flex justify-between items-center">
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{businessCardStats.totalViews}</p>
-                <p className="text-sm text-gray-600">프로필 조회수</p>
-              </div>
-              <Star className="w-6 h-6 text-purple-600" />
-            </CardContent>
-          </Card>
-
-          <Card className="flex-1 bg-white border border-gray-200 shadow-md">
-            <CardContent className="p-4 flex justify-between items-center">
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {events.length}
-                </p>
-                <p className="text-sm text-gray-600">참가 행사</p>
-              </div>
-              <Calendar className="w-6 h-6 text-purple-600" />
-            </CardContent>
-          </Card>
-        </div>
-
         {/* 내 명함 섹션 */}
         <Card className="bg-white border border-gray-200 shadow-md">
           <CardContent className="p-5">
