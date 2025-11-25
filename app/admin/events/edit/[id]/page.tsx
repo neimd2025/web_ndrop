@@ -13,6 +13,13 @@ import { useEffect, useState } from "react"
 import { useForm } from 'react-hook-form'
 import { toast } from "sonner"
 import { z } from 'zod'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 // Zod 스키마 정의 (생성과 동일)
 const eventSchema = z.object({
@@ -23,6 +30,7 @@ const eventSchema = z.object({
   endTime: z.string().min(1, '종료 시간을 입력해주세요'),
   location: z.string().min(1, '장소를 입력해주세요').max(200, '장소는 200자 이하여야 합니다'),
   description: z.string().min(1, '이벤트 설명을 입력해주세요').max(1000, '이벤트 설명은 1000자 이하여야 합니다'),
+  region: z.string({ required_error: "지역을 선택해주세요." }),
   maxParticipants: z.string().min(1, '최대 참가자 수를 입력해주세요').refine((val) => {
     const num = parseInt(val)
     return !isNaN(num) && num > 0 && num <= 1000
@@ -49,6 +57,7 @@ interface EventData {
   start_date: string
   end_date: string
   location: string
+  region?: string
   max_participants: number
   current_participants: number
   event_code: string
@@ -61,6 +70,11 @@ interface EventData {
   target_audience?: string[]
   special_benefits?: string[]
 }
+
+const REGIONS = [
+  '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종',
+  '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'
+];
 
 export default function AdminEventEditPage() {
   const router = useRouter()
@@ -134,6 +148,7 @@ export default function AdminEventEditPage() {
         setValue('endDate', endDate.toISOString().split('T')[0])
         setValue('endTime', endDate.toTimeString().slice(0, 5))
         setValue('location', event.location)
+        setValue('region', event.region || '')
         setValue('description', event.description)
         setValue('maxParticipants', event.max_participants.toString())
 
@@ -253,6 +268,7 @@ export default function AdminEventEditPage() {
           start_date: startDateTime,
           end_date: endDateTime,
           location: data.location,
+          region: data.region,
           max_participants: parseInt(data.maxParticipants),
           image_url: imageUrl,
           organizer_name: admin?.name || 'ndrop 팀',
@@ -349,6 +365,25 @@ export default function AdminEventEditPage() {
                       />
                       {errors.title && (
                         <p className="text-sm text-red-600">{errors.title.message}</p>
+                      )}
+                    </div>
+
+                                        <div className="space-y-2">
+                      <Label htmlFor="region">지역 *</Label>
+                      <Select onValueChange={(value) => setValue('region', value)} value={watch('region')}>
+                        <SelectTrigger className={errors.region ? 'border-red-500' : ''}>
+                          <SelectValue placeholder="지역을 선택하세요" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {REGIONS.map((region) => (
+                            <SelectItem key={region} value={region}>
+                              {region}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.region && (
+                        <p className="text-sm text-red-600">{errors.region.message}</p>
                       )}
                     </div>
 

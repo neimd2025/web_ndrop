@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
-import { zodResolver } from '@hookform/resolvers/zod'
+import { zodResolver } from "@hookform/resolvers/zod"
 import { ArrowLeft, Calendar, Clock, Upload, User, Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -14,6 +14,13 @@ import { useForm } from 'react-hook-form'
 import { toast } from "sonner"
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 // Zod 스키마 정의
 const eventSchema = z.object({
@@ -34,6 +41,7 @@ const eventSchema = z.object({
   endTime: z.string().min(1, '종료 시간을 입력해주세요'),
   location: z.string().min(1, '장소를 입력해주세요').max(200, '장소는 200자 이하여야 합니다'),
   description: z.string().min(1, '이벤트 설명을 입력해주세요').max(1000, '이벤트 설명은 1000자 이하여야 합니다'),
+  region: z.string({ required_error: "지역을 선택해주세요." }),
   maxParticipants: z.string().min(1, '최대 참가자 수를 입력해주세요').refine((val) => {
     const num = parseInt(val)
     return !isNaN(num) && num > 0 && num <= 1000
@@ -53,6 +61,11 @@ const eventSchema = z.object({
 })
 
 type EventFormData = z.infer<typeof eventSchema>
+
+const REGIONS = [
+  '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종',
+  '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'
+];
 
 export default function NewEventPage() {
   const router = useRouter()
@@ -177,6 +190,7 @@ export default function NewEventPage() {
           endDate: data.endDate,
           endTime: data.endTime,
           location: data.location,
+          region: data.region,
           maxParticipants: data.maxParticipants,
           imageUrl: imageUrl,
           adminId: admin.id,
@@ -355,6 +369,26 @@ export default function NewEventPage() {
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* 지역 선택 */}
+              <div className="space-y-2">
+                <Label htmlFor="region">지역</Label>
+                <Select onValueChange={(value) => setValue('region', value)} >
+                  <SelectTrigger className={`border-2 border-gray-200 focus:border-purple-500 rounded-xl ${errors.region ? 'border-red-500' : ''}`}>
+                    <SelectValue placeholder="지역을 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REGIONS.map((region) => (
+                      <SelectItem key={region} value={region}>
+                        {region}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.region && (
+                  <p className="text-red-500 text-sm">{errors.region.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">

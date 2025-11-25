@@ -8,6 +8,13 @@ import { ArrowLeft, Search, Calendar } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import EventCard from '@/components/user/user-event-card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useRouter } from 'next/navigation';
 
 const EventsPage = () => {
@@ -18,8 +25,13 @@ const EventsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'모집중' | '마감'>('모집중');
+  const [selectedRegion, setSelectedRegion] = useState('전체');
   const router = useRouter();
+
+  const REGIONS = [
+    '전체', '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종',
+    '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'
+  ];
 
   // 클라이언트에서 직접 인증 확인
   useEffect(() => {
@@ -151,63 +163,20 @@ const EventsPage = () => {
     }
   };
 
-  // 이벤트 모집 상태 확인
-  const isEventAvailable = (event) => {
-    const isEventFull = event.max_participants && event.current_participants >= event.max_participants;
-    const isPastEvent = new Date(event.end_date) < new Date();
-    return !isEventFull && !isPastEvent;
-  };
-
   // 이벤트 필터링
   const filteredEvents = events.filter(event => {
     // 검색어 필터링
     const matchesSearch = !searchTerm.trim() ||
       event.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.location?.toLowerCase().includes(searchTerm.toLowerCase());
+      event.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.region?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    if (!matchesSearch) return false;
+    // 지역 필터링
+    const matchesRegion = selectedRegion === '전체' || event.region === selectedRegion;
 
-    // 탭별 필터링
-    switch (activeTab) {
-      case '모집중':
-        return isEventAvailable(event);
-      case '마감':
-        const isEventFull = event.max_participants && event.current_participants >= event.max_participants;
-        const isPastEvent = new Date(event.end_date) < new Date();
-        return isEventFull || isPastEvent;
-      default:
-        return true;
-    }
+    return matchesSearch && matchesRegion;
   });
-
-  // 상태 뱃지 컴포넌트
-  const getStatusBadge = (event) => {
-    const isEventFull = event.max_participants && event.current_participants >= event.max_participants;
-    const isPastEvent = new Date(event.end_date) < new Date();
-
-    if (isPastEvent) {
-      return (
-        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-          종료
-        </span>
-      );
-    }
-
-    if (isEventFull) {
-      return (
-        <span className="px-2 py-1 bg-red-100 text-red-600 text-xs rounded-full">
-          마감
-        </span>
-      );
-    }
-
-    return (
-      <span className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded-full">
-        모집 중
-      </span>
-    );
-  };
 
   // 참가 버튼 컴포넌트
   const getActionButton = (event) => {
@@ -282,23 +251,20 @@ const EventsPage = () => {
 
       {/* 메인 콘텐츠 */}
       <div className="px-5 py-5">
-        {/* 토글 버튼들 - 모집중/마감으로 변경 */}
-        <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
-          {(['모집중', '마감'] as const).map((tab) => (
-            <Button
-              key={tab}
-              variant={activeTab === tab ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 ${
-                activeTab === tab
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              {tab}
-            </Button>
-          ))}
+        {/* 지역 필터 드롭다운 */}
+        <div className="mb-6">
+          <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="지역 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              {REGIONS.map((region) => (
+                <SelectItem key={region} value={region}>
+                  {region}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 이벤트 카드 목록 */}
@@ -314,7 +280,6 @@ const EventsPage = () => {
                 actionLoading={actionLoading}
                 currentUser={currentUser}
                 getActionButton={getActionButton}
-                getStatusBadge={getStatusBadge}
               />
             ))}
           </div>
@@ -322,10 +287,10 @@ const EventsPage = () => {
           <div className="text-center py-12">
             <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {activeTab === '모집중' ? '모집 중인 이벤트가 없습니다' : '마감된 이벤트가 없습니다'}
+              해당 조건의 이벤트가 없습니다
             </h3>
             <p className="text-gray-600 mb-6">
-              {activeTab === '모집중' ? '새로운 이벤트를 기다려주세요!' : '모집 중인 이벤트를 확인해보세요!'}
+              다른 지역을 선택하거나 검색어를 변경해보세요.
             </p>
           </div>
         )}

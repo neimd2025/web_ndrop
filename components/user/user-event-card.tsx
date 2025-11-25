@@ -9,7 +9,6 @@ const EventCard = ({
   onJoinEvent, 
   actionLoading, 
   currentUser,
-  getStatusBadge,
   getActionButton 
 }) => {
   return (
@@ -35,7 +34,6 @@ const EventCard = ({
                   {event.title}
                 </h3>
               </Link> 
-              {getStatusBadge(event)}
             </div>
             <p className="text-gray-600 text-sm mb-3 line-clamp-2">{event.description}</p>
           </div>
