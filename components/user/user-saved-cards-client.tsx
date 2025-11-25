@@ -105,6 +105,22 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
   }
 
   return (
+    <div className="min-h-screen">
+      <div className="bg-white border-b border-gray-200 px-5 py-4">
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="p-2"
+            onClick={() => router.back()}
+          >
+            <ArrowLeft className="w-4 h-4 text-gray-900" />
+          </Button>
+          <h1 className="text-xl font-bold text-gray-900">명함첩</h1>
+          <div className="w-10"></div>
+        </div>
+</div>
+
       <div className="px-5 py-6">
         {/* 검색 및 필터 */}
         <div className="space-y-4 mb-6">
@@ -170,7 +186,7 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
                 <Card
                   key={card.id}
                   className="border border-gray-200 hover:border-purple-300 transition-colors cursor-pointer"
-                  onClick={() => router.push(`/client/saved-cards/${card.id}`)}
+                  onClick={() => router.push(`/client/card-books/${card.id}`)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start space-x-3">
@@ -231,5 +247,6 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
           )}
         </div>
       </div>
+  </div>
   )
 }

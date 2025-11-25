@@ -29,14 +29,26 @@ interface UserCardDetailProps {
 export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps) {
   const primaryCard = businessCards.find((c) => c.is_public) || businessCards[0];
 
-  const name = user?.full_name ?? user?.email?.split("@")[0] ?? "사용자";
-  const handle = "@" + (user?.full_name ? user.full_name.split(" ")[0] : user?.email?.split("@")[0]);
+  // user가 undefined면 primaryCard에서 데이터 가져오기
+  const name = user?.full_name ?? primaryCard?.full_name ?? user?.email?.split("@")[0] ?? "사용자";
+  const handle = "@" + (user?.full_name ? user.full_name.split(" ")[0] : primaryCard?.name ?? user?.email?.split("@")[0]);
   const intro = primaryCard?.introduction ?? primaryCard?.bio ?? user?.introduction ?? "";
   const company = primaryCard?.company ?? primaryCard?.affiliation ?? "미입력";
   const job = primaryCard?.job_title ?? primaryCard?.title ?? "미입력";
   const phone = primaryCard?.phone ?? primaryCard?.contact ?? "";
   const email = primaryCard?.email ?? user?.email ?? "";
-  const externalLinks = user?.external_links ?? [];
+  
+  // external_links는 user가 없으면 primaryCard에서 가져오기
+  const externalLinks = user?.external_links ?? primaryCard?.external_links ?? [];
+
+  // user가 없으면 primaryCard에서 프로필 이미지 가져오기
+  const profileImage = user?.profile_image_url ?? primaryCard?.profile_image_url ?? "";
+
+  // user가 없으면 primaryCard에서 MBTI, 성격, 관심사, 취미 가져오기
+  const mbti = user?.mbti ?? primaryCard?.mbti ?? "";
+  const personalityKeywords = user?.personality_keywords ?? primaryCard?.personality_keywords ?? [];
+  const interestKeywords = user?.interest_keywords ?? primaryCard?.interest_keywords ?? [];
+  const hobbyKeywords = user?.hobby_keywords ?? primaryCard?.hobby_keywords ?? [];
 
   const formatPhone = (num: string) => {
     const digits = num.replace(/\D/g, "");
@@ -52,9 +64,9 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
         <div className="relative w-full bg-[#242E3A] h-60 flex flex-col items-center justify-end pb-6">
           {/* 프로필 이미지 */}
           <div className="relative mt-8 w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-md border-4 border-white overflow-hidden">
-            {user?.profile_image_url ? (
+            {profileImage ? (
               <img
-                src={user.profile_image_url}
+                src={profileImage}
                 alt={name}
                 className="w-full h-full object-cover"
               />
@@ -67,7 +79,6 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
 
           <div className="my-4">
             <h2 className="text-2xl font-semibold text-white">{name}</h2>
-            <p className="text-sm text-gray-200 mt-1">{handle}</p>
           </div>
         </div>
 
@@ -130,36 +141,36 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
             <div className="mt-6 w-full">
 
               {/* MBTI */}
-              {user?.mbti && (
+              {mbti && (
                 <div className="mb-6">
                   <h4 className="text-md font-medium text-gray-600 mb-3">MBTI</h4>
                   <span className="px-3 py-1 rounded-full border bg-gray-100 text-gray-700 border-gray-300">
-                    {user.mbti}
+                    {mbti}
                   </span>
                 </div>
               )}
 
               {/* 성격 */}
-              {user?.personality_keywords?.length > 0 && (
+              {personalityKeywords.length > 0 && (
                 <div className="mb-6">
                   <h4 className="text-md font-medium text-gray-600 mb-3">성격</h4>
-                  <TagSelector tags={user.personality_keywords} />
+                  <TagSelector tags={personalityKeywords} />
                 </div>
               )}
 
               {/* 관심사 */}
-              {user?.interest_keywords?.length > 0 && (
+              {interestKeywords.length > 0 && (
                 <div className="mb-6">
                   <h4 className="text-md font-medium text-gray-600 mb-3">관심사</h4>
-                  <TagSelector tags={user.interest_keywords.map(tag => `#${tag}`)} />
+                  <TagSelector tags={interestKeywords.map(tag => `#${tag}`)} />
                 </div>
               )}
 
               {/* 취미 */}
-              {user?.hobby_keywords?.length > 0 && (
+              {hobbyKeywords.length > 0 && (
                 <div className="mb-6">
                   <h4 className="text-md font-medium text-gray-600 mb-3">취미</h4>
-                  <TagSelector tags={user.hobby_keywords} />
+                  <TagSelector tags={hobbyKeywords} />
                 </div>
               )}
             </div>

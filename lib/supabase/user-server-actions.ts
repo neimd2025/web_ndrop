@@ -461,6 +461,45 @@ export async function getUserSavedCardsData(): Promise<{
   }
 }
 
+export async function getUserSavedCardsDataFromId(id?: string): Promise<{
+  user: UserProfile
+  savedCards: any[]
+}> {
+  try {
+    const supabase = await createClient()
+
+    // 1. 먼저 collected_cards에서 해당 id의 card_id를 찾습니다
+    const { data: collectedCard, error: collectedError } = await supabase
+      .from('collected_cards')
+      .select('card_id')
+      .eq('id', id)
+      .single()
+
+    if (collectedError) {
+      console.error('수집된 명함 ID 찾기 오류:', collectedError)
+      throw new Error('수집된 명함을 찾을 수 없습니다.')
+    }
+
+    // 2. 찾은 card_id로 실제 명함 정보를 가져옵니다
+    const { data: savedCards, error } = await supabase
+      .from('business_cards')
+      .select('*')
+      .eq('id', collectedCard.card_id)
+
+    if (error) {
+      console.error('명함 데이터 가져오기 오류:', error)
+      throw new Error('명함 데이터를 불러올 수 없습니다.')
+    }
+
+    return {
+      savedCards: savedCards || []
+    }
+  } catch (error) {
+    console.error('저장된 명함 데이터 가져오기 오류:', error)
+    throw new Error('저장된 명함 데이터를 불러올 수 없습니다.')
+  }
+}
+
 export async function getUserProfileData(profileId?: string): Promise<{
   user: UserProfile
   profile: UserProfile

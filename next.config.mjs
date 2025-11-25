@@ -5,20 +5,23 @@ const nextConfig = {
   },
   // Hydration 경고 억제
   reactStrictMode: false,
-  // Cross origin request 허용 (개발 환경)
+  
+  // 모든 origin 허용 시도
   allowedDevOrigins: [
-    '192.168.45.76',
-    'localhost',
-    '127.0.0.1'
+    'http://192.168.8.89:3000',
+    'http://localhost:3000', 
+    'http://127.0.0.1:3000',
+    '192.168.8.89:3000',
+    'localhost:3000',
+    '127.0.0.1:3000',
+    '*'
   ],
-  // Webpack 설정 통합
+  
+  // Webpack 설정
   webpack: (config, { dev, isServer }) => {
-    // 개발 환경에서 캐시 최적화
     if (dev && !isServer) {
       config.cache = false;
     }
-
-    // Edge Runtime 경고 억제
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -29,33 +32,49 @@ const nextConfig = {
     }
     return config;
   },
+  
   images: {
     domains: ['kyibcvcwwvkldlasxyjn.supabase.co'],
     formats: ['image/webp', 'image/avif'],
   },
-  headers: async () => {
+  
+  // 강력한 CORS 헤더 설정
+  async headers() {
     return [
+      {
+        source: '/_next/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS, HEAD, POST, PUT, DELETE' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, x-requested-with' },
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+        ],
+      },
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS, HEAD, POST, PUT, DELETE' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, x-requested-with' },
+        ],
+      },
       {
         source: '/manifest.json',
         headers: [
-          {
-            key: 'Content-Type',
-            value: 'application/manifest+json',
-          },
+          { key: 'Content-Type', value: 'application/manifest+json' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
         ],
       },
       {
         source: '/sw.js',
         headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=0, must-revalidate',
-          },
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
         ],
       },
     ]
   },
-  // PWA 지원을 위한 설정
+  
   async rewrites() {
     return [
       {

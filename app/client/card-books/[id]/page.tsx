@@ -1,24 +1,18 @@
-import { getUserSavedCardsData } from '@/lib/supabase/user-server-actions'
-import { UserSavedCardDetailClient } from '@/components/user/user-saved-card-detail-client'
+import { getUserSavedCardsDataFromId } from '@/lib/supabase/user-server-actions'
+import UserTheirCardDetailPage from '@/components/user/user-their-card-detail'
 import { notFound } from 'next/navigation'
 
-interface SavedCardDetailPageProps {
+interface UserCardClientPageProps {
   params: Promise<{ id: string }>
 }
 
-export default async function SavedCardDetailPage({ params }: SavedCardDetailPageProps) {
+export default async function UserCardClientPage({ params }: UserCardClientPageProps) {
   const { id } = await params
-  const { user, savedCards } = await getUserSavedCardsData()
-  const savedCard = savedCards.find(card => card.id === id)
-
-  if (!savedCard) {
-    notFound()
-  }
+  const { savedCards } = await getUserSavedCardsDataFromId(id);
 
   return (
-    <UserSavedCardDetailClient
-      user={user}
-      savedCard={savedCard}
+    <UserTheirCardDetailPage
+      businessCards={savedCards}
     />
   )
 }
