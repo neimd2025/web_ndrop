@@ -334,13 +334,6 @@ export function EventDetailCard({
                 </div>
               )}
 
-              {event.organizer_kakao && (
-                <div>
-                  <p className="text-sm text-gray-500">카카오톡</p>
-                  <p className="font-medium">{event.organizer_kakao}</p>
-                </div>
-              )}
-
               {event.organizer_phone && (
                 <div>
                   <p className="text-sm text-gray-500">전화</p>

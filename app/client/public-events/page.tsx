@@ -25,7 +25,7 @@ const EventsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [selectedRegion, setSelectedRegion] = useState('전체');
+  const [selectedRegion, setSelectedRegion] = useState('');
   const router = useRouter();
 
   const REGIONS = [
@@ -173,7 +173,7 @@ const EventsPage = () => {
       event.region?.toLowerCase().includes(searchTerm.toLowerCase());
 
     // 지역 필터링
-    const matchesRegion = selectedRegion === '전체' || event.region === selectedRegion;
+    const matchesRegion = !selectedRegion || selectedRegion === '전체' || event.region === selectedRegion;
 
     return matchesSearch && matchesRegion;
   });
@@ -255,7 +255,7 @@ const EventsPage = () => {
         <div className="mb-6">
           <Select value={selectedRegion} onValueChange={setSelectedRegion}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="지역 선택" />
+              <SelectValue placeholder="지역" />
             </SelectTrigger>
             <SelectContent>
               {REGIONS.map((region) => (
