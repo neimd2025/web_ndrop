@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { UserProfile } from '@/lib/supabase/user-server-actions'
-import { ArrowLeft, Search, Star, User, Trash2 } from 'lucide-react'
+import { ArrowLeft, Search, Star, User } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 
 interface UserSavedCardsClientProps {
@@ -21,14 +21,8 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
   const [loading, setLoading] = useState(!initialUser)
   const [searchTerm, setSearchTerm] = useState('')
   const [showFavorites, setShowFavorites] = useState(false)
-  const [swipingCardId, setSwipingCardId] = useState<string | null>(null)
-  const [swipeOffset, setSwipeOffset] = useState(0)
   const router = useRouter()
   const profileImage = user?.profile_image_url
-
-  // 터치 관련 ref
-  const touchStartX = useRef(0)
-  const currentCardId = useRef<string | null>(null)
 
   // 데이터 로딩
   useEffect(() => {
@@ -98,88 +92,15 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
     }
   }
 
-  // 카드 삭제 함수 - Supabase 직접 접근
-  const handleDeleteCard = async (cardId: string) => {
-    if (!confirm('정말 이 명함을 삭제하시겠습니까?')) {
-      resetSwipe()
-      return
-    }
-
-    try {
-      const supabase = createClient()
-
-      // collected_cards 테이블에서 삭제
-      const { error } = await supabase
-        .from('collected_cards')
-        .delete()
-        .eq('id', cardId)
-
-      if (error) {
-        console.error('명함 삭제 오류:', error)
-        alert('명함 삭제 중 오류가 발생했습니다.')
-        resetSwipe()
-        return
-      }
-
-      // 삭제 성공 시 UI에서 제거
-      setSavedCards(prev => prev.filter(card => card.id !== cardId))
-      
-    } catch (error) {
-      console.error('명함 삭제 오류:', error)
-      alert('명함 삭제 중 오류가 발생했습니다.')
-      resetSwipe()
-    }
-  }
-
-  // 터치 시작
-  const handleTouchStart = useCallback((e: React.TouchEvent, cardId: string) => {
-    touchStartX.current = e.touches[0].clientX
-    currentCardId.current = cardId
-    setSwipingCardId(cardId)
-  }, [])
-
-  // 터치 이동
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!currentCardId.current) return
-
-    const currentX = e.touches[0].clientX
-    const diff = touchStartX.current - currentX
-
-    // 오른쪽으로 스와이프 방지, 왼쪽으로만 스와이프 가능
-    if (diff > 0) {
-      setSwipeOffset(Math.min(diff, 120)) // 최대 120px까지 스와이프
-    }
-  }, [])
-
-  // 터치 종료
-  const handleTouchEnd = useCallback(() => {
-    if (!currentCardId.current) return
-
-    // 스와이프 거리가 임계값(80px) 이상이면 삭제 확인
-    if (swipeOffset > 80) {
-      handleDeleteCard(currentCardId.current)
-    } else {
-      // 임계값 미만이면 원위치
-      resetSwipe()
-    }
-  }, [swipeOffset])
-
-  // 스와이프 초기화
-  const resetSwipe = useCallback(() => {
-    setSwipeOffset(0)
-    setSwipingCardId(null)
-    currentCardId.current = null
-  }, [])
-
-  // 카드 클릭 핸들러 (스와이프 중이 아닐 때만 동작)
+  // 카드 클릭 핸들러
   const handleCardClick = useCallback((cardId: string, e: React.MouseEvent) => {
-    // 스와이프 중이거나 삭제 버튼을 클릭한 경우에는 네비게이션 막기
-    if (swipeOffset > 0 || (e.target as HTMLElement).closest('button')) {
+    // 즐겨찾기 버튼을 클릭한 경우에는 네비게이션 막기
+    if ((e.target as HTMLElement).closest('button')) {
       e.preventDefault()
       return
     }
     router.push(`/client/card-books/${cardId}`)
-  }, [swipeOffset, router])
+  }, [router])
 
   return (
     <div className="min-h-screen">
@@ -248,35 +169,11 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
             const businessCard = card.business_card
             if (!businessCard) return null
 
-            const isSwiping = swipingCardId === card.id
-            const shouldShowDelete = swipeOffset > 40
-
             return (
-              <div 
-                key={card.id}
-                className="relative overflow-hidden"
-                onTouchStart={(e) => handleTouchStart(e, card.id)}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-              >
-                {/* 삭제 버튼 배경 */}
-                <div 
-                  className="absolute right-0 top-0 bottom-0 bg-red-500 flex items-center justify-center transition-all duration-200"
-                  style={{ 
-                    width: `${Math.max(swipeOffset, 0)}px`,
-                    opacity: shouldShowDelete ? 1 : 0.7
-                  }}
-                >
-                  <Trash2 className="w-5 h-5 text-white" />
-                </div>
-
+              <div key={card.id}>
                 {/* 명함 카드 */}
                 <Card
                   className="border border-gray-200 hover:border-purple-300 transition-all duration-200 cursor-pointer"
-                  style={{
-                    transform: `translateX(-${swipeOffset}px)`,
-                    transition: isSwiping ? 'none' : 'transform 0.2s ease-out'
-                  }}
                   onClick={(e) => handleCardClick(card.id, e)}
                 >
                   <CardContent className="p-4 flex items-start gap-1.5">
