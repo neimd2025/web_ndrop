@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { UserBusinessCard, UserProfile } from "@/lib/supabase/user-server-actions";
-import { User, Mail, Phone, QrCode, Edit3 } from "lucide-react";
+import { User, Mail, Phone, QrCode, Edit3, Trash2 } from "lucide-react";
 import { 
   FaInstagram, 
   FaLinkedin, 
@@ -22,6 +22,8 @@ import {
 } from "react-icons/fa";
 import { SiNotion, SiNaver } from "react-icons/si";
 import Link from "next/link";
+import { createClient } from '@/utils/supabase/client'
+import { useRouter } from 'next/navigation'
 
 interface UserCardDetailProps {
   user?: UserProfile;
@@ -30,6 +32,7 @@ interface UserCardDetailProps {
 
 export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps) {
   const primaryCard = businessCards.find((c) => c.is_public) || businessCards[0];
+  const router = useRouter();
 
   // user가 undefined면 primaryCard에서 데이터 가져오기
   const name = user?.full_name ?? primaryCard?.full_name ?? user?.email?.split("@")[0] ?? "사용자";
@@ -57,6 +60,39 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
     if (/^02\d{7,8}$/.test(digits)) return digits.replace(/^(02)(\d{3,4})(\d{4})$/, "$1-$2-$3");
     if (/^01[016789]\d{7,8}$/.test(digits)) return digits.replace(/^(01[016789])(\d{3,4})(\d{4})$/, "$1-$2-$3");
     return num;
+  };
+
+  // Supabase 직접 접근 방식으로 삭제 처리
+  const handleDelete = async () => {
+    if (!primaryCard?.id) return;
+
+    if (!confirm('정말 이 명함을 삭제하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      const supabase = createClient()
+
+      // collected_cards 테이블에서 삭제
+      const { error } = await supabase
+        .from('collected_cards')
+        .delete()
+        .eq('card_id', primaryCard.id)
+
+      if (error) {
+        console.error('명함 삭제 오류:', error)
+        alert('명함 삭제 중 오류가 발생했습니다.')
+        return
+      }
+
+      // 삭제 성공 시 명함첩 페이지로 이동
+      alert('명함이 삭제되었습니다.')
+      router.push('/client/card-books')
+      
+    } catch (error) {
+      console.error('명함 삭제 오류:', error)
+      alert('명함 삭제 중 오류가 발생했습니다.')
+    }
   };
 
   return (
@@ -192,27 +228,40 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
             )}
           </div>
 
-          { user && (
-          <div className="my-6 flex gap-3">
-            {/* 편집하기 버튼 - 왼쪽, 보라색 배경 */}
-            <Link 
-              href="/client/namecard/edit"
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md"
-            >
-              <Edit3 className="w-5 h-5" />
-              편집하기
-            </Link>
-            
-            {/* QR 코드 보기 버튼 - 오른쪽, 흰색 배경 */}
-            <Link 
-              href="/client/my-qr"
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white text-purple-600 border border-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-colors shadow-md"
-            >
-              <QrCode className="w-5 h-5" />
-              QR 보기
-            </Link>
-          </div>
-)}
+          {user ? (
+            <div className="my-6 flex gap-3">
+              {/* 편집하기 버튼 - 왼쪽, 보라색 배경 */}
+              <Link 
+                href="/client/namecard/edit"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md"
+              >
+                <Edit3 className="w-5 h-5" />
+                편집하기
+              </Link>
+              
+              {/* QR 코드 보기 버튼 - 오른쪽, 흰색 배경 */}
+              <Link 
+                href="/client/my-qr"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white text-purple-600 border border-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-colors shadow-md"
+              >
+                <QrCode className="w-5 h-5" />
+                QR 보기
+              </Link>
+            </div>
+          ) : (
+            // user가 없고 primaryCard가 있을 때만 삭제 버튼 표시
+            primaryCard && (
+              <div className="my-6">
+                <button
+                  onClick={handleDelete}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-100 text-gray-600 rounded-lg font-medium hover:bg-gray-200 transition-colors border border-gray-300"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  명함 삭제
+                </button>
+              </div>
+            )
+          )}
         </div>
       </Card>
     </div>
