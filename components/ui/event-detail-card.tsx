@@ -26,6 +26,7 @@ interface EventDetailCardProps {
     status: 'upcoming' | 'ongoing' | 'completed'
     organizer_name?: string
     organizer_email?: string
+    region?: string | null
     organizer_phone?: string
     organizer_kakao?: string
     // 동적 콘텐츠 필드들
@@ -229,8 +230,9 @@ export function EventDetailCard({
       <Card className="border-0 shadow-lg">
         <CardContent className="p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">이벤트 정보</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Row 1: 날짜 | 참가자 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-gray-500" />
                 <div>
@@ -238,27 +240,6 @@ export function EventDetailCard({
                   <p className="font-medium">{formatDate(event.start_date)}</p>
                 </div>
               </div>
-
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-500">시간</p>
-                  <p className="font-medium">
-                    {formatTime(event.start_date)} - {formatTime(event.end_date)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-500">장소</p>
-                  <p className="font-medium">{event.location}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-gray-500" />
                 <div>
@@ -266,7 +247,20 @@ export function EventDetailCard({
                   <p className="font-medium">{event.current_participants}명</p>
                 </div>
               </div>
+            </div>
 
+            {/* Row 2: 지역 | 이벤트코드 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {event.region ? (
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">지역</p>
+                    <p className="font-medium">{event.region}</p>
+                  </div>
+                </div>
+              ) : <div />} {/* 지역이 없을 경우 빈 div로 자리 유지 */}
+              
               {showEventCode && (
                 <div className="flex items-center gap-3">
                   <QrCode className="h-5 w-5 text-gray-500" />
@@ -276,6 +270,26 @@ export function EventDetailCard({
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Row 3: 시간 */}
+            <div className="flex items-center gap-3">
+              <Clock className="h-5 w-5 text-gray-500" />
+              <div>
+                <p className="text-sm text-gray-500">시간</p>
+                <p className="font-medium">
+                  {formatTime(event.start_date)} - {formatTime(event.end_date)}
+                </p>
+              </div>
+            </div>
+
+            {/* Row 4: 장소 */}
+            <div className="flex items-center gap-3">
+              <MapPin className="h-5 w-5 text-gray-500" />
+              <div>
+                <p className="text-sm text-gray-500">장소</p>
+                <p className="font-medium">{event.location}</p>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -338,95 +352,6 @@ export function EventDetailCard({
         </Card>
       )}
 
-      {/* 피드백 섹션 */}
-      <Card className="border-0 shadow-lg">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <MessageSquare className="h-5 w-5 text-purple-600" />
-            <h2 className="text-xl font-semibold text-gray-900">이벤트 피드백</h2>
-          </div>
-          <p className="text-gray-600 mb-4">
-            이벤트에 대한 소중한 피드백을 남겨주세요. 더 나은 이벤트를 위해 도움이 됩니다.
-          </p>
-          <Button
-            onClick={() => setShowFeedbackModal(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            <MessageSquare className="h-4 w-4 mr-2" />
-            피드백 보내기
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* 피드백 모달 */}
-      {showFeedbackModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold mb-4">이벤트 피드백</h3>
-
-            {/* 평점 선택 */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                평점 (필수)
-              </label>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setRating(star)}
-                    className="p-1"
-                  >
-                    <Star
-                      className={`h-6 w-6 ${
-                        star <= rating
-                          ? 'text-yellow-400 fill-current'
-                          : 'text-gray-300'
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 피드백 텍스트 */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                피드백 내용 (선택)
-              </label>
-              <textarea
-                value={feedbackText}
-                onChange={(e) => setFeedbackText(e.target.value)}
-                placeholder="이벤트에 대한 피드백을 작성해주세요..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                rows={4}
-              />
-            </div>
-
-            {/* 버튼들 */}
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowFeedbackModal(false)
-                  setFeedbackText('')
-                  setRating(0)
-                }}
-                className="flex-1"
-              >
-                취소
-              </Button>
-              <Button
-                onClick={handleSubmitFeedback}
-                disabled={isSubmitting || rating === 0}
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                {isSubmitting ? '전송 중...' : '피드백 전송'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

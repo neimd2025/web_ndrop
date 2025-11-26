@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       endDate,
       endTime,
       location,
+      region,
       maxParticipants,
       imageUrl,
       adminId,
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
         start_date: startDateTime,
         end_date: endDateTime,
         location,
+        region, // region 필드 추가
         max_participants: parseInt(maxParticipants),
         event_code: eventCode,
         image_url: imageUrl,
@@ -110,6 +112,7 @@ export async function POST(request: NextRequest) {
         start_date: startDateTime,
         end_date: endDateTime,
         location,
+        region,
         max_participants: parseInt(maxParticipants),
         event_code: eventCode,
         image_url: imageUrl,
