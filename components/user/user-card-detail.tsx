@@ -354,7 +354,6 @@ export function SocialLinks({ links }: SocialLinksProps) {
           {getIcon(link)}
         </a>
         <a
-          key={link}
           href={link}
           target="_blank"
           rel="noopener noreferrer"
