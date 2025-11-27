@@ -17,7 +17,7 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-// Zod 스키마 정의 - external_links를 배열로 수정
+// Zod 스키마 정의
 const profileSchema = z.object({
   full_name: z.string().min(2, '이름은 2자 이상이어야 합니다').max(50, '이름은 50자 이하여야 합니다'),
   birth_date: z.string().optional(),
@@ -31,7 +31,7 @@ const profileSchema = z.object({
   interest_keywords: z.array(z.string()).max(3, '관심 키워드는 최대 3개까지 선택할 수 있습니다'),
   hobby_keywords: z.array(z.string()).max(3, '취미는 최대 3개까지 선택할 수 있습니다'),
   introduction: z.string().max(500, '자기소개는 500자 이하여야 합니다'),
-  external_link: z.string().url('올바른 URL 형식을 입력해주세요').optional().or(z.literal('')) // 단일 링크 입력용
+  external_link: z.string().url('올바른 URL 형식을 입력해주세요').optional().or(z.literal(''))
 })
 
 type ProfileFormData = z.infer<typeof profileSchema>
@@ -88,154 +88,159 @@ export default function CreateNamecardPage() {
   ]
 
   const hobbyOptions = [
-    '독서', '영화감상', '음악감상', '운동', '요리', '여행', '사진', '게임',
+    '독서', '영화감상', '음악감상', '운동', '요리', '여행', '사진', 'ゲーム',
     '등산', '자전거', '수영', '자기계발', '사람', '그림그리기', '악기연주',
     '춤', '글쓰기', '쇼핑', '카페투어', '맛집탐방', '드라마', '웹툰', '만화'
   ]
 
-const onSubmit = async (data: ProfileFormData) => {
-  console.log('=== 명함 생성 시작 ===')
-
-  if (!user) {
-    toast.error('로그인이 필요합니다.')
-    router.push('/login?type=user')
-    return
-  }
-
-  if (isSubmitting) {
-    console.log('이미 제출 중입니다.')
-    return
-  }
-
-  setIsSubmitting(true)
-
-  try {
-    const supabase = createClient()
-    console.log('=== Supabase 클라이언트 생성 완료 ===')
-
-    let profileImageUrl = null
-
-    // 이미지 업로드 로직
-    if (selectedFile) {
-      setIsUploading(true)
-      try {
-        console.log('=== 이미지 업로드 시작 ===')
-        const formData = new FormData()
-        formData.append('file', selectedFile)
-
-        const response = await fetch('/api/user/upload-profile-image', {
-          method: 'POST',
-          body: formData
-        })
-
-        const result = await response.json()
-
-        if (!response.ok) {
-          throw new Error(result.error || '이미지 업로드에 실패했습니다.')
-        }
-
-        profileImageUrl = result.publicUrl
-        console.log('=== 이미지 업로드 성공 ===', profileImageUrl)
-      } catch (error) {
-        console.error('이미지 업로드 오류:', error)
-        toast.warning('이미지 업로드에 실패했지만 명함 생성은 계속됩니다.')
-        profileImageUrl = null
-      } finally {
-        setIsUploading(false)
-      }
-    } else {
-      console.log('=== 이미지 업로드 생략 ===')
-    }
-
-    // 1. 가장 기본적인 데이터만 준비 (프로필 이미지 URL 포함)
-    const basicData = {
-      id: user.id,
-      full_name: data.full_name,
-      email: user.email,
-      profile_image_url: profileImageUrl, // 프로필 이미지 URL 추가
-      role_id: ROLE_IDS.USER,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-
-    console.log('=== 기본 데이터 준비 완료 ===', basicData)
-
-    // 2. 먼저 upsert만 시도 (select 제외)
-    console.log('=== 프로필 upsert 시작 ===')
-    const { error: upsertError } = await supabase
-      .from('user_profiles')
-      .upsert(basicData)
-
-    console.log('=== 프로필 upsert 완료 ===', { upsertError })
-
-    if (upsertError) {
-      console.error('프로필 upsert 실패:', upsertError)
-      throw upsertError
-    }
-
-    // 3. 성공하면 select로 데이터 가져오기
-    console.log('=== 프로필 select 시작 ===')
-    const { data: createdProfile, error: selectError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    console.log('=== 프로필 select 완료 ===', { createdProfile, selectError })
-
-    if (selectError) {
-      console.error('프로필 select 실패:', selectError)
-      throw selectError
-    }
-
-    console.log('=== 프로필 저장 성공 ===', createdProfile)
-
-    // 4. 명함 생성도 마찬가지로 분리 (프로필 이미지 URL 포함)
+  const onSubmit = async (data: ProfileFormData) => {
     console.log('=== 명함 생성 시작 ===')
-    const businessCardData = {
-      user_id: user.id,
-      full_name: data.full_name,
-      introduction: data.introduction || '안녕하세요!',
-      company: data.affiliation_type === '소속' ? data.affiliation : null,
-      job_title: data.affiliation_type === '소속' ? data.role : null,
-      work_field: data.affiliation_type === '미소속' ? data.work_field : null,
-      contact: data.contact || null,
-      mbti: data.mbti || null,
-      personality_keywords: data.personality_keywords,
-      interest_keywords: data.interest_keywords,
-      hobby_keywords: data.hobby_keywords,
-      external_link: data.external_link || null,
-      profile_image_url: profileImageUrl, // 프로필 이미지 URL 추가
-      is_public: true
+
+    if (!user) {
+      toast.error('로그인이 필요합니다.')
+      router.push('/login?type=user')
+      return
     }
 
-    console.log('=== 명함 데이터:', businessCardData)
-
-    const { error: cardError } = await supabase
-      .from('business_cards')
-      .upsert(businessCardData)
-
-    console.log('=== 명함 upsert 완료 ===', { cardError })
-
-    if (cardError) {
-      console.error('명함 생성 실패:', cardError)
-      throw cardError
+    if (isSubmitting) {
+      console.log('이미 제출 중입니다.')
+      return
     }
 
-    toast.success('명함이 성공적으로 생성되었습니다!')
-    console.log('=== 명함 생성 완료, 홈으로 이동 ===')
+    setIsSubmitting(true)
 
-    // 홈으로 이동
-    router.push('/client/home')
+    try {
+      const supabase = createClient()
+      console.log('=== Supabase 클라이언트 생성 완료 ===')
 
-  } catch (error) {
-    console.error('명함 생성 전체 오류:', error)
-    console.error('오류 상세:', JSON.stringify(error, null, 2))
-    toast.error(`명함 생성에 실패했습니다: ${error.message}`)
-  } finally {
-    setIsSubmitting(false)
+      let profileImageUrl = null
+
+      // 이미지 업로드 로직
+      if (selectedFile) {
+        setIsUploading(true)
+        try {
+          console.log('=== 이미지 업로드 시작 ===')
+          const formData = new FormData()
+          formData.append('file', selectedFile)
+
+          const response = await fetch('/api/user/upload-profile-image', {
+            method: 'POST',
+            body: formData
+          })
+
+          const result = await response.json()
+
+          if (!response.ok) {
+            throw new Error(result.error || '이미지 업로드에 실패했습니다.')
+          }
+
+          profileImageUrl = result.publicUrl
+          console.log('=== 이미지 업로드 성공 ===', profileImageUrl)
+        } catch (error) {
+          console.error('이미지 업로드 오류:', error)
+          toast.warning('이미지 업로드에 실패했지만 명함 생성은 계속됩니다.')
+          profileImageUrl = null
+        } finally {
+          setIsUploading(false)
+        }
+      } else {
+        console.log('=== 이미지 업로드 생략 ===')
+      }
+
+      // user_profiles에 저장할 데이터 (external_links - 배열)
+      const userProfileData = {
+        id: user.id,
+        full_name: data.full_name,
+        birth_date: data.birth_date || null,
+        affiliation_type: data.affiliation_type,
+        affiliation: data.affiliation_type === '소속' ? (data.affiliation || null) : null,
+        job_title: data.affiliation_type === '소속' ? (data.role || null) : null,
+        work_field: data.affiliation_type === '미소속' ? (data.work_field || null) : null,
+        contact: data.contact || null,
+        mbti: data.mbti && data.mbti.trim() !== '' ? data.mbti : null,
+        personality_keywords: data.personality_keywords.length > 0 ? data.personality_keywords : [],
+        interest_keywords: data.interest_keywords.length > 0 ? data.interest_keywords : [],
+        hobby_keywords: data.hobby_keywords.length > 0 ? data.hobby_keywords : [],
+        introduction: data.introduction || null,
+        external_links: data.external_link ? [data.external_link] : [], // 배열로 저장
+        email: user.email || '',
+        profile_image_url: profileImageUrl,
+        nickname: data.full_name,
+        role_id: ROLE_IDS.USER,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+
+      console.log('=== user_profiles 데이터 준비 완료 ===', userProfileData)
+
+      // user_profiles 저장
+      console.log('=== user_profiles 저장 시작 ===')
+      const { data: createdProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .upsert(userProfileData)
+        .select()
+        .single()
+
+      console.log('=== user_profiles 저장 완료 ===', { createdProfile, profileError })
+
+      if (profileError) {
+        console.error('user_profiles 저장 실패:', profileError)
+        throw profileError
+      }
+
+      console.log('=== user_profiles 저장 성공 ===', createdProfile)
+
+      // business_cards에 저장할 데이터 (external_link - 단일 값)
+      const businessCardData = {
+        user_id: user.id,
+        full_name: data.full_name,
+        introduction: data.introduction || '안녕하세요!',
+        company: data.affiliation_type === '소속' ? data.affiliation : null,
+        job_title: data.affiliation_type === '소속' ? data.role : null,
+        work_field: data.affiliation_type === '미소속' ? data.work_field : null,
+        contact: data.contact || null,
+        mbti: data.mbti || null,
+        personality_keywords: data.personality_keywords,
+        interest_keywords: data.interest_keywords,
+        hobby_keywords: data.hobby_keywords,
+        external_link: data.external_link || null, // 단일 값 (external_links[0]과 동일)
+        profile_image_url: profileImageUrl,
+        is_public: true
+      }
+
+      console.log('=== business_cards 데이터:', businessCardData)
+
+      // business_cards 저장
+      console.log('=== business_cards 저장 시작 ===')
+      const { data: businessCard, error: cardError } = await supabase
+        .from('business_cards')
+        .upsert(businessCardData)
+        .select()
+        .single()
+
+      console.log('=== business_cards 저장 완료 ===', { businessCard, cardError })
+
+      if (cardError) {
+        console.error('business_cards 저장 실패:', cardError)
+        throw cardError
+      }
+
+      console.log('=== business_cards 저장 성공 ===', businessCard)
+
+      toast.success('명함이 성공적으로 생성되었습니다!')
+      console.log('=== 명함 생성 완료, 홈으로 이동 ===')
+
+      // 홈으로 이동
+      router.push('/client/home')
+
+    } catch (error) {
+      console.error('명함 생성 전체 오류:', error)
+      console.error('오류 상세:', JSON.stringify(error, null, 2))
+      toast.error(`명함 생성에 실패했습니다: ${error.message}`)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
-}
 
   const handleMBTISelect = (mbti: string) => {
     const currentMBTI = watch('mbti')

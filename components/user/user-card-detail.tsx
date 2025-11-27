@@ -342,6 +342,7 @@ export function SocialLinks({ links }: SocialLinksProps) {
   return (
     <div className="grid grid-cols-4 gap-4">
       {links.map((link) => (
+<div className="flex flex-row gap-3">
         <a
           key={link}
           href={link}
@@ -352,6 +353,17 @@ export function SocialLinks({ links }: SocialLinksProps) {
         >
           {getIcon(link)}
         </a>
+        <a
+          key={link}
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex justify-center items-center"
+          title={link}
+        >
+          {link}
+        </a>
+</div>
       ))}
     </div>
   );
