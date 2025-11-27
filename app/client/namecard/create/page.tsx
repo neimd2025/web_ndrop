@@ -16,26 +16,21 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-// Zod 스키마 정의
+// Zod 스키마 정의 - external_links를 배열로 수정
 const profileSchema = z.object({
   full_name: z.string().min(2, '이름은 2자 이상이어야 합니다').max(50, '이름은 50자 이하여야 합니다'),
-  birth_date: z.string().optional().refine((val) => {
-    if (!val || val === '') return true
-    if (val === '123123123') return false
-    const date = new Date(val)
-    return !isNaN(date.getTime())
-  }, '올바른 날짜 형식을 입력해주세요'),
+  birth_date: z.string().optional(),
   affiliation_type: z.enum(['소속', '미소속']).default('소속'),
   affiliation: z.string().max(100, '소속은 100자 이하여야 합니다'),
   role: z.string().max(100, '역할은 100자 이하여야 합니다'),
   work_field: z.string().max(100, '하는일은 100자 이하여야 합니다'),
   contact: z.string().max(100, '연락처는 100자 이하여야 합니다'),
   mbti: z.string().optional(),
-  personality_keywords: z.array(z.string()).max(3, '성격 키워드는 최대 3개까지 선택할 수 있습니다'),
+  personality_keywords: z.array(z.string()).min(1, '성격 키워드는 최소 1개 이상 선택해주세요').max(3, '성격 키워드는 최대 3개까지 선택할 수 있습니다'),
   interest_keywords: z.array(z.string()).max(3, '관심 키워드는 최대 3개까지 선택할 수 있습니다'),
   hobby_keywords: z.array(z.string()).max(3, '취미는 최대 3개까지 선택할 수 있습니다'),
   introduction: z.string().max(500, '자기소개는 500자 이하여야 합니다'),
-  external_link: z.string().url('올바른 URL 형식을 입력해주세요').optional().or(z.literal(''))
+  external_link: z.string().url('올바른 URL 형식을 입력해주세요').optional().or(z.literal('')) // 단일 링크 입력용
 })
 
 type ProfileFormData = z.infer<typeof profileSchema>
@@ -45,16 +40,14 @@ export default function CreateNamecardPage() {
   const { user } = useAuth()
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
-
-  // SimpleUserLayout에서 이미 명함 체크를 했으므로 여기 도달했다면 명함 생성이 필요한 상태
-  // useUserProfile 훅 사용하지 않음 (중복 쿼리 방지)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
-    formState: { errors, isSubmitting }
+    formState: { errors }
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -99,165 +92,116 @@ export default function CreateNamecardPage() {
     '춤', '글쓰기', '쇼핑', '카페투어', '맛집탐방', '드라마', '웹툰', '만화'
   ]
 
-  const onSubmit = async (data: ProfileFormData) => {
-    console.log('=== 명함 생성 시작 ===')
-    console.log('로그인된 사용자:', user)
-    console.log('사용자 ID:', user?.id)
-    console.log('사용자 이메일:', user?.email)
+const onSubmit = async (data: ProfileFormData) => {
+  console.log('=== 명함 생성 시작 ===')
 
-    // 사용자가 로그인되어 있지 않은 경우 처리
-    if (!user) {
-      toast.error('로그인이 필요합니다.')
-      router.push('/login?type=user')
-      return
-    }
-
-    try {
-      let profileImageUrl = null
-
-      // 이미지가 선택된 경우 업로드
-      if (selectedFile) {
-        setIsUploading(true)
-        try {
-          const formData = new FormData()
-          formData.append('file', selectedFile)
-
-          const response = await fetch('/api/user/upload-profile-image', {
-            method: 'POST',
-            body: formData
-          })
-
-          const result = await response.json()
-
-          if (!response.ok) {
-            throw new Error(result.error || '이미지 업로드에 실패했습니다.')
-          }
-
-          profileImageUrl = result.publicUrl
-          console.log('이미지 업로드 성공:', profileImageUrl)
-        } catch (error) {
-          console.error('이미지 업로드 오류:', error)
-          console.error('오류 상세:', JSON.stringify(error, null, 2))
-
-          // 이미지 업로드 실패해도 명함 생성은 계속 진행
-          toast.warning('이미지 업로드에 실패했지만 명함 생성은 계속됩니다.')
-          profileImageUrl = null
-        } finally {
-          setIsUploading(false)
-        }
-      }
-      // 빈 문자열들을 null로 변환
-      const cleanedData = {
-        full_name: data.full_name,
-        birth_date: data.birth_date || null,
-        affiliation_type: data.affiliation_type,
-        affiliation: data.affiliation_type === '소속' ? (data.affiliation || null) : null,
-        job_title: data.affiliation_type === '소속' ? (data.role || null) : null,
-        work_field: data.affiliation_type === '미소속' ? (data.work_field || null) : null,
-        contact: data.contact || null,
-        mbti: data.mbti && data.mbti.trim() !== '' ? data.mbti : null,
-        personality_keywords: data.personality_keywords.length > 0 ? data.personality_keywords : null,
-        interest_keywords: data.interest_keywords.length > 0 ? data.interest_keywords : null,
-        hobby_keywords: data.hobby_keywords.length > 0 ? data.hobby_keywords : null,
-        introduction: data.introduction || null,
-        external_link: data.external_link || null,
-        email: user.email || '',
-        company: data.affiliation_type === '소속' ? (data.affiliation || null) : null,
-        keywords: data.personality_keywords.length > 0 ? data.personality_keywords : null,
-        profile_image_url: profileImageUrl,
-        nickname: data.full_name,
-        qr_code_url: null,
-        role_id: ROLE_IDS.USER, // 기본 사용자 역할 설정
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-
-      // 프로필 생성 또는 업데이트
-      let createdProfile
-      try {
-        // 먼저 업데이트 시도 (기존 프로필이 있는 경우)
-        createdProfile = await userProfileAPI.updateUserProfile(user.id, cleanedData)
-        console.log('프로필 업데이트 성공:', createdProfile)
-      } catch (updateError) {
-        console.log('프로필 업데이트 실패, 생성 시도:', updateError)
-        // 업데이트 실패 시 생성 시도 (새 사용자의 경우)
-        createdProfile = await userProfileAPI.createUserProfile({
-          id: user.id,
-          ...cleanedData
-        })
-        console.log('프로필 생성 성공:', createdProfile)
-      }
-
-      if (!createdProfile) {
-        throw new Error('프로필 생성/업데이트에 실패했습니다.')
-      }
-
-      toast.success('명함이 성공적으로 생성되었습니다!')
-
-      // 명함 생성 (프로필이 성공적으로 생성된 경우에만)
-      if (createdProfile) {
-        try {
-          const supabase = createClient()
-
-          // 기존 명함이 있는지 확인
-          const { data: existingCard } = await supabase
-            .from('business_cards')
-            .select('id')
-            .eq('user_id', user.id)
-            .single()
-
-          if (!existingCard) {
-            // 명함이 없으면 새로 생성
-            const businessCardData = {
-              user_id: user.id,
-              full_name: createdProfile.full_name || '이름 없음',
-              introduction: createdProfile.introduction || '안녕하세요!',
-              company: createdProfile.affiliation,
-              job_title: createdProfile.job_title,
-              work_field: createdProfile.work_field,
-              contact: createdProfile.contact,
-              mbti: createdProfile.mbti,
-              keywords: createdProfile.personality_keywords,
-              personality_keywords: createdProfile.personality_keywords,
-              interest_keywords: createdProfile.interest_keywords,
-              hobby_keywords: createdProfile.hobby_keywords,
-              external_link: createdProfile.external_link,
-              profile_image_url: createdProfile.profile_image_url,
-              is_public: true
-            }
-
-            const { data: businessCard, error } = await supabase
-              .from('business_cards')
-              .insert(businessCardData)
-              .select()
-              .single()
-
-            if (error) {
-              console.error('명함 생성 오류:', error)
-              toast.warning('프로필은 생성되었지만 명함 생성에 실패했습니다.')
-            } else {
-              console.log('명함 생성 성공:', businessCard)
-            }
-          } else {
-            console.log('기존 명함이 이미 존재합니다:', existingCard.id)
-          }
-        } catch (cardError) {
-          console.error('명함 생성 중 오류:', cardError)
-          toast.warning('프로필은 생성되었지만 명함 생성에 실패했습니다.')
-        }
-      }
-
-      // 명함 생성 완료 후 홈으로 이동
-      router.push('/client/home')
-    } catch (error) {
-      console.error('프로필 생성 오류:', error)
-      toast.error('명함 생성에 실패했습니다.')
-    }
+  if (!user) {
+    toast.error('로그인이 필요합니다.')
+    router.push('/login?type=user')
+    return
   }
+
+  if (isSubmitting) {
+    console.log('이미 제출 중입니다.')
+    return
+  }
+
+  setIsSubmitting(true)
+
+  try {
+    const supabase = createClient()
+    console.log('=== Supabase 클라이언트 생성 완료 ===')
+
+    // 1. 가장 기본적인 데이터만 준비
+    const basicData = {
+      id: user.id,
+      full_name: data.full_name,
+      email: user.email,
+      role_id: ROLE_IDS.USER,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+
+    console.log('=== 기본 데이터 준비 완료 ===', basicData)
+
+    // 2. 먼저 upsert만 시도 (select 제외)
+    console.log('=== 프로필 upsert 시작 ===')
+    const { error: upsertError } = await supabase
+      .from('user_profiles')
+      .upsert(basicData)
+
+    console.log('=== 프로필 upsert 완료 ===', { upsertError })
+
+    if (upsertError) {
+      console.error('프로필 upsert 실패:', upsertError)
+      throw upsertError
+    }
+
+    // 3. 성공하면 select로 데이터 가져오기
+    console.log('=== 프로필 select 시작 ===')
+    const { data: createdProfile, error: selectError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    console.log('=== 프로필 select 완료 ===', { createdProfile, selectError })
+
+    if (selectError) {
+      console.error('프로필 select 실패:', selectError)
+      throw selectError
+    }
+
+    console.log('=== 프로필 저장 성공 ===', createdProfile)
+
+    // 4. 명함 생성도 마찬가지로 분리
+    console.log('=== 명함 생성 시작 ===')
+    const businessCardData = {
+      user_id: user.id,
+      full_name: data.full_name,
+      introduction: data.introduction || '안녕하세요!',
+      company: data.affiliation_type === '소속' ? data.affiliation : null,
+      job_title: data.affiliation_type === '소속' ? data.role : null,
+      work_field: data.affiliation_type === '미소속' ? data.work_field : null,
+      contact: data.contact || null,
+      mbti: data.mbti || null,
+      personality_keywords: data.personality_keywords,
+      interest_keywords: data.interest_keywords,
+      hobby_keywords: data.hobby_keywords,
+      external_link: data.external_link || null,
+      is_public: true
+    }
+
+    console.log('=== 명함 데이터:', businessCardData)
+
+    const { error: cardError } = await supabase
+      .from('business_cards')
+      .upsert(businessCardData)
+
+    console.log('=== 명함 upsert 완료 ===', { cardError })
+
+    if (cardError) {
+      console.error('명함 생성 실패:', cardError)
+      throw cardError
+    }
+
+    toast.success('명함이 성공적으로 생성되었습니다!')
+    console.log('=== 명함 생성 완료, 홈으로 이동 ===')
+
+    // 홈으로 이동
+    router.push('/client/home')
+
+  } catch (error) {
+    console.error('명함 생성 전체 오류:', error)
+    console.error('오류 상세:', JSON.stringify(error, null, 2))
+    toast.error(`명함 생성에 실패했습니다: ${error.message}`)
+  } finally {
+    setIsSubmitting(false)
+  }
+}
 
   const handleMBTISelect = (mbti: string) => {
     const currentMBTI = watch('mbti')
-    // 이미 선택된 MBTI를 다시 클릭하면 해제
     setValue('mbti', currentMBTI === mbti ? '' : mbti)
   }
 
@@ -297,21 +241,17 @@ export default function CreateNamecardPage() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    // 파일 크기 체크 (5MB 제한)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('파일 크기는 5MB 이하여야 합니다.')
       return
     }
 
-    // 파일 타입 체크
     if (!file.type.startsWith('image/')) {
       toast.error('이미지 파일만 업로드 가능합니다.')
       return
     }
 
     setSelectedFile(file)
-
-    // 미리보기를 위한 URL 생성
     const imageUrl = URL.createObjectURL(file)
     setProfileImage(imageUrl)
   }
@@ -347,13 +287,13 @@ export default function CreateNamecardPage() {
         >
           {/* 프로필 사진 섹션 */}
           <div className="text-center mb-8">
-            <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center relative ">
+            <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center relative">
               {profileImage ? (
                 <>
                   <img
                     src={profileImage}
                     alt="프로필"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-full"
                   />
                   <button
                     onClick={handleRemoveImage}
@@ -448,13 +388,13 @@ export default function CreateNamecardPage() {
               {watch('affiliation_type') === '소속' && (
                 <>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                  소속
+                    소속
                   </label>
-                <Input
-                  {...register('affiliation')}
-                  placeholder="예: 네이버"
-                  className={errors.affiliation ? 'border-red-500' : ''}
-                />
+                  <Input
+                    {...register('affiliation')}
+                    placeholder="예: 네이버"
+                    className={errors.affiliation ? 'border-red-500' : ''}
+                  />
                 </>
               )}
               {errors.affiliation && (
@@ -627,7 +567,6 @@ export default function CreateNamecardPage() {
                 <p className="text-red-500 text-sm mt-1">{errors.external_link.message}</p>
               )}
             </div>
-
           </form>
         </motion.div>
       </div>
