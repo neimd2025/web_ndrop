@@ -112,11 +112,46 @@ const onSubmit = async (data: ProfileFormData) => {
     const supabase = createClient()
     console.log('=== Supabase 클라이언트 생성 완료 ===')
 
-    // 1. 가장 기본적인 데이터만 준비
+    let profileImageUrl = null
+
+    // 이미지 업로드 로직
+    if (selectedFile) {
+      setIsUploading(true)
+      try {
+        console.log('=== 이미지 업로드 시작 ===')
+        const formData = new FormData()
+        formData.append('file', selectedFile)
+
+        const response = await fetch('/api/user/upload-profile-image', {
+          method: 'POST',
+          body: formData
+        })
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(result.error || '이미지 업로드에 실패했습니다.')
+        }
+
+        profileImageUrl = result.publicUrl
+        console.log('=== 이미지 업로드 성공 ===', profileImageUrl)
+      } catch (error) {
+        console.error('이미지 업로드 오류:', error)
+        toast.warning('이미지 업로드에 실패했지만 명함 생성은 계속됩니다.')
+        profileImageUrl = null
+      } finally {
+        setIsUploading(false)
+      }
+    } else {
+      console.log('=== 이미지 업로드 생략 ===')
+    }
+
+    // 1. 가장 기본적인 데이터만 준비 (프로필 이미지 URL 포함)
     const basicData = {
       id: user.id,
       full_name: data.full_name,
       email: user.email,
+      profile_image_url: profileImageUrl, // 프로필 이미지 URL 추가
       role_id: ROLE_IDS.USER,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -154,7 +189,7 @@ const onSubmit = async (data: ProfileFormData) => {
 
     console.log('=== 프로필 저장 성공 ===', createdProfile)
 
-    // 4. 명함 생성도 마찬가지로 분리
+    // 4. 명함 생성도 마찬가지로 분리 (프로필 이미지 URL 포함)
     console.log('=== 명함 생성 시작 ===')
     const businessCardData = {
       user_id: user.id,
@@ -169,6 +204,7 @@ const onSubmit = async (data: ProfileFormData) => {
       interest_keywords: data.interest_keywords,
       hobby_keywords: data.hobby_keywords,
       external_link: data.external_link || null,
+      profile_image_url: profileImageUrl, // 프로필 이미지 URL 추가
       is_public: true
     }
 
