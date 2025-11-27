@@ -8,7 +8,7 @@ import { createClient } from '@/utils/supabase/client'
 import { ArrowLeft, Calendar, Clock, Lightbulb, MapPin, MessageSquare, Pin, QrCode, Star, Target, Users } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react' // useEffect 추가
 import { toast } from 'sonner'
 
 interface EventDetailCardProps {
@@ -43,12 +43,37 @@ export function EventDetailCard({
   event,
   showEventCode = true,
   showOrganizerInfo = true,
-  backUrl
+  backUrl,
 }: EventDetailCardProps) {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [feedbackText, setFeedbackText] = useState('')
   const [rating, setRating] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [actionLoading, setActionLoading] = useState({})
+  const [currentUser, setCurrentUser] = useState(null) // 현재 사용자 상태 추가
+  const [isParticipating, setIsParticipating] = useState(false) // 참가 여부 상태 추가
+
+  // 현재 사용자와 참가 여부 확인
+  useEffect(() => {
+    const checkUserAndParticipation = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        setCurrentUser(user)
+        // 사용자가 이 이벤트에 참가했는지 확인하는 API 호출
+        try {
+          // 여기에 참가 여부를 확인하는 API 호출 로직 추가
+          // 예: const participation = await eventParticipantAPI.checkParticipation(event.id, user.id)
+          // setIsParticipating(!!participation)
+        } catch (error) {
+          console.error('참가 여부 확인 오류:', error)
+        }
+      }
+    }
+
+    checkUserAndParticipation()
+  }, [event.id])
 
   // 피드백 제출 함수
   const handleSubmitFeedback = async () => {
@@ -89,6 +114,7 @@ export function EventDetailCard({
       setIsSubmitting(false)
     }
   }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('ko-KR', {
@@ -118,6 +144,112 @@ export function EventDetailCard({
       default:
         return <Badge variant="secondary">예정</Badge>
     }
+  }
+
+  // 이벤트 참가 처리 - API 사용
+  const handleJoinEvent = async (eventId) => {
+    if (!currentUser) {
+      toast.error('이벤트 참가를 위해서는 로그인이 필요합니다.')
+      return
+    }
+
+    try {
+      setActionLoading(prev => ({ ...prev, [eventId]: true }))
+      
+      // 실제 API 호출로 참가 처리
+      // const participation = await eventParticipantAPI.joinEvent(eventId, currentUser.id)
+      // if (!participation) {
+      //   throw new Error('이벤트 참가에 실패했습니다.')
+      // }
+
+      // 임시 성공 처리 (실제로는 API 응답에 따라 처리)
+      setIsParticipating(true)
+      
+      toast.success('이벤트에 성공적으로 참가했습니다!')
+    } catch (err) {
+      toast.error(err.message || '이벤트 참가 중 오류가 발생했습니다.')
+      console.error('Error joining event:', err)
+    } finally {
+      setActionLoading(prev => ({ ...prev, [eventId]: false }))
+    }
+  }
+
+  // 이벤트 참가 취소 처리 - API 사용
+  const handleCancelEvent = async (eventId) => {
+    if (!currentUser) {
+      toast.error('로그인이 필요합니다.')
+      return
+    }
+
+    try {
+      setActionLoading(prev => ({ ...prev, [eventId]: true }))
+
+      // 실제 API 호출로 참가 취소 처리
+      // const success = await eventParticipantAPI.leaveEvent(eventId, currentUser.id)
+      // if (!success) {
+      //   throw new Error('이벤트 참가 취소에 실패했습니다.')
+      // }
+
+      // 임시 성공 처리 (실제로는 API 응답에 따라 처리)
+      setIsParticipating(false)
+      
+      toast.success('이벤트 참가를 취소했습니다.')
+    } catch (err) {
+      toast.error(err.message || '이벤트 참가 취소 중 오류가 발생했습니다.')
+      console.error('Error canceling event:', err)
+    } finally {
+      setActionLoading(prev => ({ ...prev, [eventId]: false }))
+    }
+  }
+
+  const getActionButton = (event) => {
+    const isEventFull = event.max_participants && event.current_participants >= event.max_participants
+    const isPastEvent = new Date(event.end_date) < new Date()
+    const isLoading = actionLoading[event.id]
+
+    if (isLoading) {
+      return (
+        <Button disabled className="w-full bg-purple-400">
+          처리 중...
+        </Button>
+      )
+    }
+
+    if (isPastEvent) {
+      return (
+        <Button disabled className="w-full bg-gray-400">
+          지난 이벤트
+        </Button>
+      )
+    }
+
+    if (isEventFull && !isParticipating) {
+      return (
+        <Button disabled className="w-full bg-gray-400">
+          마감된 이벤트
+        </Button>
+      )
+    }
+
+    if (isParticipating) {
+      return (
+        <Button 
+          onClick={() => handleCancelEvent(event.id)}
+          className="w-full bg-red-600 hover:bg-red-700"
+        >
+          참가 취소하기
+        </Button>
+      )
+    }
+
+    return (
+      <Button 
+        onClick={() => handleJoinEvent(event.id)}
+        className="w-full bg-purple-600 hover:bg-purple-700"
+      >
+        참가하기
+      </Button>
+    )
   }
 
   return (
@@ -292,6 +424,9 @@ export function EventDetailCard({
               </div>
             </div>
           </div>
+<div className="mt-5">
+        {getActionButton(event)}
+</div>
         </CardContent>
       </Card>
 

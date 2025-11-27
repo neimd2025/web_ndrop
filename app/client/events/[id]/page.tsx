@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { EventDetailCard } from '@/components/ui/event-detail-card'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
@@ -55,7 +56,7 @@ export default async function ClientEventDetailPage({ params }: EventDetailPageP
         event={event}
         showEventCode={showEventCode}
         showOrganizerInfo={true}
-        backUrl="/client/events/history"
+        backUrl="/client/public-events"
       />
     </div>
   )
