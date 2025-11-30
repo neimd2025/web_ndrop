@@ -38,8 +38,8 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
   const name = user?.full_name ?? primaryCard?.full_name ?? user?.email?.split("@")[0] ?? "사용자";
   const handle = "@" + (user?.full_name ? user.full_name.split(" ")[0] : primaryCard?.name ?? user?.email?.split("@")[0]);
   const intro = primaryCard?.introduction ?? primaryCard?.bio ?? user?.introduction ?? "";
-  const company = primaryCard?.company ?? primaryCard?.affiliation ?? "미입력";
-  const job = primaryCard?.job_title ?? primaryCard?.title ?? "미입력";
+  const company = primaryCard?.company ?? primaryCard?.affiliation ?? "미소속";
+  const job = primaryCard?.work_field ?? "미입력";
   const phone = primaryCard?.phone ?? primaryCard?.contact ?? "";
   const email = primaryCard?.email ?? user?.email ?? "";
   

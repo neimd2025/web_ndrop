@@ -11,6 +11,7 @@ import { createClient } from '@/utils/supabase/client'
 import { Calendar, Camera, Star } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { NotificationBell } from "./notification-bell"
 
 interface UserHomeClientProps {
   user?: UserProfile
@@ -244,8 +245,9 @@ export function UserHomeClient({
     <div className="min-h-screen">
       {/* 헤더 섹션 */}
       <div className="bg-white border-b border-gray-200 px-5 pt-10 pb-5">
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center justify-between mb-4">
           {/* 프로필 아바타 */}
+<div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-500 rounded-full flex items-center justify-center">
             <span className="text-white font-bold text-lg">{getInitial()}</span>
           </div>
@@ -258,6 +260,8 @@ export function UserHomeClient({
               오늘도 좋은 만남이 있기를 🤝
             </p>
           </div>
+</div>
+          <NotificationBell />
         </div>
 
         {/* 액션 버튼들 */}

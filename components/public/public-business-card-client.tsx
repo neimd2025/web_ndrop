@@ -82,7 +82,7 @@ export function PublicBusinessCardClient({ businessCard }: PublicBusinessCardCli
       alert('명함이 성공적으로 저장되었습니다!')
 
       // 저장된 명함 페이지로 이동
-      router.push(`/client/saved-cards/${savedCard.id}`)
+      router.push(`/client/card-books/${savedCard.id}`)
     } catch (error) {
       console.error('명함 저장 중 오류:', error)
       alert('명함 저장 중 오류가 발생했습니다.')

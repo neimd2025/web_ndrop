@@ -4,12 +4,12 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { feedbackAPI } from '@/lib/supabase/database'
+import { eventParticipantAPI } from '@/lib/supabase/database'
 import { createClient } from '@/utils/supabase/client'
-import { ArrowLeft, Calendar, Clock, Lightbulb, MapPin, MessageSquare, Pin, QrCode, Star, Target, Users } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, Lightbulb, MapPin, Pin, QrCode, Target, Users } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState, useEffect } from 'react' // useEffect 추가
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 interface EventDetailCardProps {
@@ -41,80 +41,45 @@ interface EventDetailCardProps {
 }
 
 export function EventDetailCard({
-  event,
+  event: initialEvent,
   showEventCode = true,
   showOrganizerInfo = true,
   backUrl,
 }: EventDetailCardProps) {
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
-  const [feedbackText, setFeedbackText] = useState('')
-  const [rating, setRating] = useState(0)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [actionLoading, setActionLoading] = useState({})
-  const [currentUser, setCurrentUser] = useState(null) // 현재 사용자 상태 추가
-  const [isParticipating, setIsParticipating] = useState(false) // 참가 여부 상태 추가
+  const [event, setEvent] = useState(initialEvent)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [currentUser, setCurrentUser] = useState(null)
+  const [isParticipating, setIsParticipating] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   // 현재 사용자와 참가 여부 확인
   useEffect(() => {
     const checkUserAndParticipation = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (user) {
-        setCurrentUser(user)
-        // 사용자가 이 이벤트에 참가했는지 확인하는 API 호출
-        try {
-          // 여기에 참가 여부를 확인하는 API 호출 로직 추가
-          // 예: const participation = await eventParticipantAPI.checkParticipation(event.id, user.id)
-          // setIsParticipating(!!participation)
-        } catch (error) {
-          console.error('참가 여부 확인 오류:', error)
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (user) {
+          setCurrentUser(user)
+          try {
+            // EventAPI 함수명 확인 필요 - 실제 함수명에 맞게 수정
+            const participation = await eventParticipantAPI.getUserParticipation(event.id, user.id)
+            setIsParticipating(participation)
+          } catch (error) {
+            console.error('참가 여부 확인 오류:', error)
+            // 에러 발생 시 기본값 설정
+            setIsParticipating(false)
+          }
         }
+      } catch (error) {
+        console.error('사용자 확인 오류:', error)
+      } finally {
+        setLoading(false)
       }
     }
 
     checkUserAndParticipation()
   }, [event.id])
-
-  // 피드백 제출 함수
-  const handleSubmitFeedback = async () => {
-    if (rating === 0) {
-      toast.error('평점을 선택해주세요')
-      return
-    }
-
-    setIsSubmitting(true)
-    try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user) {
-        toast.error('로그인이 필요합니다')
-        return
-      }
-
-      const result = await feedbackAPI.createFeedback({
-        user_id: user.id,
-        event_id: event.id,
-        rating: rating,
-        feedback: feedbackText.trim() || null
-      })
-
-      if (result) {
-        toast.success('피드백이 성공적으로 전송되었습니다!')
-        setShowFeedbackModal(false)
-        setFeedbackText('')
-        setRating(0)
-      } else {
-        toast.error('피드백 전송에 실패했습니다')
-      }
-    } catch (error) {
-      console.error('피드백 제출 오류:', error)
-      toast.error('피드백 전송 중 오류가 발생했습니다')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -147,68 +112,83 @@ export function EventDetailCard({
     }
   }
 
-  // 이벤트 참가 처리 - API 사용
-  const handleJoinEvent = async (eventId) => {
+  // 이벤트 참가 처리
+  const handleJoinEvent = async () => {
     if (!currentUser) {
       toast.error('이벤트 참가를 위해서는 로그인이 필요합니다.')
       return
     }
 
     try {
-      setActionLoading(prev => ({ ...prev, [eventId]: true }))
+      setActionLoading(true)
       
-      // 실제 API 호출로 참가 처리
-      // const participation = await eventParticipantAPI.joinEvent(eventId, currentUser.id)
-      // if (!participation) {
-      //   throw new Error('이벤트 참가에 실패했습니다.')
-      // }
+      // EventAPI 함수명 확인 필요
+      const result = await eventParticipantAPI.joinEvent(event.id, currentUser.id)
 
-      // 임시 성공 처리 (실제로는 API 응답에 따라 처리)
-      setIsParticipating(true)
-      
-      toast.success('이벤트에 성공적으로 참가했습니다!')
-    } catch (err) {
-      toast.error(err.message || '이벤트 참가 중 오류가 발생했습니다.')
+      if (result) {
+        setIsParticipating(true)
+        // 이벤트 참가자 수 업데이트
+        setEvent(prev => ({
+          ...prev,
+          current_participants: prev.current_participants + 1
+        }))
+        toast.success('이벤트에 성공적으로 참가했습니다!')
+      } else {
+        throw new Error('이벤트 참가에 실패했습니다.')
+      }
+    } catch (err: any) {
       console.error('Error joining event:', err)
+      toast.error(err.message || '이벤트 참가 중 오류가 발생했습니다.')
     } finally {
-      setActionLoading(prev => ({ ...prev, [eventId]: false }))
+      setActionLoading(false)
     }
   }
 
-  // 이벤트 참가 취소 처리 - API 사용
-  const handleCancelEvent = async (eventId) => {
+  // 이벤트 참가 취소 처리
+  const handleCancelEvent = async () => {
     if (!currentUser) {
       toast.error('로그인이 필요합니다.')
       return
     }
 
     try {
-      setActionLoading(prev => ({ ...prev, [eventId]: true }))
+      setActionLoading(true)
 
-      // 실제 API 호출로 참가 취소 처리
-      // const success = await eventParticipantAPI.leaveEvent(eventId, currentUser.id)
-      // if (!success) {
-      //   throw new Error('이벤트 참가 취소에 실패했습니다.')
-      // }
+      // EventAPI 함수명 확인 필요
+      const result = await eventParticipantAPI.leaveEvent(event.id, currentUser.id)
 
-      // 임시 성공 처리 (실제로는 API 응답에 따라 처리)
-      setIsParticipating(false)
-      
-      toast.success('이벤트 참가를 취소했습니다.')
-    } catch (err) {
-      toast.error(err.message || '이벤트 참가 취소 중 오류가 발생했습니다.')
+      if (result) {
+        setIsParticipating(false)
+        // 이벤트 참가자 수 업데이트
+        setEvent(prev => ({
+          ...prev,
+          current_participants: Math.max(0, prev.current_participants - 1)
+        }))
+        toast.success('이벤트 참가를 취소했습니다.')
+      } else {
+        throw new Error('이벤트 참가 취소에 실패했습니다.')
+      }
+    } catch (err: any) {
       console.error('Error canceling event:', err)
+      toast.error(err.message || '이벤트 참가 취소 중 오류가 발생했습니다.')
     } finally {
-      setActionLoading(prev => ({ ...prev, [eventId]: false }))
+      setActionLoading(false)
     }
   }
 
-  const getActionButton = (event) => {
+  const getActionButton = () => {
+    if (loading) {
+      return (
+        <Button disabled className="w-full bg-gray-400">
+          로딩 중...
+        </Button>
+      )
+    }
+
     const isEventFull = event.max_participants && event.current_participants >= event.max_participants
     const isPastEvent = new Date(event.end_date) < new Date()
-    const isLoading = actionLoading[event.id]
 
-    if (isLoading) {
+    if (actionLoading) {
       return (
         <Button disabled className="w-full bg-purple-400">
           처리 중...
@@ -235,7 +215,7 @@ export function EventDetailCard({
     if (isParticipating) {
       return (
         <Button 
-          onClick={() => handleCancelEvent(event.id)}
+          onClick={handleCancelEvent}
           className="w-full bg-red-600 hover:bg-red-700"
         >
           참가 취소하기
@@ -245,11 +225,27 @@ export function EventDetailCard({
 
     return (
       <Button 
-        onClick={() => handleJoinEvent(event.id)}
+        onClick={handleJoinEvent}
         className="w-full bg-purple-600 hover:bg-purple-700"
       >
         참가하기
       </Button>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
+          <div className="space-y-4">
+            <div className="h-32 bg-gray-200 rounded"></div>
+            <div className="h-32 bg-gray-200 rounded"></div>
+            <div className="h-32 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
     )
   }
 
@@ -353,6 +349,7 @@ export function EventDetailCard({
                 alt={event.title}
                 fill
                 className="object-cover"
+                priority
               />
             </div>
           </CardContent>
@@ -392,7 +389,7 @@ export function EventDetailCard({
                     <p className="font-medium">{event.region}</p>
                   </div>
                 </div>
-              ) : <div />} {/* 지역이 없을 경우 빈 div로 자리 유지 */}
+              ) : <div />}
               
               {showEventCode && (
                 <div className="flex items-center gap-3">
@@ -425,9 +422,10 @@ export function EventDetailCard({
               </div>
             </div>
           </div>
-<div className="mt-5">
-        {getActionButton(event)}
-</div>
+          
+          <div className="mt-6">
+            {getActionButton()}
+          </div>
         </CardContent>
       </Card>
 
@@ -480,7 +478,6 @@ export function EventDetailCard({
           </CardContent>
         </Card>
       )}
-
     </div>
   )
 }

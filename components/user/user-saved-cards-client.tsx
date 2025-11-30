@@ -170,54 +170,54 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
             if (!businessCard) return null
 
             return (
-              <div key={card.id}>
-                {/* 명함 카드 */}
-                <Card
-                  className="border border-gray-200 hover:border-purple-300 transition-all duration-200 cursor-pointer"
-                  onClick={(e) => handleCardClick(card.id, e)}
-                >
-                  <CardContent className="p-4 flex items-start gap-1.5">
-                    {/* 즐겨찾기 별 */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => { e.stopPropagation(); handleToggleFavorite(card.id) }}
-                      className="absolute top-2 right-3 p-1 hover:bg-gray-100 z-10"
-                    >
-                      <Star
-                        className={`h-4 w-4 ${card.is_favorite ? 'text-yellow-500 fill-current' : 'text-gray-400'}`}
-                      />
-                    </Button>
+// 명함 카드 부분 수정
+<div key={card.id}>
+  {/* 명함 카드 - relative 추가 */}
+  <Card
+    className="border border-gray-200 hover:border-purple-300 transition-all duration-200 cursor-pointer relative" // relative 추가
+    onClick={(e) => handleCardClick(card.id, e)}
+  >
+    <CardContent className="p-4 flex items-start gap-1.5">
+      {/* 즐겨찾기 별 */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={(e) => { e.stopPropagation(); handleToggleFavorite(card.id) }}
+        className="absolute top-2 right-2 p-1 hover:bg-gray-100 z-10" // 위치 조정
+      >
+        <Star
+          className={`h-6 w-6 ${card.is_favorite ? 'text-yellow-500 fill-current' : 'text-gray-400'}`}
+        />
+      </Button>
 
-                    {/* 프로필 이미지 */}
-                    <div className="w-12 h-12 flex-shrink-0 rounded-full overflow-hidden bg-purple-600 flex items-center justify-center mt-1">
-                      {businessCard.profile_image_url ? (
-                        <img 
-                          src={businessCard.profile_image_url} 
-                          alt={businessCard.full_name || businessCard.name} 
-                          className="w-full h-full object-cover" 
-                        />
-                      ) : (
-                        <User className="w-8 h-8 text-white" />
-                      )}
-                    </div>
+      {/* 나머지 코드는 동일 */}
+      <div className="w-12 h-12 flex-shrink-0 rounded-full overflow-hidden bg-purple-600 flex items-center justify-center mt-1">
+        {businessCard.profile_image_url ? (
+          <img 
+            src={businessCard.profile_image_url} 
+            alt={businessCard.full_name || businessCard.name} 
+            className="w-full h-full object-cover" 
+          />
+        ) : (
+          <User className="w-8 h-8 text-white" />
+        )}
+      </div>
 
-                    {/* 명함 정보 */}
-                    <div className="flex-1 ml-3">
-                      <h3 className="font-bold text-gray-900">{businessCard.full_name || businessCard.name}</h3>
-                      <p className="text-sm text-gray-600">
-                        {businessCard.job_title || businessCard.title} / {businessCard.company || businessCard.affiliation}
-                      </p>
-                      {(businessCard.email || businessCard.contact) && (
-                        <p className="text-sm text-gray-500">{businessCard.email || businessCard.contact}</p>
-                      )}
-                      <p className="text-xs text-gray-400 mt-1">
-                        저장일: {new Date(card.collected_at || card.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+      <div className="flex-1 ml-3">
+        <h3 className="font-bold text-gray-900">{businessCard.full_name || businessCard.name}</h3>
+        <p className="text-sm text-gray-600">
+          {businessCard.job_title || businessCard.title} / {businessCard.company || businessCard.affiliation}
+        </p>
+        {(businessCard.email || businessCard.contact) && (
+          <p className="text-sm text-gray-500">{businessCard.email || businessCard.contact}</p>
+        )}
+        <p className="text-xs text-gray-400 mt-1">
+          저장일: {new Date(card.collected_at || card.created_at).toLocaleDateString()}
+        </p>
+      </div>
+    </CardContent>
+  </Card>
+</div>
             )
           })
         )}

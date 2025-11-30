@@ -10,14 +10,14 @@ import { userProfileAPI } from '@/lib/supabase/database'
 import { createClient } from '@/utils/supabase/client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Camera, User, X } from 'lucide-react'
+import { ArrowLeft, Camera, User, X, Plus, Minus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react' // useEffect 추가
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-// Zod 스키마 정의
+// Zod 스키마 정의 - hobby_keywords를 문자열 배열로 유지
 const profileSchema = z.object({
   full_name: z.string().min(2, '이름은 2자 이상이어야 합니다').max(50, '이름은 50자 이하여야 합니다'),
   birth_date: z.string().optional(),
@@ -29,7 +29,7 @@ const profileSchema = z.object({
   mbti: z.string().optional(),
   personality_keywords: z.array(z.string()).min(1, '성격 키워드는 최소 1개 이상 선택해주세요').max(3, '성격 키워드는 최대 3개까지 선택할 수 있습니다'),
   interest_keywords: z.array(z.string()).max(3, '관심 키워드는 최대 3개까지 선택할 수 있습니다'),
-  hobby_keywords: z.array(z.string()).max(3, '취미는 최대 3개까지 선택할 수 있습니다'),
+  hobby_keywords: z.array(z.string()).max(3, '취미는 최대 3개까지 입력할 수 있습니다'),
   introduction: z.string().max(500, '자기소개는 500자 이하여야 합니다'),
   external_link: z.string().url('올바른 URL 형식을 입력해주세요').optional().or(z.literal(''))
 })
@@ -38,10 +38,12 @@ type ProfileFormData = z.infer<typeof profileSchema>
 
 export default function CreateNamecardPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth() // authLoading 상태 추가
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [hobbyInputs, setHobbyInputs] = useState<string[]>(['']) // 주관식 취미 입력 필드
+  const [isRedirecting, setIsRedirecting] = useState(false) // 리디렉션 상태 추가
 
   const {
     register,
@@ -68,6 +70,16 @@ export default function CreateNamecardPage() {
     }
   })
 
+  // 인증 상태 확인 useEffect 추가
+  useEffect(() => {
+    if (!authLoading && !user) {
+      console.log('인증되지 않은 사용자, 로그인 페이지로 이동')
+      toast.error('로그인이 필요합니다.')
+      router.push('/login?type=user')
+      return
+    }
+  }, [user, authLoading, router])
+
   const mbtiTypes = [
     'INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
     'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'
@@ -87,12 +99,32 @@ export default function CreateNamecardPage() {
     '진로탐색', '자기계발', '지속가능성'
   ]
 
-  const hobbyOptions = [
-    '독서', '영화감상', '음악감상', '운동', '요리', '여행', '사진', 'ゲーム',
-    '등산', '자전거', '수영', '자기계발', '사람', '그림그리기', '악기연주',
-    '춤', '글쓰기', '쇼핑', '카페투어', '맛집탐방', '드라마', '웹툰', '만화'
-  ]
+  // 주관식 취미 입력 필드 관리
+  const addHobbyInput = () => {
+    if (hobbyInputs.length < 3) {
+      setHobbyInputs([...hobbyInputs, ''])
+    }
+  }
 
+  const removeHobbyInput = (index: number) => {
+    if (hobbyInputs.length > 1) {
+      const newHobbyInputs = hobbyInputs.filter((_, i) => i !== index)
+      setHobbyInputs(newHobbyInputs)
+      
+      // 폼 데이터도 업데이트
+      const currentHobbies = watch('hobby_keywords')
+      const newHobbies = currentHobbies.filter((_, i) => i !== index)
+      setValue('hobby_keywords', newHobbies)
+    }
+  }
+
+  const updateHobby = (index: number, value: string) => {
+    const newHobbies = [...watch('hobby_keywords')]
+    newHobbies[index] = value
+    setValue('hobby_keywords', newHobbies)
+  }
+
+  // 나머지 함수들은 동일하게 유지
   const onSubmit = async (data: ProfileFormData) => {
     console.log('=== 명함 생성 시작 ===')
 
@@ -102,8 +134,8 @@ export default function CreateNamecardPage() {
       return
     }
 
-    if (isSubmitting) {
-      console.log('이미 제출 중입니다.')
+    if (isSubmitting || isRedirecting) {
+      console.log('이미 제출 중이거나 리디렉션 중입니다.')
       return
     }
 
@@ -147,7 +179,7 @@ export default function CreateNamecardPage() {
         console.log('=== 이미지 업로드 생략 ===')
       }
 
-      // user_profiles에 저장할 데이터 (external_links - 배열)
+      // user_profiles에 저장할 데이터
       const userProfileData = {
         id: user.id,
         full_name: data.full_name,
@@ -160,9 +192,9 @@ export default function CreateNamecardPage() {
         mbti: data.mbti && data.mbti.trim() !== '' ? data.mbti : null,
         personality_keywords: data.personality_keywords.length > 0 ? data.personality_keywords : [],
         interest_keywords: data.interest_keywords.length > 0 ? data.interest_keywords : [],
-        hobby_keywords: data.hobby_keywords.length > 0 ? data.hobby_keywords : [],
+        hobby_keywords: data.hobby_keywords.filter(hobby => hobby.trim() !== ''), // 빈 문자열 제거
         introduction: data.introduction || null,
-        external_links: data.external_link ? [data.external_link] : [], // 배열로 저장
+        external_links: data.external_link ? [data.external_link] : [],
         email: user.email || '',
         profile_image_url: profileImageUrl,
         nickname: data.full_name,
@@ -190,7 +222,7 @@ export default function CreateNamecardPage() {
 
       console.log('=== user_profiles 저장 성공 ===', createdProfile)
 
-      // business_cards에 저장할 데이터 (external_link - 단일 값)
+      // business_cards에 저장할 데이터
       const businessCardData = {
         user_id: user.id,
         full_name: data.full_name,
@@ -202,8 +234,8 @@ export default function CreateNamecardPage() {
         mbti: data.mbti || null,
         personality_keywords: data.personality_keywords,
         interest_keywords: data.interest_keywords,
-        hobby_keywords: data.hobby_keywords,
-        external_link: data.external_link || null, // 단일 값 (external_links[0]과 동일)
+        hobby_keywords: data.hobby_keywords.filter(hobby => hobby.trim() !== ''), // 빈 문자열 제거
+        external_link: data.external_link || null,
         profile_image_url: profileImageUrl,
         is_public: true
       }
@@ -230,16 +262,18 @@ export default function CreateNamecardPage() {
       toast.success('명함이 성공적으로 생성되었습니다!')
       console.log('=== 명함 생성 완료, 홈으로 이동 ===')
 
-      // 홈으로 이동
+      // 리디렉션 상태 설정 후 이동
+      setIsRedirecting(true)
       router.push('/client/home')
 
     } catch (error) {
       console.error('명함 생성 전체 오류:', error)
       console.error('오류 상세:', JSON.stringify(error, null, 2))
       toast.error(`명함 생성에 실패했습니다: ${error.message}`)
-    } finally {
       setIsSubmitting(false)
+      setIsRedirecting(false)
     }
+    // finally 블록 제거 - 리디렉션 중에는 상태 유지
   }
 
   const handleMBTISelect = (mbti: string) => {
@@ -267,16 +301,6 @@ export default function CreateNamecardPage() {
     setValue('interest_keywords', newKeywords)
   }
 
-  const handleHobbyToggle = (hobby: string) => {
-    const currentKeywords = watch('hobby_keywords')
-    const newKeywords = currentKeywords.includes(hobby)
-      ? currentKeywords.filter(p => p !== hobby)
-      : currentKeywords.length < 3
-        ? [...currentKeywords, hobby]
-        : currentKeywords
-    setValue('hobby_keywords', newKeywords)
-  }
-
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -301,6 +325,18 @@ export default function CreateNamecardPage() {
   const handleRemoveImage = () => {
     setProfileImage(null)
     setSelectedFile(null)
+  }
+
+  // 인증 로딩 중이면 로딩 표시
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">인증 확인 중...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -555,22 +591,44 @@ export default function CreateNamecardPage() {
               )}
             </div>
 
-            {/* 취미 키워드 */}
+            {/* 취미 키워드 - 주관식 입력으로 변경 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 취미 (선택, 최대 3개)
               </label>
-              <div className="flex flex-wrap gap-2">
-                {hobbyOptions.map((hobby) => (
-                  <Badge
-                    key={hobby}
-                    variant={watch('hobby_keywords').includes(hobby) ? 'default' : 'outline'}
-                    className={`cursor-pointer h-[30px] ${watch('hobby_keywords').includes(hobby) ? 'bg-purple-600' : ''}`}
-                    onClick={() => handleHobbyToggle(hobby)}
-                  >
-                    {hobby}
-                  </Badge>
+              <div className="space-y-3">
+                {hobbyInputs.map((_, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <Input
+                      placeholder={`취미 ${index + 1}을 입력하세요`}
+                      value={watch('hobby_keywords')[index] || ''}
+                      onChange={(e) => updateHobby(index, e.target.value)}
+                      className="flex-1"
+                    />
+                    {hobbyInputs.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => removeHobbyInput(index)}
+                        className="shrink-0 h-10 w-10 border-red-300 text-red-500 hover:bg-red-50"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                 ))}
+                {hobbyInputs.length < 3 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addHobbyInput}
+                    className="w-full border-dashed border-gray-300 text-gray-600 hover:bg-gray-50"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    취미 추가하기
+                  </Button>
+                )}
               </div>
               {errors.hobby_keywords && (
                 <p className="text-red-500 text-sm mt-1">{errors.hobby_keywords.message}</p>
@@ -617,10 +675,10 @@ export default function CreateNamecardPage() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-5 py-4 max-w-md mx-auto">
         <Button
           onClick={handleSubmit(onSubmit)}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isRedirecting || authLoading}
           className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-medium"
         >
-          {isSubmitting ? '생성 중...' : '명함 생성하기'}
+          {isSubmitting || isRedirecting ? '생성 중...' : '명함 생성하기'}
         </Button>
       </div>
     </div>

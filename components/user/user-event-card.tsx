@@ -24,7 +24,6 @@ const EventCard = ({
             />
           </div>
         )}
-      </Link>
       
       {/* 콘텐츠 영역 */}
       <div className="p-5">
@@ -68,6 +67,7 @@ const EventCard = ({
           </div>
         </div>
       </div>
+      </Link>
     </div>
   );
 };

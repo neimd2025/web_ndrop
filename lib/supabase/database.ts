@@ -500,7 +500,7 @@ export const eventParticipantAPI = {
       .select('*')
       .eq('event_id', eventId)
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
     if (error) {
       console.error('Error fetching user participation:', error)
