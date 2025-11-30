@@ -2,19 +2,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { eventParticipantAPI,userProfileAPI,businessCardAPI   } from '@/lib/supabase/database'
+import { eventParticipantAPI, userProfileAPI, businessCardAPI } from '@/lib/supabase/database'
 
-export default function EventReportPage({ params }: { params: { id: string } }) {
+export default function EventReportPage({ params }: { params: Promise<{ id: string }> }) {
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
   const [participants, setParticipants] = useState<any[]>([])
   const [participantsWithDetails, setParticipantsWithDetails] = useState<any[]>([])
   const [analytics, setAnalytics] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
+  // params를 resolve하는 useEffect
   useEffect(() => {
-    if (params.id) {
-      testAPIs()
+    const resolveParams = async () => {
+      const resolved = await params
+      setResolvedParams(resolved)
     }
-  }, [params.id])
+    resolveParams()
+  }, [params])
 
   // 데이터 분석 함수
   const analyzeData = (participants: any[]) => {
@@ -109,8 +113,7 @@ export default function EventReportPage({ params }: { params: { id: string } }) 
     return analytics
   }
 
-  const testAPIs = async () => {
-    const eventId = params.id
+  const testAPIs = async (eventId: string) => {
     setLoading(true)
 
     try {
@@ -167,6 +170,13 @@ export default function EventReportPage({ params }: { params: { id: string } }) 
 
     setLoading(false)
   }
+
+  // resolvedParams가 있을 때 API 호출
+  useEffect(() => {
+    if (resolvedParams?.id) {
+      testAPIs(resolvedParams.id)
+    }
+  }, [resolvedParams])
 
   // 차트 컴포넌트들
   const BarChart = ({ data, title, color = 'blue' }: { data: Record<string, number>, title: string, color?: string }) => {
@@ -356,14 +366,14 @@ export default function EventReportPage({ params }: { params: { id: string } }) 
     )
   }
 
-  if (!params.id) {
+  if (!resolvedParams?.id) {
     return <div>이벤트 ID를 찾을 수 없습니다.</div>
   }
 
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-2">이벤트 참가자 분석 리포트</h1>
-      <p className="text-gray-600 mb-6">이벤트 ID: {params.id}</p>
+      <p className="text-gray-600 mb-6">이벤트 ID: {resolvedParams.id}</p>
 
       {loading && (
         <div className="text-center py-12">
