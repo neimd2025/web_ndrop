@@ -15,7 +15,9 @@ interface AdminEventParticipantsClientProps {
 export function AdminEventParticipantsClient({ event }: AdminEventParticipantsClientProps) {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
-
+  if(1){
+console.log(event.current_participants);
+  }
   return (
     <div className="min-h-screen bg-white">
       <div className="bg-white border-b border-gray-200 p-4">

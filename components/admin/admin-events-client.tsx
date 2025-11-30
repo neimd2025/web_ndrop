@@ -8,11 +8,12 @@ import { AdminEvent } from "@/lib/supabase/admin-server-actions"
 import { calculateEventStatus } from "@/lib/supabase/database"
 import { getSiteUrl, logError } from "@/lib/utils"
 import { AnimatePresence, motion } from "framer-motion"
-import { Bell, Calendar, Copy, Edit, Eye, FileText, MapPin, Plus, Save, Share, Trash2, Users, X } from "lucide-react"
+import { BarChart3, Bell, Calendar, Copy, Edit, Eye, FileText, MapPin, Plus, Save, Share, Trash2, Users, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
+
 interface Participant {
   id: string
   name: string
@@ -92,14 +93,12 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
   // 참여자 데이터 가져오기
   const fetchParticipants = async (eventId: string) => {
     try {
-      // JWT 토큰 가져오기
       const adminToken = localStorage.getItem('admin_token')
       if (!adminToken) {
         toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
         return
       }
 
-      // 관리자용 참여자 조회 API 호출
       const response = await fetch('/api/admin/get-participants', {
         method: 'POST',
         headers: {
@@ -170,15 +169,12 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
 
     try {
       setLoading(true)
-
-      // JWT 토큰 가져오기
       const adminToken = localStorage.getItem('admin_token')
       if (!adminToken) {
         toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
         return
       }
 
-      // 관리자용 공지 전송 API 호출
       const response = await fetch('/api/admin/send-notice', {
         method: 'POST',
         headers: {
@@ -196,13 +192,6 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
 
       if (!response.ok) {
         console.error('공지 전송 오류:', result)
-        console.error('응답 상태:', response.status)
-        console.error('응답 헤더:', response.headers)
-        console.error('요청 데이터:', {
-          eventId: selectedEvent.id,
-          title: noticeTitle,
-          message: noticeMessage
-        })
         toast.error(result.error || result.details || '공지 전송에 실패했습니다.')
         return
       }
@@ -230,7 +219,6 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
 
   const handleShare = () => {
     if (selectedEvent) {
-      // 이벤트 상세 페이지 URL만 복사
       const baseUrl = getSiteUrl()
       const eventDetailUrl = `${baseUrl}/client/events/${selectedEvent.id}`
 
@@ -241,7 +229,6 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
 
   const handleSaveQR = () => {
     if (qrData?.dataUrl) {
-      // QR 코드 이미지 다운로드
       const link = document.createElement('a')
       link.href = qrData.dataUrl
       link.download = `qr-${selectedEvent?.event_code || 'event'}.png`
@@ -288,14 +275,12 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
     setSelectedEvent(event)
 
     try {
-      // JWT 토큰 가져오기
       const adminToken = localStorage.getItem('admin_token')
       if (!adminToken) {
         toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
         return
       }
 
-      // 관리자용 QR 코드 생성 API 호출
       const response = await fetch('/api/admin/generate-qr', {
         method: 'POST',
         headers: {
@@ -321,21 +306,23 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
     }
   }
 
+  // 리포트 페이지로 이동
+  const handleViewReport = (event: AdminEvent) => {
+    window.location.href = `/admin/events/${event.id}/report`
+  }
+
   // 이벤트 삭제 함수
   const handleDeleteEvent = async () => {
     if (!eventToDelete) return
 
     try {
       setDeleteLoading(true)
-
-      // JWT 토큰 가져오기
       const adminToken = localStorage.getItem('admin_token')
       if (!adminToken) {
         toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
         return
       }
 
-      // 관리자용 이벤트 삭제 API 호출
       const response = await fetch(`/api/admin/delete-event/${eventToDelete.id}`, {
         method: 'DELETE',
         headers: {
@@ -352,11 +339,7 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
       }
 
       toast.success('이벤트가 성공적으로 삭제되었습니다.')
-
-      // 이벤트 목록에서 제거
       setEvents(prevEvents => prevEvents.filter(event => event.id !== eventToDelete.id))
-
-      // 모달 닫기
       setShowDeleteModal(false)
       setEventToDelete(null)
     } catch (error) {
@@ -542,12 +525,21 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                             onClick={() => handleViewQR(event)}
                           >
                             <FileText className="h-4 w-4" />
-                            <span className="hidden sm:inline">리포트 받기</span>
+                            <span className="hidden sm:inline">QR 코드</span>
                           </Button>
                         </div>
 
                         {/* 관리 액션 버튼 */}
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2 hover:bg-indigo-50 hover:border-indigo-200 text-indigo-600 hover:text-indigo-700"
+                            onClick={() => handleViewReport(event)}
+                          >
+                            <BarChart3 className="h-4 w-4" />
+                            <span className="hidden sm:inline">리포트 받기</span>
+                          </Button>
                           <Link href={`/admin/events/edit/${event.id}`}>
                             <Button
                               variant="outline"
