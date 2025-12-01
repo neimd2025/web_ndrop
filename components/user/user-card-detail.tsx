@@ -72,7 +72,7 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
 
     try {
       const supabase = createClient()
-
+     
       // collected_cards 테이블에서 삭제
       const { error } = await supabase
         .from('collected_cards')

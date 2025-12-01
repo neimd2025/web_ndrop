@@ -1079,3 +1079,371 @@ export const roleAPI = {
     return true
   }
 }
+
+export const eventCollectionAPI = {
+  // 이벤트 기간 동안 수집된 카드 통계 조회
+  async getEventCollectionStats(eventId: string) {
+    try {
+    const supabase = createClient()
+      // 1. 이벤트 정보 조회
+      const { data: event, error: eventError } = await supabase
+        .from('events')
+        .select('id, title, start_date, end_date')
+        .eq('id', eventId)
+        .single();
+
+      if (eventError || !event) {
+        console.error('이벤트 조회 실패:', eventError);
+        return null;
+      }
+
+      // 2. 이벤트 기간 동안 수집된 카드 조회
+      const { data: collections, error: collectionError } = await supabase
+        .from('collected_cards')
+        .select('id, collected_at')
+        .gte('collected_at', event.start_date)
+        .lte('collected_at', event.end_date);
+
+      if (collectionError) {
+        console.error('카드 수집 데이터 조회 실패:', collectionError);
+        return null;
+      }
+
+      // 3. 일별 통계 계산
+      const dailyStats = calculateDailyStats(
+        collections || [],
+        event.start_date,
+        event.end_date
+      );
+
+      // 4. 최대 수집일 찾기
+      const peak = findPeakCollectionDay(dailyStats);
+
+      // 5. 결과 반환
+      return {
+        event_id: event.id,
+        event_title: event.title,
+        event_start_date: event.start_date,
+        event_end_date: event.end_date,
+        total_collections: collections?.length || 0,
+        collections_per_day: calculateAveragePerDay(
+          collections?.length || 0,
+          event.start_date,
+          event.end_date
+        ),
+        peak_collection_date: peak?.date,
+        peak_collection_count: peak?.count,
+      };
+    } catch (error) {
+      console.error('이벤트 수집 통계 조회 중 오류:', error);
+      return null;
+    }
+  },
+
+  // 시간대별 수집 통계
+  async getEventCollectionTimeline(eventId: string, groupBy = 'day') {
+    const supabase = createClient()
+    try {
+      // 1. 이벤트 정보 조회
+      const { data: event } = await supabase
+        .from('events')
+        .select('start_date, end_date')
+        .eq('id', eventId)
+        .single();
+
+      if (!event) return [];
+
+      // 2. 이벤트 기간 동안 수집된 카드 조회
+      const { data: collections } = await supabase
+        .from('collected_cards')
+        .select('collected_at')
+        .gte('collected_at', event.start_date)
+        .lte('collected_at', event.end_date)
+        .order('collected_at', { ascending: true });
+
+      if (!collections) return [];
+
+      // 3. 그룹별 통계 계산
+      return groupCollectionsByTime(collections, groupBy);
+    } catch (error) {
+      console.error('타임라인 통계 조회 중 오류:', error);
+      return [];
+    }
+  },
+
+  // 특정 사용자의 이벤트 기간 수집 현황
+  async getUserEventCollectionStats(eventId: string, userId: string) {
+    const supabase = createClient()
+    try {
+      const { data: event } = await supabase
+        .from('events')
+        .select('start_date, end_date')
+        .eq('id', eventId)
+        .single();
+
+      if (!event) return null;
+
+      const { data: userCollections, count } = await supabase
+        .from('collected_cards')
+        .select('id, collected_at, card_id', { count: 'exact' })
+        .eq('collector_id', userId)
+        .gte('collected_at', event.start_date)
+        .lte('collected_at', event.end_date);
+
+      return {
+        user_id: userId,
+        event_id: eventId,
+        total_collected: count || 0,
+        collections: userCollections || [],
+      };
+    } catch (error) {
+      console.error('사용자 이벤트 수집 통계 조회 중 오류:', error);
+      return null;
+    }
+  },
+
+// 이벤트 참여자 랭킹 (수집량 기준)
+async getEventCollectionRanking(eventId: string, limit = 10) {
+  const supabase = createClient()
+  try {
+    const { data: event } = await supabase
+      .from('events')
+      .select('start_date, end_date')
+      .eq('id', eventId)
+      .single();
+
+    if (!event) return [];
+
+    // 직접 쿼리로 집계
+    const { data: collections, error } = await supabase
+      .from('collected_cards')
+      .select('collector_id, collected_at')
+      .gte('collected_at', event.start_date)
+      .lte('collected_at', event.end_date);
+
+    if (error) {
+      console.error('수집 데이터 조회 실패:', error);
+      return [];
+    }
+
+    if (!collections || collections.length === 0) return [];
+
+    // 수집량 집계
+    const collectionCounts: Record<string, number> = {};
+    
+    collections.forEach(collection => {
+      if (collection.collector_id) {
+        collectionCounts[collection.collector_id] = 
+          (collectionCounts[collection.collector_id] || 0) + 1;
+      }
+    });
+
+    // 사용자 ID 목록
+    const userIds = Object.keys(collectionCounts);
+    if (userIds.length === 0) return [];
+
+    // user_profiles 테이블에서 사용자 이름 가져오기
+    const { data: userProfiles, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id, full_name, email')
+      .in('id', userIds);
+
+    if (profileError) {
+      console.error('사용자 프로필 조회 실패:', profileError);
+      // 프로필이 없으면 기본 이메일 정보라도 가져오기
+      const { data: users } = await supabase
+        .from('auth.users')
+        .select('id, email')
+        .in('id', userIds);
+
+      const userMap = new Map();
+      users?.forEach(user => {
+        userMap.set(user.id, { email: user.email, full_name: null });
+      });
+
+      // 랭킹 정렬
+      const ranking = Object.entries(collectionCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, limit)
+        .map(([userId, count], index) => {
+          const userInfo = userMap.get(userId) || { email: null, full_name: null };
+          return {
+            user_id: userId,
+            user_email: userInfo.email,
+            user_name: userInfo.full_name || userInfo.email?.split('@')[0] || `참가자 ${index + 1}`,
+            collection_count: count,
+            rank: index + 1
+          };
+        });
+
+      return ranking;
+    }
+
+    // user_profiles에서 정보 가져온 경우
+    const userProfileMap = new Map();
+    userProfiles?.forEach(profile => {
+      userProfileMap.set(profile.id, {
+        full_name: profile.full_name,
+        email: profile.email
+      });
+    });
+
+    // user_profiles에 없는 사용자는 auth.users에서 이메일 가져오기
+    const missingUserIds = userIds.filter(id => !userProfileMap.has(id));
+    if (missingUserIds.length > 0) {
+      const { data: missingUsers } = await supabase
+        .from('auth.users')
+        .select('id, email')
+        .in('id', missingUserIds);
+
+      missingUsers?.forEach(user => {
+        if (!userProfileMap.has(user.id)) {
+          userProfileMap.set(user.id, {
+            full_name: null,
+            email: user.email
+          });
+        }
+      });
+    }
+
+    // 랭킹 정렬
+    const ranking = Object.entries(collectionCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, limit)
+      .map(([userId, count], index) => {
+        const userInfo = userProfileMap.get(userId) || { full_name: null, email: null };
+        return {
+          user_id: userId,
+          user_email: userInfo.email,
+          user_name: userInfo.full_name || userInfo.email?.split('@')[0] || `참가자 ${index + 1}`,
+          collection_count: count,
+          rank: index + 1
+        };
+      });
+
+    return ranking;
+
+  } catch (error) {
+    console.error('이벤트 랭킹 조회 중 오류:', error);
+    return [];
+  }
+},
+
+  // 실시간 수집 현황 모니터링
+  async getRealTimeCollections(eventId: string, lastChecked?: string) {
+    const supabase = createClient()
+    try {
+      const { data: event } = await supabase
+        .from('events')
+        .select('start_date, end_date')
+        .eq('id', eventId)
+        .single();
+
+      if (!event) return { new_collections: [], total: 0 };
+
+      let query = supabase
+        .from('collected_cards')
+        .select('*', { count: 'exact' })
+        .gte('collected_at', event.start_date)
+        .lte('collected_at', event.end_date);
+
+      // 마지막 확인 시간 이후의 새 데이터만 가져오기
+      if (lastChecked) {
+        query = query.gt('collected_at', lastChecked);
+      }
+
+      const { data: newCollections, count } = await query.order('collected_at', { ascending: false });
+
+      return {
+        new_collections: newCollections || [],
+        total: count || 0,
+        last_checked: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error('실시간 수집 현황 조회 중 오류:', error);
+      return { new_collections: [], total: 0 };
+    }
+  }
+};
+
+// ===== 유틸리티 함수 =====
+
+function calculateDailyStats(collections, startDate, endDate) {
+  const dateMap = new Map();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  // 날짜 범위 초기화
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().split('T')[0];
+    dateMap.set(dateStr, 0);
+  }
+
+  // 수집 데이터 집계
+  collections.forEach((collection) => {
+    if (collection.collected_at) {
+      const date = new Date(collection.collected_at)
+        .toISOString()
+        .split('T')[0];
+      dateMap.set(date, (dateMap.get(date) || 0) + 1);
+    }
+  });
+
+  // 배열로 변환
+  return Array.from(dateMap.entries()).map(([date, count]) => ({
+    date,
+    count,
+  }));
+}
+
+function findPeakCollectionDay(dailyStats) {
+  if (dailyStats.length === 0) return null;
+
+  let peak = dailyStats[0];
+  for (const stat of dailyStats) {
+    if (stat.count > peak.count) {
+      peak = stat;
+    }
+  }
+  return { date: peak.date, count: peak.count };
+}
+
+function calculateAveragePerDay(total, startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1;
+  
+  return days > 0 ? parseFloat((total / days).toFixed(2)) : 0;
+}
+
+function groupCollectionsByTime(collections, groupBy) {
+  const groupMap = new Map();
+
+  collections.forEach((collection) => {
+    if (!collection.collected_at) return;
+
+    const date = new Date(collection.collected_at);
+    let key;
+
+    switch (groupBy) {
+      case 'hour':
+        key = `${date.toISOString().split('T')[0]} ${date.getHours()}:00`;
+        break;
+      case 'weekday':
+        const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+        key = weekdays[date.getDay()];
+        break;
+      case 'day':
+      default:
+        key = date.toISOString().split('T')[0];
+        break;
+    }
+
+    groupMap.set(key, (groupMap.get(key) || 0) + 1);
+  });
+
+  return Array.from(groupMap.entries()).map(([label, count]) => ({
+    date: label,
+    count,
+  }));
+}
