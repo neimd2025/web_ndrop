@@ -52,10 +52,10 @@ export function EventDetailCard({
   const [loading, setLoading] = useState(true)
   
   const searchParams = useSearchParams()
-  const source = searchParams.get('source')
 
   // 뒤로가기 경로 결정
   const getBackUrl = () => {
+      const source = searchParams.get('source')
     switch (source) {
       case 'history':
         return '/client/events/history'
