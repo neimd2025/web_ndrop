@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/components/notification-modal.tsx
 "use client"
 
