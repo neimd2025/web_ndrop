@@ -127,10 +127,12 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
 
         <div className="w-full px-8 bg-white text-left">
           <div className="flex flex-col gap-3">
+            { company && (
             <div className="w-full flex flex-row items-center justify-between">
               <button className="px-4 py-1.5 rounded-full border-2 border-purple-300 text-purple-700 font-medium text-md bg-white">소속</button>
               <p className="text-md font-medium text-gray-700">{company}</p>
             </div>
+            )}
             <div className="w-full flex flex-row items-center justify-between">
               <button className="px-4 py-1.5 rounded-full border-2 border-gray-200 text-gray-700 font-medium text-md bg-white">직무</button>
               <p className="text-md font-medium text-gray-700">{job}</p>
