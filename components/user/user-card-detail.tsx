@@ -158,7 +158,12 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
                   <Phone className="w-5 h-5 text-gray-600" />
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-gray-800">전화번호</span>
-                    <span className="text-purple-600 font-medium text-sm">{formatPhone(phone)}</span>
+<a 
+  href={`tel:${phone}`}
+  className="text-purple-600 font-medium text-sm hover:text-purple-800 transition-colors"
+>
+  {formatPhone(phone)}
+</a>
                   </div>
                 </div>
               )}
