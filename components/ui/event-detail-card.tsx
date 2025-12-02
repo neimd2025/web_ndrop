@@ -52,13 +52,13 @@ export function EventDetailCard({
   const [loading, setLoading] = useState(true)
   
   const searchParams = useSearchParams()
+  const source = searchParams.get('source')
 
   // 뒤로가기 경로 결정
   const getBackUrl = () => {
-      const source = searchParams.get('source')
     switch (source) {
       case 'admin':
-        return 'admin/events'
+        return '/admin/events'
       case 'history':
         return '/client/events/history'
       case 'public':
@@ -437,9 +437,10 @@ export function EventDetailCard({
             </div>
           </div>
           
+{source !== "admin" && (
           <div className="mt-6">
             {getActionButton()}
-          </div>
+          </div>)}
         </CardContent>
       </Card>
 
