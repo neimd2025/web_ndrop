@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { AdminEvent } from "@/lib/supabase/admin-server-actions"
-import { calculateEventStatus } from "@/lib/supabase/database"
+import { userProfileAPI, calculateEventStatus } from "@/lib/supabase/database"
 import { getSiteUrl, logError } from "@/lib/utils"
 import { AnimatePresence, motion } from "framer-motion"
-import { BarChart3, Bell, Calendar, Copy, Edit, Eye, FileText, MapPin, Plus, Save, Share, Trash2, Users, X } from "lucide-react"
+import { BarChart3, Bell, Copy, Edit, Eye, FileText, MapPin, Plus, Save, Share, Trash2, Users, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
+import { Mail, Phone, User, Calendar, Check } from 'lucide-react';
 
 interface Participant {
   id: string
@@ -91,37 +92,55 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
   }, [initialEvents.length])
 
   // 참여자 데이터 가져오기
-  const fetchParticipants = async (eventId: string) => {
-    try {
-      const adminToken = localStorage.getItem('admin_token')
-      if (!adminToken) {
-        toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
-        return
-      }
-
-      const response = await fetch('/api/admin/get-participants', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`
-        },
-        body: JSON.stringify({ eventId })
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        console.error('참여자 조회 오류:', result)
-        toast.error(result.error || '참여자를 불러오는데 실패했습니다.')
-        return
-      }
-
-      setParticipants(result.participants || [])
-    } catch (error) {
-      logError('참여자 가져오기 오류:', error)
-      toast.error('참여자를 불러오는데 실패했습니다.')
+const fetchParticipants = async (eventId: string) => {
+  try {
+    const adminToken = localStorage.getItem('admin_token')
+    if (!adminToken) {
+      toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
+      return
     }
+
+    const response = await fetch('/api/admin/get-participants', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ eventId })
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      console.error('참여자 조회 오류:', result)
+      toast.error(result.error || '참여자를 불러오는데 실패했습니다.')
+      return
+    }
+    
+    const participantsWithProfiles = await Promise.all(
+      result.participants.map(async (participant) => {
+        try {
+          const profile = await userProfileAPI.getUserProfileFromEmail(participant.email)
+          return {
+            ...participant,
+            profile: profile // 프로필 정보 추가
+          }
+        } catch (error) {
+          logError('프로필 가져오기 오류:', error)
+          return {
+            ...participant,
+            profile: null // 프로필 가져오기 실패 시 null
+          }
+        }
+      })
+    )
+    console.log(participantsWithProfiles);
+    setParticipants(participantsWithProfiles)
+  } catch (error) {
+    logError('참여자 가져오기 오류:', error)
+    toast.error('참여자를 불러오는데 실패했습니다.')
   }
+}
 
   const getStatusBadge = (event: any) => {
     const status = calculateEventStatus(event)
@@ -831,33 +850,189 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                     </div>
                   ) : (
                     participants.map((participant) => (
-                      <Card key={participant.id} className="bg-white shadow-sm border border-gray-200">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <h3 className="font-semibold text-gray-900 text-lg">{participant.name}</h3>
-                              <p className="text-sm text-gray-600">
-                                {participant.university && participant.major
-                                  ? `${participant.university} / ${participant.major}`
-                                  : participant.company && participant.position
-                                  ? `${participant.company} / ${participant.position}`
-                                  : "정보 없음"
-                                }
-                              </p>
-                            </div>
-                            <Button variant="outline" size="sm">
-                              <Save className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-sm text-gray-600">{participant.email}</p>
-                            <p className="text-sm text-gray-600">{participant.phone}</p>
-                            <div className=" rounded-lg p-2">
-                              <p className="text-xs text-gray-600">관심분야: {participant.interests}</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+<Card key={participant.id} className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
+  <CardContent className="p-5">
+    {/* 헤더 영역 - 이름과 상태 */}
+    <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start space-x-3">
+        {/* 프로필 이미지 */}
+        {participant.profile?.profile_image_url ? (
+          <div className="relative">
+            <img
+              src={participant.profile.profile_image_url}
+              alt={participant.name}
+              className="w-12 h-12 rounded-full object-cover border-2 border-gray-100"
+            />
+            {participant.status === "confirmed" && (
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                <Check className="h-3 w-3 text-white" />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 flex items-center justify-center border border-gray-200">
+            <User className="h-6 w-6 text-gray-400" />
+          </div>
+        )}
+        
+        {/* 기본 정보 */}
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="font-bold text-gray-900 text-lg">{participant.name}</h3>
+            {participant.profile?.mbti && (
+              <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full border border-indigo-100">
+                {participant.profile.mbti}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-gray-500">{participant.profile?.nickname || participant.name}</p>
+          
+          {/* 소속 정보 */}
+          <div className="mt-1">
+            <p className="text-sm text-gray-700 font-medium">
+              {participant.profile?.work_field && participant.profile?.job_title
+                ? `${participant.profile.work_field} • ${participant.profile.job_title}`
+                : participant.company && participant.position
+                ? `${participant.company} • ${participant.position}`
+                : participant.profile?.affiliation_type === "미소속"
+                ? "미소속"
+                : "정보 없음"
+              }
+            </p>
+            {participant.profile?.company && (
+              <p className="text-xs text-gray-500">{participant.profile.company}</p>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* 저장 버튼 */}
+      <Button 
+        variant="ghost" 
+        size="sm"
+        className="h-8 w-8 p-0 hover:bg-gray-100 rounded-full"
+      >
+        <Save className="h-4 w-4 text-gray-500" />
+      </Button>
+    </div>
+
+    {/* 자기소개 */}
+    {participant.profile?.introduction && (
+      <div className="mb-4">
+        <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 border border-gray-100">
+          "{participant.profile.introduction}"
+        </p>
+      </div>
+    )}
+
+    {/* 연락처 정보 */}
+    <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="flex items-center text-sm">
+        <Mail className="h-4 w-4 text-gray-400 mr-2" />
+        <a 
+          href={`mailto:${participant.email}`}
+          className="text-gray-600 hover:text-blue-600 truncate"
+          title={participant.email}
+        >
+          {participant.email}
+        </a>
+      </div>
+      {participant.phone && (
+        <div className="flex items-center text-sm">
+          <Phone className="h-4 w-4 text-gray-400 mr-2" />
+          <a 
+            href={`tel:${participant.phone}`}
+            className="text-gray-600 hover:text-blue-600"
+          >
+            {participant.phone}
+          </a>
+        </div>
+      )}
+    </div>
+
+    {/* 키워드 태그들 */}
+    <div className="space-y-3">
+      {/* 성격 키워드 */}
+      {participant.profile?.personality_keywords?.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-1">성격</p>
+          <div className="flex flex-wrap gap-1.5">
+            {participant.profile.personality_keywords.map((keyword, idx) => (
+              <span 
+                key={idx}
+                className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100"
+              >
+                {keyword}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 관심 키워드 */}
+      {participant.profile?.interest_keywords?.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-1">관심분야</p>
+          <div className="flex flex-wrap gap-1.5">
+            {participant.profile.interest_keywords.map((interest, idx) => (
+              <span 
+                key={idx}
+                className="px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-100"
+              >
+                {interest}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 취미 키워드 */}
+      {participant.profile?.hobby_keywords?.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-1">취미</p>
+          <div className="flex flex-wrap gap-1.5">
+            {participant.profile.hobby_keywords.map((hobby, idx) => (
+              <span 
+                key={idx}
+                className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full border border-green-100"
+              >
+                {hobby}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* 하단 상태 및 메타 정보 */}
+    <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
+      <div className="flex items-center text-xs text-gray-500">
+        <Calendar className="h-3 w-3 mr-1" />
+        {participant.profile?.birth_date && (
+          <span className="mr-3">
+            {new Date(participant.profile.birth_date).toLocaleDateString('ko-KR')}
+          </span>
+        )}
+        <span className={`px-2 py-0.5 rounded-full ${
+          participant.status === "confirmed" 
+            ? "bg-green-100 text-green-800" 
+            : "bg-yellow-100 text-yellow-800"
+        }`}>
+          {participant.status === "confirmed" ? "확정" : "대기"}
+        </span>
+      </div>
+      
+      <div className="flex space-x-1">
+        <Button variant="ghost" size="sm" className="h-7 text-xs">
+          프로필 보기
+        </Button>
+        <Button variant="ghost" size="sm" className="h-7 text-xs">
+          메시지
+        </Button>
+      </div>
+    </div>
+  </CardContent>
+</Card>
                     ))
                   )}
                 </div>
