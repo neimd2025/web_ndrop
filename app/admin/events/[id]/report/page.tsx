@@ -167,43 +167,58 @@ export default function EventReportPage({ params }: { params: Promise<{ id: stri
   }, [resolvedParams])
 
   // 공통 차트 컴포넌트들
-  const BarChart = ({ data, title, color = 'primary', maxBars = 10 }: { data: Record<string, number>, title: string, color?: string, maxBars?: number }) => {
-    const sortedData = Object.entries(data)
+const BarChart = ({ data, title, color = 'primary', maxBars = 10, fixedOrder }: { 
+  data: Record<string, number>, 
+  title: string, 
+  color?: string, 
+  maxBars?: number,
+  fixedOrder?: string[] // 새로운 prop 추가
+}) => {
+  // fixedOrder가 있으면 해당 순서대로 정렬
+  let sortedData
+  if (fixedOrder) {
+    sortedData = fixedOrder
+      .map(key => [key, data[key] || 0] as [string, number])
+      .slice(0, maxBars)
+  } else {
+    // 기존 로직: 값으로 내림차순 정렬
+    sortedData = Object.entries(data)
       .sort(([, a], [, b]) => b - a)
       .slice(0, maxBars)
-    
-    const maxValue = Math.max(...sortedData.map(([, value]) => value))
-    const colorClasses = {
-      primary: 'bg-[#9464EE]',
-      light: 'bg-[#AD82FC]',
-      dark: 'bg-[#793CE9]',
-      accent: 'bg-[#F1ECFA]',
-      blue: 'bg-blue-500',
-      green: 'bg-green-500'
-    }
-
-    return (
-      <div className="bg-white p-6 rounded-xl border border-[#F1ECFA] shadow-sm">
-        <h3 className="font-semibold mb-4 text-gray-800">{title}</h3>
-        <div className="space-y-3">
-          {sortedData.map(([key, value]) => (
-            <div key={key} className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 w-32 truncate">{key}</span>
-              <div className="flex items-center flex-1 max-w-64">
-                <div className="w-full bg-[#F1ECFA] rounded-full h-4 overflow-hidden">
-                  <div 
-                    className={`${colorClasses[color]} h-full rounded-full transition-all duration-700 ease-out`}
-                    style={{ width: `${(value / maxValue) * 100}%` }}
-                  />
-                </div>
-                <span className="text-sm font-medium ml-3 w-10 text-right">{value}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
   }
+  
+  const maxValue = Math.max(...sortedData.map(([, value]) => value), 1)
+  const colorClasses = {
+    primary: 'bg-[#9464EE]',
+    light: 'bg-[#AD82FC]',
+    dark: 'bg-[#793CE9]',
+    accent: 'bg-[#F1ECFA]',
+    blue: 'bg-blue-500',
+    green: 'bg-green-500'
+  }
+
+  return (
+    <div className="bg-white p-6 rounded-xl border border-[#F1ECFA] shadow-sm">
+      <h3 className="font-semibold mb-4 text-gray-800">{title}</h3>
+      <div className="space-y-3">
+        {sortedData.map(([key, value]) => (
+          <div key={key} className="flex items-center justify-between">
+            <span className="text-sm text-gray-600 w-32 truncate">{key}</span>
+            <div className="flex items-center flex-1 max-w-64">
+              <div className="w-full bg-[#F1ECFA] rounded-full h-4 overflow-hidden">
+                <div 
+                  className={`${colorClasses[color]} h-full rounded-full transition-all duration-700 ease-out`}
+                  style={{ width: `${(value / maxValue) * 100}%` }}
+                />
+              </div>
+              <span className="text-sm font-medium ml-3 w-10 text-right">{value}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
   // 시간대별 차트 컴포넌트
   const HourlyChart = ({ data, title }: { data: Array<{date: string, count: number}>, title: string }) => {

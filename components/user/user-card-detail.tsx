@@ -39,7 +39,7 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
   const handle = "@" + (user?.full_name ? user.full_name.split(" ")[0] : primaryCard?.name ?? user?.email?.split("@")[0]);
   const intro = primaryCard?.introduction ?? primaryCard?.bio ?? user?.introduction ?? "";
   const company = primaryCard?.company ?? primaryCard?.affiliation ?? "미소속";
-  const job = primaryCard?.work_field ?? "미입력";
+  const job = primaryCard?.work_field ?? primaryCard?.role ?? primaryCard?.job_title ?? "미입력";
   const phone = primaryCard?.phone ?? primaryCard?.contact ?? "";
   const email = primaryCard?.email ?? user?.email ?? "";
   
