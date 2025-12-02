@@ -134,7 +134,7 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
             </div>
             )}
             <div className="w-full flex flex-row items-center justify-between">
-              <button className="px-4 py-1.5 rounded-full border-2 border-gray-200 text-gray-700 font-medium text-md bg-white">직무</button>
+              <button className="px-4 py-1.5 rounded-full border-2 border-gray-200 text-gray-700 font-medium text-md bg-white">{ company !== "미소속" ? "직무" : "하는 일" }</button>
               <p className="text-md font-medium text-gray-700">{job}</p>
             </div>
           </div>
