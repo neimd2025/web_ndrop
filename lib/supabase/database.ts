@@ -1158,10 +1158,11 @@ export const roleAPI = {
 }
 
 export const eventCollectionAPI = {
-  // 이벤트 기간 동안 수집된 카드 통계 조회
+  // 이벤트 기간 동안 수집된 카드 통계 조회 (참가자들만 대상)
   async getEventCollectionStats(eventId: string) {
     try {
       const supabase = createClient()
+      
       // 1. 이벤트 정보 조회
       const { data: event, error: eventError } = await supabase
         .from('events')
@@ -1169,42 +1170,86 @@ export const eventCollectionAPI = {
         .eq('id', eventId)
         .single();
 
-      console.log(event);
       if (eventError || !event) {
         console.error('이벤트 조회 실패:', eventError);
         return null;
       }
 
-      // 2. 이벤트 기간 동안 수집된 카드 조회
-const { data: collections, error: collectionError } = await supabase
-  .from('collected_cards')
-  .select('*')
-        //.gte('collected_at', event.start_date)
-        //.lte('collected_at', event.end_date);
+      // 2. 이벤트 참가자 목록 조회
+      const { data: participants, error: participantsError } = await supabase
+        .from('event_participants')
+        .select('user_id')
+        .eq('event_id', eventId)
+        .in('status', ['confirmed']); // 확인된 참가자만
 
-      console.log(collections);
+      if (participantsError) {
+        console.error('참가자 조회 실패:', participantsError);
+        return null;
+      }
+
+      if (!participants || participants.length === 0) {
+        return {
+          event_id: event.id,
+          event_title: event.title,
+          event_start_date: event.start_date,
+          event_end_date: event.end_date,
+          total_participants: 0,
+          total_collections: 0,
+          average_collection_per_participant: 0,
+          collections_per_day: 0,
+          peak_collection_date: null,
+          peak_collection_count: 0,
+          participant_collection_stats: []
+        };
+      }
+
+      const participantIds = participants.map(p => p.user_id);
+
+      // 3. 이벤트 기간 동안 참가자들이 수집한 카드 조회
+      const { data: collections, error: collectionError } = await supabase
+        .from('collected_cards')
+        .select(`
+          *,
+          business_cards!inner(*)
+        `)
+        .in('collector_id', participantIds)
+        .gte('collected_at', event.start_date)
+        .lte('collected_at', event.end_date);
+
       if (collectionError) {
         console.error('카드 수집 데이터 조회 실패:', collectionError);
         return null;
       }
 
-      // 3. 일별 통계 계산
+      // 4. 일별 통계 계산
       const dailyStats = calculateDailyStats(
         collections || [],
         event.start_date,
         event.end_date
       );
 
-      // 4. 최대 수집일 찾기
+      // 5. 최대 수집일 찾기
       const peak = findPeakCollectionDay(dailyStats);
 
-      // 5. 결과 반환
+      // 6. 참가자별 수집 통계
+      const participantStats = await this.getParticipantCollectionStats(
+        participantIds,
+        collections || [],
+        event.start_date,
+        event.end_date
+      );
+
+      // 7. 결과 반환
       return {
         event_id: event.id,
         event_title: event.title,
         event_start_date: event.start_date,
         event_end_date: event.end_date,
+        total_participants: participants.length,
         total_collections: collections?.length || 0,
+        average_collection_per_participant: participants.length > 0 
+          ? (collections?.length || 0) / participants.length 
+          : 0,
         collections_per_day: calculateAveragePerDay(
           collections?.length || 0,
           event.start_date,
@@ -1212,6 +1257,7 @@ const { data: collections, error: collectionError } = await supabase
         ),
         peak_collection_date: peak?.date,
         peak_collection_count: peak?.count,
+        participant_collection_stats: participantStats
       };
     } catch (error) {
       console.error('이벤트 수집 통계 조회 중 오류:', error);
@@ -1219,7 +1265,82 @@ const { data: collections, error: collectionError } = await supabase
     }
   },
 
-  // 시간대별 수집 통계 - 수정된 버전
+  // 참가자별 수집 통계 계산
+  async getParticipantCollectionStats(
+    participantIds: string[], 
+    collections: any[], 
+    startDate: string, 
+    endDate: string
+  ) {
+    const supabase = createClient()
+    
+    // 1. 사용자 프로필 정보 가져오기
+    const { data: userProfiles } = await supabase
+      .from('user_profiles')
+      .select('id, full_name, email, company')
+      .in('id', participantIds);
+
+    const userProfileMap = new Map();
+    userProfiles?.forEach(profile => {
+      userProfileMap.set(profile.id, {
+        full_name: profile.full_name,
+        email: profile.email,
+        company: profile.company
+      });
+    });
+
+    // 2. 참가자별 수집 카드 수 계산
+    const participantStats: Record<string, any> = {};
+
+    collections.forEach(collection => {
+      const collectorId = collection.collector_id;
+      if (collectorId && participantIds.includes(collectorId)) {
+        if (!participantStats[collectorId]) {
+          participantStats[collectorId] = {
+            user_id: collectorId,
+            total_collections: 0,
+            collections: [],
+            first_collection: null,
+            last_collection: null
+          };
+        }
+        
+        participantStats[collectorId].total_collections++;
+        participantStats[collectorId].collections.push({
+          id: collection.id,
+          collected_at: collection.collected_at,
+          card_id: collection.card_id
+        });
+
+        // 첫 번째와 마지막 수집 시간 기록
+        const collectionTime = new Date(collection.collected_at);
+        if (!participantStats[collectorId].first_collection || 
+            collectionTime < new Date(participantStats[collectorId].first_collection)) {
+          participantStats[collectorId].first_collection = collection.collected_at;
+        }
+        if (!participantStats[collectorId].last_collection || 
+            collectionTime > new Date(participantStats[collectorId].last_collection)) {
+          participantStats[collectorId].last_collection = collection.collected_at;
+        }
+      }
+    });
+
+    // 3. 결과 배열 생성
+    return Object.values(participantStats).map((stat: any) => {
+      const userInfo = userProfileMap.get(stat.user_id) || {};
+      return {
+        ...stat,
+        user_name: userInfo.full_name || '이름 없음',
+        user_email: userInfo.email,
+        user_company: userInfo.company,
+        collections: stat.collections.sort((a: any, b: any) => 
+          new Date(b.collected_at).getTime() - new Date(a.collected_at).getTime()
+        )
+      };
+    }).sort((a: any, b: any) => b.total_collections - a.total_collections);
+  },
+
+  // 시간대별 수집 통계 (참가자들만)
   async getEventCollectionTimeline(eventId: string, groupBy = 'hour') {
     const supabase = createClient()
     try {
@@ -1232,17 +1353,29 @@ const { data: collections, error: collectionError } = await supabase
 
       if (!event) return [];
 
-      // 2. 이벤트 기간 동안 수집된 카드 조회
+      // 2. 이벤트 참가자 목록 조회
+      const { data: participants } = await supabase
+        .from('event_participants')
+        .select('user_id')
+        .eq('event_id', eventId)
+        .in('status', ['confirmed']);
+
+      if (!participants || participants.length === 0) return [];
+
+      const participantIds = participants.map(p => p.user_id);
+
+      // 3. 이벤트 기간 동안 참가자들이 수집한 카드 조회
       const { data: collections } = await supabase
         .from('collected_cards')
         .select('collected_at')
+        .in('collector_id', participantIds)
         .gte('collected_at', event.start_date)
         .lte('collected_at', event.end_date)
         .order('collected_at', { ascending: true });
 
       if (!collections) return [];
 
-      // 3. 그룹별 통계 계산 - 모든 시간대를 포함하도록 수정
+      // 4. 그룹별 통계 계산
       return this.groupCollectionsWithAllHours(collections, groupBy, event.start_date, event.end_date);
     } catch (error) {
       console.error('타임라인 통계 조회 중 오류:', error);
@@ -1250,19 +1383,16 @@ const { data: collections, error: collectionError } = await supabase
     }
   },
 
-  // 모든 시간대를 포함하는 그룹화 함수
+  // 모든 시간대를 포함하는 그룹화 함수 (변경 없음)
   groupCollectionsWithAllHours(collections: any[], groupBy: string, startDate: string, endDate: string) {
     const groupMap = new Map();
     
-    // 날짜 범위 생성
     const start = new Date(startDate);
     const end = new Date(endDate);
     const current = new Date(start);
     
-    // 모든 날짜와 시간 초기화
     while (current <= end) {
       if (groupBy === 'hour') {
-        // 24시간 모두 추가
         for (let hour = 0; hour < 24; hour++) {
           const dateStr = current.toISOString().split('T')[0];
           const key = `${dateStr} ${hour.toString().padStart(2, '0')}:00`;
@@ -1276,7 +1406,6 @@ const { data: collections, error: collectionError } = await supabase
       }
     }
     
-    // 실제 데이터 채우기
     collections.forEach((collection) => {
       if (!collection.collected_at) return;
 
@@ -1298,7 +1427,6 @@ const { data: collections, error: collectionError } = await supabase
       }
     });
 
-    // 배열로 변환 및 정렬
     return Array.from(groupMap.entries())
       .map(([label, count]) => ({
         date: label,
@@ -1307,10 +1435,30 @@ const { data: collections, error: collectionError } = await supabase
       .sort((a, b) => a.date.localeCompare(b.date));
   },
 
-  // 특정 사용자의 이벤트 기간 수집 현황
+  // 특정 사용자의 이벤트 기간 수집 현황 (변경 없음)
   async getUserEventCollectionStats(eventId: string, userId: string) {
     const supabase = createClient()
     try {
+      // 먼저 사용자가 이벤트 참가자인지 확인
+      const { data: participant } = await supabase
+        .from('event_participants')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('user_id', userId)
+        .in('status', ['confirmed'])
+        .single();
+
+      if (!participant) {
+        return {
+          user_id: userId,
+          event_id: eventId,
+          is_participant: false,
+          total_collected: 0,
+          collections: [],
+          message: '이벤트 참가자가 아닙니다.'
+        };
+      }
+
       const { data: event } = await supabase
         .from('events')
         .select('start_date, end_date')
@@ -1329,6 +1477,7 @@ const { data: collections, error: collectionError } = await supabase
       return {
         user_id: userId,
         event_id: eventId,
+        is_participant: true,
         total_collected: count || 0,
         collections: userCollections || [],
       };
@@ -1338,134 +1487,99 @@ const { data: collections, error: collectionError } = await supabase
     }
   },
 
-// 이벤트 참여자 랭킹 (수집량 기준)
-async getEventCollectionRanking(eventId: string, limit = 10) {
-  const supabase = createClient()
-  try {
-    const { data: event } = await supabase
-      .from('events')
-      .select('start_date, end_date')
-      .eq('id', eventId)
-      .single();
+  // 이벤트 참여자 랭킹 (수집량 기준) - 참가자들만 대상
+  async getEventCollectionRanking(eventId: string, limit = 10) {
+    const supabase = createClient()
+    try {
+      // 1. 이벤트 정보 조회
+      const { data: event } = await supabase
+        .from('events')
+        .select('start_date, end_date')
+        .eq('id', eventId)
+        .single();
 
-    if (!event) return [];
+      if (!event) return [];
 
-    // 직접 쿼리로 집계
-    const { data: collections, error } = await supabase
-      .from('collected_cards')
-      .select('collector_id, collected_at')
-      .gte('collected_at', event.start_date)
-      .lte('collected_at', event.end_date);
+      // 2. 이벤트 참가자 목록 조회
+      const { data: participants } = await supabase
+        .from('event_participants')
+        .select('user_id')
+        .eq('event_id', eventId)
+        .in('status', ['confirmed']);
 
-    if (error) {
-      console.error('수집 데이터 조회 실패:', error);
-      return [];
-    }
+      if (!participants || participants.length === 0) return [];
 
-    if (!collections || collections.length === 0) return [];
+      const participantIds = participants.map(p => p.user_id);
 
-    // 수집량 집계
-    const collectionCounts: Record<string, number> = {};
-    
-    collections.forEach(collection => {
-      if (collection.collector_id) {
-        collectionCounts[collection.collector_id] = 
-          (collectionCounts[collection.collector_id] || 0) + 1;
+      // 3. 참가자들이 수집한 카드 조회
+      const { data: collections, error } = await supabase
+        .from('collected_cards')
+        .select('collector_id, collected_at')
+        .in('collector_id', participantIds)
+        .gte('collected_at', event.start_date)
+        .lte('collected_at', event.end_date);
+
+      if (error) {
+        console.error('수집 데이터 조회 실패:', error);
+        return [];
       }
-    });
 
-    // 사용자 ID 목록
-    const userIds = Object.keys(collectionCounts);
-    if (userIds.length === 0) return [];
+      if (!collections || collections.length === 0) return [];
 
-    // user_profiles 테이블에서 사용자 이름 가져오기
-    const { data: userProfiles, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('id, full_name, email')
-      .in('id', userIds);
-
-    if (profileError) {
-      console.error('사용자 프로필 조회 실패:', profileError);
-      // 프로필이 없으면 기본 이메일 정보라도 가져오기
-      const { data: users } = await supabase
-        .from('auth.users')
-        .select('id, email')
-        .in('id', userIds);
-
-      const userMap = new Map();
-      users?.forEach(user => {
-        userMap.set(user.id, { email: user.email, full_name: null });
+      // 4. 수집량 집계 (참가자들만)
+      const collectionCounts: Record<string, number> = {};
+      
+      collections.forEach(collection => {
+        if (collection.collector_id && participantIds.includes(collection.collector_id)) {
+          collectionCounts[collection.collector_id] = 
+            (collectionCounts[collection.collector_id] || 0) + 1;
+        }
       });
 
-      // 랭킹 정렬
+      // 5. user_profiles 테이블에서 사용자 정보 가져오기
+      const { data: userProfiles, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email, company')
+        .in('id', Object.keys(collectionCounts));
+
+      const userProfileMap = new Map();
+      userProfiles?.forEach(profile => {
+        userProfileMap.set(profile.id, {
+          full_name: profile.full_name,
+          email: profile.email,
+          company: profile.company
+        });
+      });
+
+      // 6. 랭킹 정렬
       const ranking = Object.entries(collectionCounts)
         .sort(([, a], [, b]) => b - a)
         .slice(0, limit)
         .map(([userId, count], index) => {
-          const userInfo = userMap.get(userId) || { email: null, full_name: null };
+          const userInfo = userProfileMap.get(userId) || { 
+            full_name: null, 
+            email: null, 
+            company: null 
+          };
           return {
             user_id: userId,
             user_email: userInfo.email,
-            user_name: userInfo.full_name || userInfo.email?.split('@')[0] || `참가자 ${index + 1}`,
+            user_name: userInfo.full_name || `참가자 ${index + 1}`,
+            user_company: userInfo.company,
             collection_count: count,
             rank: index + 1
           };
         });
 
       return ranking;
+
+    } catch (error) {
+      console.error('이벤트 랭킹 조회 중 오류:', error);
+      return [];
     }
+  },
 
-    // user_profiles에서 정보 가져온 경우
-    const userProfileMap = new Map();
-    userProfiles?.forEach(profile => {
-      userProfileMap.set(profile.id, {
-        full_name: profile.full_name,
-        email: profile.email
-      });
-    });
-
-    // user_profiles에 없는 사용자는 auth.users에서 이메일 가져오기
-    const missingUserIds = userIds.filter(id => !userProfileMap.has(id));
-    if (missingUserIds.length > 0) {
-      const { data: missingUsers } = await supabase
-        .from('auth.users')
-        .select('id, email')
-        .in('id', missingUserIds);
-
-      missingUsers?.forEach(user => {
-        if (!userProfileMap.has(user.id)) {
-          userProfileMap.set(user.id, {
-            full_name: null,
-            email: user.email
-          });
-        }
-      });
-    }
-
-    // 랭킹 정렬
-    const ranking = Object.entries(collectionCounts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, limit)
-      .map(([userId, count], index) => {
-        const userInfo = userProfileMap.get(userId) || { full_name: null, email: null };
-        return {
-          user_id: userId,
-          user_email: userInfo.email,
-          user_name: userInfo.full_name || userInfo.email?.split('@')[0] || `참가자 ${index + 1}`,
-          collection_count: count,
-          rank: index + 1
-        };
-      });
-
-    return ranking;
-
-  } catch (error) {
-    console.error('이벤트 랭킹 조회 중 오류:', error);
-    return [];
-  }
-},
-
-  // 실시간 수집 현황 모니터링
+  // 실시간 수집 현황 모니터링 (참가자들만)
   async getRealTimeCollections(eventId: string, lastChecked?: string) {
     const supabase = createClient()
     try {
@@ -1477,9 +1591,23 @@ async getEventCollectionRanking(eventId: string, limit = 10) {
 
       if (!event) return { new_collections: [], total: 0 };
 
+      // 이벤트 참가자 목록 조회
+      const { data: participants } = await supabase
+        .from('event_participants')
+        .select('user_id')
+        .eq('event_id', eventId)
+        .in('status', ['confirmed']);
+
+      if (!participants || participants.length === 0) {
+        return { new_collections: [], total: 0, last_checked: new Date().toISOString() };
+      }
+
+      const participantIds = participants.map(p => p.user_id);
+
       let query = supabase
         .from('collected_cards')
         .select('*', { count: 'exact' })
+        .in('collector_id', participantIds)
         .gte('collected_at', event.start_date)
         .lte('collected_at', event.end_date);
 
@@ -1494,10 +1622,103 @@ async getEventCollectionRanking(eventId: string, limit = 10) {
         new_collections: newCollections || [],
         total: count || 0,
         last_checked: new Date().toISOString(),
+        total_participants: participants.length
       };
     } catch (error) {
       console.error('실시간 수집 현황 조회 중 오류:', error);
       return { new_collections: [], total: 0 };
+    }
+  },
+
+  // 추가: 이벤트 참가자들의 상세 통계
+  async getEventParticipantsCollectionDetails(eventId: string) {
+    const supabase = createClient()
+    try {
+      // 1. 이벤트 정보 조회
+      const { data: event } = await supabase
+        .from('events')
+        .select('start_date, end_date')
+        .eq('id', eventId)
+        .single();
+
+      if (!event) return [];
+
+      // 2. 이벤트 참가자 목록과 프로필 정보 함께 조회
+      const { data: participants, error: participantsError } = await supabase
+        .from('event_participants')
+        .select(`
+          user_id,
+          status,
+          joined_at,
+          user_profiles!inner (
+            id,
+            full_name,
+            email,
+            company,
+            profile_image_url
+          )
+        `)
+        .eq('event_id', eventId)
+        .in('status', ['confirmed', 'pending'])
+        .order('joined_at', { ascending: true });
+
+      if (participantsError || !participants) {
+        console.error('참가자 상세 조회 실패:', participantsError);
+        return [];
+      }
+
+      const participantIds = participants.map(p => p.user_id);
+
+      // 3. 참가자들의 수집 통계 조회
+      const { data: collections } = await supabase
+        .from('collected_cards')
+        .select('collector_id, collected_at, card_id')
+        .in('collector_id', participantIds)
+        .gte('collected_at', event.start_date)
+        .lte('collected_at', event.end_date);
+
+      // 4. 참가자별 통계 계산
+      const participantStats = participants.map(participant => {
+        const userCollections = collections?.filter(c => c.collector_id === participant.user_id) || [];
+        
+        // 일별 수집 패턴 분석
+        const dailyPattern: Record<string, number> = {};
+        userCollections.forEach(collection => {
+          const date = new Date(collection.collected_at).toISOString().split('T')[0];
+          dailyPattern[date] = (dailyPattern[date] || 0) + 1;
+        });
+
+        return {
+          user_id: participant.user_id,
+          full_name: participant.user_profiles?.full_name || '이름 없음',
+          email: participant.user_profiles?.email,
+          company: participant.user_profiles?.company,
+          profile_image_url: participant.user_profiles?.profile_image_url,
+          status: participant.status,
+          joined_at: participant.joined_at,
+          total_collections: userCollections.length,
+          first_collection: userCollections.length > 0 
+            ? userCollections.reduce((earliest, curr) => 
+                new Date(earliest.collected_at) < new Date(curr.collected_at) ? earliest : curr
+              ).collected_at 
+            : null,
+          last_collection: userCollections.length > 0 
+            ? userCollections.reduce((latest, curr) => 
+                new Date(latest.collected_at) > new Date(curr.collected_at) ? latest : curr
+              ).collected_at 
+            : null,
+          daily_collection_pattern: dailyPattern,
+          collection_dates: Object.keys(dailyPattern),
+          average_collections_per_day: Object.keys(dailyPattern).length > 0 
+            ? userCollections.length / Object.keys(dailyPattern).length 
+            : 0
+        };
+      });
+
+      return participantStats.sort((a, b) => b.total_collections - a.total_collections);
+    } catch (error) {
+      console.error('참가자 상세 통계 조회 중 오류:', error);
+      return [];
     }
   }
 };
