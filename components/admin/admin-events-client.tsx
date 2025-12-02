@@ -462,7 +462,7 @@ export function AdminEventsClient({ initialEvents }: AdminEventsClientProps) {
                     {/* 이벤트 정보 */}
                     <div className="p-6">
                       <div className="mb-4">
-                        <Link href={`/admin/events/${event.id}`}>
+                        <Link href={`/admin/events/${event.id}?source=admin`}>
                           <h3 className="text-lg font-bold text-gray-900 mb-2 hover:text-purple-600 transition-colors cursor-pointer">
                             {event.title}
                           </h3>

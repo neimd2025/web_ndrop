@@ -57,6 +57,8 @@ export function EventDetailCard({
   const getBackUrl = () => {
       const source = searchParams.get('source')
     switch (source) {
+      case 'admin':
+        return 'admin/events'
       case 'history':
         return '/client/events/history'
       case 'public':
