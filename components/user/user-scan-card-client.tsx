@@ -1,7 +1,6 @@
 "use client"
 
 import { Button } from '@/components/ui/button'
-import { notificationService } from '@/lib/notification-helpers'
 import { UserProfile } from '@/lib/supabase/user-server-actions'
 import { createClient } from '@/utils/supabase/client'
 import jsQR from 'jsqr'
@@ -30,15 +29,12 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
     setIsScanning(true)
   }, [])
 
-  // QR 코드 감지 시 처리
+  // QR 코드 감지 시 처리 - 상세 페이지로 이동만 처리
   const handleQRCodeDetected = useCallback(async (qrData: string) => {
     setIsScanning(false)
     console.log('QR 코드 데이터:', qrData)
 
     try {
-      // Supabase 클라이언트 생성
-      const supabase = createClient()
-
       // ndrop.link 형식의 URL에서 카드 ID 추출
       let cardId = null
 
@@ -49,80 +45,8 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
       }
 
       if (cardId) {
-        // 비로그인 사용자의 경우 명함 페이지로 이동
-        if (!user) {
-          router.push(`/business-card/${cardId}`)
-          return
-        }
-
-        // 명함 데이터 가져오기
-        const { data: businessCard, error } = await supabase
-          .from('business_cards')
-          .select('*')
-          .eq('id', cardId)
-          .eq('is_public', true)
-          .single()
-
-        if (error || !businessCard) {
-          alert('유효하지 않은 QR 코드이거나 공개되지 않은 명함입니다.')
-          setIsScanning(true)
-          return
-        }
-
-        // 자신의 명함인지 확인
-        if (businessCard.user_id === user.id) {
-          alert('자신의 명함은 저장할 수 없습니다.')
-          router.push(`/business-card/${cardId}`)
-          return
-        }
-
-        // 이미 저장된 명함인지 확인
-        const { data: existingCard } = await supabase
-          .from('collected_cards')
-          .select('id')
-          .eq('collector_id', user.id)
-          .eq('card_id', cardId)
-          .single()
-
-        if (existingCard) {
-          alert('이미 저장된 명함입니다!')
-          router.push(`/client/saved-cards`)
-          return
-        }
-
-        // 명함 저장
-        const { data: savedCard, error: saveError } = await supabase
-          .from('collected_cards')
-          .insert({
-            collector_id: user.id,
-            card_id: cardId,
-            collected_at: new Date().toISOString()
-          })
-          .select()
-          .single()
-
-        if (saveError) {
-          console.error('명함 저장 오류:', saveError)
-          alert('명함 저장에 실패했습니다.')
-          setIsScanning(true)
-          return
-        }
-
-        // 명함 수집 알림 생성
-        try {
-          await notificationService.createBusinessCardCollectedNotification(
-            user.id,
-            businessCard.user_id,
-            cardId,
-            businessCard.full_name || '알 수 없는 사용자'
-          )
-        } catch (notificationError) {
-          console.error('알림 생성 오류:', notificationError)
-          // 알림 생성 실패해도 명함 저장은 성공으로 처리
-        }
-
-        alert('명함이 성공적으로 저장되었습니다!')
-        router.push(`/client/saved-cards/${savedCard.id}`)
+        // 로그인 여부와 관계없이 명함 상세 페이지로 이동
+        router.push(`/business-card/${cardId}`)
       } else {
         alert('유효하지 않은 명함 QR 코드입니다.')
         setIsScanning(true)
@@ -130,10 +54,9 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
     } catch (error) {
       console.error('QR 코드 처리 오류:', error)
       alert('QR 코드 처리 중 오류가 발생했습니다.')
+      setIsScanning(true)
     }
-
-    setIsScanning(true)
-  }, [user?.id, router])
+  }, [router])
 
   // QR 코드 스캔
   const scanQRCode = useCallback(() => {

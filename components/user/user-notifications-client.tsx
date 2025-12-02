@@ -2,10 +2,12 @@
 
 import MobileHeader from "@/components/mobile-header"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { UserNotification, UserProfile } from '@/lib/supabase/user-server-actions'
+import { notificationAPI } from "@/lib/supabase/database"
 import { createClient } from "@/utils/supabase/client"
-import { Bell, Calendar, Megaphone, Plus, RefreshCw, User } from "lucide-react"
+import { Bell, Calendar, Check, Megaphone, Plus, RefreshCw, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -27,6 +29,9 @@ export function UserNotificationsClient({
   const channelRef = useRef<any>(null)
   const router = useRouter()
 
+  // 안읽은 알림 개수 계산
+  const unreadCount = notifications.filter(n => !n.read_at).length
+
   // 알림 새로고침 함수
   const refreshNotifications = async () => {
     if (!user) {
@@ -47,6 +52,7 @@ export function UserNotificationsClient({
 
       if (error) {
         console.error('❌ 알림 조회 오류:', error)
+        toast.error('알림을 불러오는데 실패했습니다')
         return
       }
 
@@ -106,6 +112,7 @@ export function UserNotificationsClient({
       setNotifications(data || [])
     } catch (error) {
       console.error('알림 새로고침 오류:', error)
+      toast.error('알림 새로고침에 실패했습니다')
     }
   }
 
@@ -202,28 +209,98 @@ export function UserNotificationsClient({
     }
   }, [user])
 
-  // 알림 읽음 처리 함수
+  // 단일 알림 읽음 처리 함수
   const markAsRead = async (notificationId: string) => {
+    console.log("씨발");
     if (!user) return
 
     try {
-      // 클라이언트에서 읽음 처리는 로컬 상태만 업데이트
-      setNotifications(prev =>
-        prev.map(notification =>
-          notification.id === notificationId
-            ? { ...notification, is_read: true }
-            : notification
+      // 1. API 호출로 서버에 읽음 상태 저장
+      const success = await notificationAPI.markNotificationAsRead(notificationId, user.id)
+      
+      if (success) {
+        // 2. 성공하면 로컬 상태 업데이트
+        setNotifications(prev =>
+          prev.map(notification =>
+            notification.id === notificationId
+              ? { 
+                  ...notification, 
+                  read_at: new Date().toISOString(),
+                  read_by_users: [...(notification.read_by_users || []), user.id]
+                }
+              : notification
+          )
         )
-      )
+        console.log('✅ 알림 읽음 처리 완료:', notificationId)
+        toast.success('알림을 읽음으로 표시했습니다')
+      } else {
+        console.error('❌ 알림 읽음 처리 실패')
+        toast.error('알림 읽음 처리에 실패했습니다')
+      }
     } catch (error) {
       console.error('알림 읽음 처리 오류:', error)
+      toast.error('알림 읽음 처리 중 오류가 발생했습니다')
+    }
+  }
+
+  // 모두 읽음 처리 함수
+  const markAllAsRead = async () => {
+    if (!user) {
+      toast.error('로그인이 필요합니다')
+      return
+    }
+
+    if (unreadCount === 0) {
+      toast.info('읽지 않은 알림이 없습니다')
+      return
+    }
+
+    try {
+      setLoading(true)
+      console.log('📝 모두 읽음 처리 시작, 사용자 ID:', user.id)
+      
+      // 1. API 호출로 모든 알림 읽음 처리
+      const success = await notificationAPI.markAllNotificationsAsRead(user.id)
+      
+      if (success) {
+        // 2. 성공하면 로컬 상태 업데이트
+        setNotifications(prev =>
+          prev.map(notification => ({
+            ...notification,
+            read_at: new Date().toISOString(),
+            read_by_users: [...(notification.read_by_users || []), user.id]
+          }))
+        )
+        
+        console.log('✅ 모두 읽음 처리 완료')
+        toast.success(`모든 알림(${unreadCount}개)을 읽음으로 표시했습니다`)
+      } else {
+        console.error('❌ 모두 읽음 처리 실패')
+        toast.error('모두 읽음 처리에 실패했습니다')
+      }
+    } catch (error) {
+      console.error('모두 읽음 처리 오류:', error)
+      toast.error('모두 읽음 처리 중 오류가 발생했습니다')
+    } finally {
+      setLoading(false)
     }
   }
 
   // 알림 클릭 처리
   const handleNotificationClick = async (notification: UserNotification) => {
-    if (!notification.read_at) {
+    if (!user) return
+
+    console.log('🔔 알림 클릭:', notification.id, '읽음 상태:', notification.read_at)
+    
+    // 이미 읽은 알림인지 확인 (read_by_users도 확인)
+    const isRead = notification.read_at || 
+                   (notification.read_by_users && notification.read_by_users.includes(user.id))
+    
+    if (!isRead) {
+      console.log('📝 읽지 않은 알림, 읽음 처리 시작')
       await markAsRead(notification.id)
+    } else {
+      console.log('📌 이미 읽은 알림')
     }
 
     // 알림 타입에 따른 라우팅
@@ -298,17 +375,37 @@ export function UserNotificationsClient({
 
   return (
     <div className="min-h-screen bg-white pb-24">
-      <MobileHeader title="최근 활동 및 알림"  />
+      <MobileHeader title="최근 활동 및 알림" />
 
-      {/* 새로고침 버튼 */}
-      <div className="px-4 py-2">
+      {/* 액션 버튼들 */}
+      <div className="px-4 py-2 flex items-center justify-between border-b border-gray-200">
         <button
           onClick={refreshNotifications}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-purple-600 transition-colors"
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-purple-600 transition-colors disabled:opacity-50"
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           새로고침
         </button>
+
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <span className="text-xs text-gray-500">
+              {unreadCount}개 읽지 않음
+            </span>
+          )}
+          
+          <Button
+            onClick={markAllAsRead}
+            disabled={loading || unreadCount === 0}
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1 text-xs"
+          >
+            <Check className="h-3 w-3" />
+            모두 읽음
+          </Button>
+        </div>
       </div>
 
       <div className="px-4 py-6 space-y-4">
@@ -326,49 +423,87 @@ export function UserNotificationsClient({
             <p className="text-sm text-gray-400 mt-1">새로운 알림이 오면 여기에 표시됩니다.</p>
           </div>
         ) : (
-          notifications.map((notification) => {
-            const { icon: Icon, color, bg } = getNotificationIcon(notification)
-            const badgeText = getNotificationBadgeText(notification)
-            return (
-              <Card
-                key={notification.id}
-                className="border border-gray-200 hover:border-purple-300 transition-colors cursor-pointer"
-                onClick={() => handleNotificationClick(notification)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start space-x-3">
-                    <div
-                      className={`w-10 h-10 ${bg} rounded-full flex items-center justify-center flex-shrink-0`}
-                    >
-                      <Icon className={`h-5 w-5 ${color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-900">{notification.title}</h3>
-                        <div className="flex items-center space-x-2">
-                          <Badge
-                            variant="secondary"
-                            className={`text-xs ${
-                              notification.notification_type === "business_card_collected" || notification.notification_type === "event_joined"
-                                ? "bg-gray-100 text-gray-700"
-                                : "bg-purple-100 text-purple-700"
-                            }`}
-                          >
-                            {badgeText}
-                          </Badge>
-                          {!notification.read_at && <div className="w-2 h-2 bg-purple-600 rounded-full"></div>}
+          <>
+            {/* 알림 목록 */}
+            {notifications.map((notification) => {
+              const { icon: Icon, color, bg } = getNotificationIcon(notification)
+              const badgeText = getNotificationBadgeText(notification)
+              const isRead = notification.read_at || 
+                           (notification.read_by_users && notification.read_by_users.includes(user?.id || ''))
+
+              return (
+                <Card
+                  key={notification.id}
+                  className={`border border-gray-200 hover:border-purple-300 transition-colors cursor-pointer ${
+                    isRead ? 'opacity-80' : 'bg-purple-50/50'
+                  }`}
+                  onClick={() => handleNotificationClick(notification)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start space-x-3">
+                      <div
+                        className={`w-10 h-10 ${bg} rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isRead ? 'opacity-70' : ''
+                        }`}
+                      >
+                        <Icon className={`h-5 w-5 ${color}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h3 className={`font-semibold ${
+                            isRead ? 'text-gray-700' : 'text-gray-900'
+                          }`}>
+                            {notification.title}
+                          </h3>
+                          <div className="flex items-center space-x-2">
+                            <Badge
+                              variant="secondary"
+                              className={`text-xs ${
+                                notification.notification_type === "business_card_collected" || notification.notification_type === "event_joined"
+                                  ? "bg-gray-100 text-gray-700"
+                                  : "bg-purple-100 text-purple-700"
+                              } ${isRead ? 'opacity-70' : ''}`}
+                            >
+                              {badgeText}
+                            </Badge>
+                            {!isRead && (
+                              <div className="w-2 h-2 bg-purple-600 rounded-full animate-pulse"></div>
+                            )}
+                          </div>
+                        </div>
+                        <p className={`text-sm mt-1 ${
+                          isRead ? 'text-gray-500' : 'text-gray-600'
+                        }`}>
+                          {notification.message}
+                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-xs text-gray-400">
+                            {formatTime(notification.created_at)}
+                          </p>
+                          {isRead && (
+                            <span className="text-xs text-green-600 flex items-center gap-1">
+                              <Check className="h-3 w-3" />
+                              읽음
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
-                      <p className="text-xs text-gray-500 mt-2">{formatTime(notification.created_at)}</p>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </>
         )}
       </div>
+
+      {/* 실시간 연결 상태 표시 */}
+      {isConnected && (
+        <div className="fixed bottom-4 right-4 bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full flex items-center gap-1">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          실시간 연결됨
+        </div>
+      )}
     </div>
   )
 }

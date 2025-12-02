@@ -280,6 +280,7 @@ const EventsPage = () => {
                 actionLoading={actionLoading}
                 currentUser={currentUser}
                 getActionButton={getActionButton}
+                param="public"
               />
             ))}
           </div>

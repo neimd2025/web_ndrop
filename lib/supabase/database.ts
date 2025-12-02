@@ -800,34 +800,110 @@ export const notificationAPI = {
     return true
   },
 
-  // 알림 읽음 처리
-  async markNotificationAsRead(notificationId: string): Promise<boolean> {
+  async markNotificationAsRead(notificationId: string, userId: string): Promise<boolean> {
     const supabase = createClient()
 
-    // 먼저 현재 읽음 카운트를 가져옵니다
-    const { data: currentNotification, error: fetchError } = await supabase
-      .from('notifications')
-      .select('read_count')
-      .eq('id', notificationId)
-      .single()
+    try {
+      // read_at 필드 업데이트 (사용자가 읽은 시간 기록)
+      const { error } = await supabase
+        .from('notifications')
+        .update({ 
+          read_at: new Date().toISOString()
+        })
+        .eq('id', notificationId)
 
-    if (fetchError) {
-      console.error('Error fetching notification:', fetchError)
+      if (error) {
+        console.error('Error marking notification as read:', error)
+        return false
+      }
+
+      return true
+    } catch (error) {
+      console.error('Error in markNotificationAsRead:', error)
       return false
     }
+  },
 
-    // 읽음 카운트를 1 증가시킵니다
-    const { error } = await supabase
+  // 모든 알림을 읽음 처리
+  async markAllNotificationsAsRead(userId: string): Promise<boolean> {
+    const supabase = createClient()
+
+    try {
+      // 사용자에게 보여지는 모든 알림 조회
+      const { data: userNotifications, error: fetchError } = await supabase
+        .from('notifications')
+        .select('id')
+        .or(`target_type.eq.all,target_type.eq.specific,target_type.eq.event_participants`)
+        .is('read_at', null) // 아직 읽지 않은 알림만
+
+      if (fetchError) {
+        console.error('Error fetching user notifications:', fetchError)
+        return false
+      }
+
+      if (userNotifications.length === 0) {
+        console.log('읽지 않은 알림이 없습니다.')
+        return true
+      }
+
+      // 모든 알림의 read_at 업데이트
+      const notificationIds = userNotifications.map(n => n.id)
+      const { error } = await supabase
+        .from('notifications')
+        .update({ 
+          read_at: new Date().toISOString()
+        })
+        .in('id', notificationIds)
+
+      if (error) {
+        console.error('Error updating all notifications:', error)
+        return false
+      }
+
+      console.log(`✅ ${notificationIds.length}개 알림 읽음 처리 완료`)
+      return true
+    } catch (error) {
+      console.error('Error in markAllNotificationsAsRead:', error)
+      return false
+    }
+  },
+
+  // 사용자 알림 가져오기 함수 수정
+  async getUserNotifications(userId: string): Promise<Notification[]> {
+    const supabase = createClient()
+
+    // 모든 알림을 가져와서 필터링
+    const { data: allNotifications, error } = await supabase
       .from('notifications')
-      .update({ read_count: (currentNotification?.read_count || 0) + 1 })
-      .eq('id', notificationId)
+      .select('*')
+      .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Error marking notification as read:', error)
-      return false
+      console.error('Error fetching notifications:', error)
+      return []
     }
 
-    return true
+    // 사용자에게 보여줄 알림 필터링
+    const notifications = allNotifications?.filter(notification => {
+      // 전체 대상 알림이거나
+      if (notification.target_type === 'all') {
+        return true
+      }
+
+      // 특정 사용자 대상 알림인 경우
+      if (notification.target_type === 'specific') {
+        return notification.user_id === userId
+      }
+
+      // event_participants 타입도 확인 (관리자 공지용)
+      if (notification.target_type === 'event_participants') {
+        return true
+      }
+
+      return false
+    }) || []
+
+    return notifications
   }
 }
 
@@ -1084,7 +1160,7 @@ export const eventCollectionAPI = {
   // 이벤트 기간 동안 수집된 카드 통계 조회
   async getEventCollectionStats(eventId: string) {
     try {
-    const supabase = createClient()
+      const supabase = createClient()
       // 1. 이벤트 정보 조회
       const { data: event, error: eventError } = await supabase
         .from('events')
@@ -1092,18 +1168,20 @@ export const eventCollectionAPI = {
         .eq('id', eventId)
         .single();
 
+      console.log(event);
       if (eventError || !event) {
         console.error('이벤트 조회 실패:', eventError);
         return null;
       }
 
       // 2. 이벤트 기간 동안 수집된 카드 조회
-      const { data: collections, error: collectionError } = await supabase
-        .from('collected_cards')
-        .select('id, collected_at')
-        .gte('collected_at', event.start_date)
-        .lte('collected_at', event.end_date);
+const { data: collections, error: collectionError } = await supabase
+  .from('collected_cards')
+  .select('*')
+        //.gte('collected_at', event.start_date)
+        //.lte('collected_at', event.end_date);
 
+      console.log(collections);
       if (collectionError) {
         console.error('카드 수집 데이터 조회 실패:', collectionError);
         return null;
@@ -1140,8 +1218,8 @@ export const eventCollectionAPI = {
     }
   },
 
-  // 시간대별 수집 통계
-  async getEventCollectionTimeline(eventId: string, groupBy = 'day') {
+  // 시간대별 수집 통계 - 수정된 버전
+  async getEventCollectionTimeline(eventId: string, groupBy = 'hour') {
     const supabase = createClient()
     try {
       // 1. 이벤트 정보 조회
@@ -1163,12 +1241,69 @@ export const eventCollectionAPI = {
 
       if (!collections) return [];
 
-      // 3. 그룹별 통계 계산
-      return groupCollectionsByTime(collections, groupBy);
+      // 3. 그룹별 통계 계산 - 모든 시간대를 포함하도록 수정
+      return this.groupCollectionsWithAllHours(collections, groupBy, event.start_date, event.end_date);
     } catch (error) {
       console.error('타임라인 통계 조회 중 오류:', error);
       return [];
     }
+  },
+
+  // 모든 시간대를 포함하는 그룹화 함수
+  groupCollectionsWithAllHours(collections: any[], groupBy: string, startDate: string, endDate: string) {
+    const groupMap = new Map();
+    
+    // 날짜 범위 생성
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const current = new Date(start);
+    
+    // 모든 날짜와 시간 초기화
+    while (current <= end) {
+      if (groupBy === 'hour') {
+        // 24시간 모두 추가
+        for (let hour = 0; hour < 24; hour++) {
+          const dateStr = current.toISOString().split('T')[0];
+          const key = `${dateStr} ${hour.toString().padStart(2, '0')}:00`;
+          groupMap.set(key, 0);
+        }
+        current.setDate(current.getDate() + 1);
+      } else if (groupBy === 'day') {
+        const key = current.toISOString().split('T')[0];
+        groupMap.set(key, 0);
+        current.setDate(current.getDate() + 1);
+      }
+    }
+    
+    // 실제 데이터 채우기
+    collections.forEach((collection) => {
+      if (!collection.collected_at) return;
+
+      const date = new Date(collection.collected_at);
+      let key;
+
+      switch (groupBy) {
+        case 'hour':
+          key = `${date.toISOString().split('T')[0]} ${date.getHours().toString().padStart(2, '0')}:00`;
+          break;
+        case 'day':
+        default:
+          key = date.toISOString().split('T')[0];
+          break;
+      }
+
+      if (groupMap.has(key)) {
+        groupMap.set(key, (groupMap.get(key) || 0) + 1);
+      }
+    });
+
+    // 배열로 변환 및 정렬
+    return Array.from(groupMap.entries())
+      .map(([label, count]) => ({
+        date: label,
+        count,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
   },
 
   // 특정 사용자의 이벤트 기간 수집 현황

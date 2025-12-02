@@ -11,6 +11,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
+import { useSearchParams } from 'next/navigation'
 
 interface EventDetailCardProps {
   event: {
@@ -37,20 +38,33 @@ interface EventDetailCardProps {
   }
   showEventCode?: boolean
   showOrganizerInfo?: boolean
-  backUrl?: string
 }
 
 export function EventDetailCard({
   event: initialEvent,
   showEventCode = true,
   showOrganizerInfo = true,
-  backUrl,
 }: EventDetailCardProps) {
   const [event, setEvent] = useState(initialEvent)
   const [actionLoading, setActionLoading] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
   const [isParticipating, setIsParticipating] = useState(false)
   const [loading, setLoading] = useState(true)
+  
+  const searchParams = useSearchParams()
+  const source = searchParams.get('source')
+
+  // 뒤로가기 경로 결정
+  const getBackUrl = () => {
+    switch (source) {
+      case 'history':
+        return '/client/events/history'
+      case 'public':
+        return '/client/public-events'
+      default:
+        return '/client/events' // 기본값
+    }
+  }
 
   // 현재 사용자와 참가 여부 확인
   useEffect(() => {
@@ -252,16 +266,14 @@ export function EventDetailCard({
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
       {/* 뒤로가기 버튼 */}
-      {backUrl && (
-        <div className="mb-4">
-          <Link href={backUrl}>
-            <Button variant="ghost" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              뒤로가기
-            </Button>
-          </Link>
-        </div>
-      )}
+      <div className="mb-4">
+        <Link href={getBackUrl()}>
+          <Button variant="ghost" className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            뒤로가기
+          </Button>
+        </Link>
+      </div>
 
       {/* 이벤트 헤더 */}
       <div className="space-y-4">

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import EventCard from '@/components/user/user-event-card'
 import { calculateEventStatus, filterEventsByStatus } from '@/lib/supabase/database'
 import { UserEvent, UserEventParticipation, UserProfile } from '@/lib/supabase/user-server-actions'
 import { ArrowLeft, Calendar, MapPin, Search, Users } from 'lucide-react'
@@ -25,27 +26,13 @@ export function UserEventsHistoryClient({
 }: UserEventsHistoryClientProps) {
   const [activeTab, setActiveTab] = useState<'진행중' | '예정' | '종료'>('진행중')
   const [searchTerm, setSearchTerm] = useState('')
+  const [actionLoading, setActionLoading] = useState({})
   const router = useRouter()
 
   // 이벤트 필터링 - 현재 시간 기준으로 상태 계산
   const ongoingEvents = filterEventsByStatus(events, 'ongoing')
   const upcomingEvents = filterEventsByStatus(events, 'upcoming')
   const completedEvents = filterEventsByStatus(events, 'completed')
-
-  // 상태 배지 함수
-  const getStatusBadge = (event: UserEvent) => {
-    const status = calculateEventStatus(event)
-    switch (status) {
-      case 'ongoing':
-        return <Badge className="bg-green-100 text-green-800">진행중</Badge>
-      case 'upcoming':
-        return <Badge className="bg-blue-100 text-blue-800">예정</Badge>
-      case 'completed':
-        return <Badge className="bg-gray-100 text-gray-800">종료</Badge>
-      default:
-        return <Badge className="bg-gray-100 text-gray-800">{status}</Badge>
-    }
-  }
 
   // 검색 필터링 함수
   const filterEventsBySearch = (events: UserEvent[]) => {
@@ -56,6 +43,11 @@ export function UserEventsHistoryClient({
       event.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.location?.toLowerCase().includes(searchTerm.toLowerCase())
     )
+  }
+
+  // 빈 액션 버튼 컴포넌트 (EventCard에 전달하기 위해 필요)
+  const getActionButton = (event: UserEvent) => {
+    return null; // 마이페이지에서는 액션 버튼 없음
   }
 
   const getCurrentEvents = () => {
@@ -148,77 +140,15 @@ export function UserEventsHistoryClient({
             </div>
           ) : (
             getCurrentEvents().map((event) => (
-              <Card key={event.id} className="border border-gray-200 hover:border-purple-300 transition-colors rounded-lg overflow-hidden">
-                {/* 이미지 영역 */}
-                {event.image_url && (
-                  <div className="w-full h-48 overflow-hidden">
-                    <img
-                      src={event.image_url}
-                      alt={event.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                
-                {/* 콘텐츠 영역 */}
-                <div className="p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Link href={`/client/events/${event.id}`}>
-                          <h3 className="text-lg font-semibold text-gray-900 hover:text-purple-600 transition-colors cursor-pointer">
-                            {event.title}
-                          </h3>
-                        </Link> 
-                        {getStatusBadge(event)}
-                      </div>
-                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">{event.description}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        {new Date(event.start_date).toLocaleDateString('ko-KR', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          weekday: 'short'
-                        })}
-                        {' '}
-                        {new Date(event.start_date).toLocaleTimeString('ko-KR', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <MapPin className="w-4 h-4" />
-                      <span>{event.location}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Users className="w-4 h-4" />
-                      <span>{event.current_participants || 0}/{event.max_participants}명 참가</span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Link href={`/client/events/${event.id}`} className="flex-1">
-                      <Button variant="outline" className="w-full">
-                        상세보기
-                      </Button>
-                    </Link>
-                    {/* {calculateEventStatus(event) === 'completed' && (
-                      <Button variant="outline" className="text-purple-600 border-purple-200">
-                        후기작성
-                      </Button>
-                    )} */}
-                  </div>
-                </div>
-              </Card>
+              <EventCard
+                key={event.id}
+                event={event}
+                onJoinEvent={() => {}} // 마이페이지에서는 필요 없음
+                actionLoading={actionLoading}
+                currentUser={{ id: user.id, email: user.email }}
+                getActionButton={getActionButton}
+                param="history"
+              />
             ))
           )}
         </div>

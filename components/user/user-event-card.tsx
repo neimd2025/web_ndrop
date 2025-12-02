@@ -9,12 +9,13 @@ const EventCard = ({
   onJoinEvent, 
   actionLoading, 
   currentUser,
-  getActionButton 
+  getActionButton,
+  param
 }) => {
   return (
     <div className="bg-white border border-gray-200 hover:border-purple-300 transition-colors rounded-lg overflow-hidden">
       {/* 이미지 영역 */}
-      <Link href={`/client/events/${event.id}`}>
+      <Link href={`/client/events/${event.id}?source=${param}`}>
         {event.image_url && (
           <div className="w-full h-48 overflow-hidden">
             <img

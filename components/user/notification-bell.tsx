@@ -1,11 +1,13 @@
 "use client"
 
 import { UserNotification, UserProfile } from '@/lib/supabase/user-server-actions'
+import { notificationAPI } from '@/lib/supabase/database'
 import { createClient } from "@/utils/supabase/client"
-import { Bell, Calendar, Megaphone, Plus, RefreshCw, User, X } from "lucide-react"
+import { Bell, Calendar, Check, Megaphone, Plus, RefreshCw, User, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
+import { NotificationModal } from '@/components/user/notification-modal'
 
 interface NotificationBellProps {
   user?: UserProfile
@@ -17,7 +19,7 @@ export function NotificationBell({
   initialNotifications
 }: NotificationBellProps = {}) {
   const [user, setUser] = useState<UserProfile | null>(initialUser || null)
-  const [notifications, setNotifications] = useState<UserNotification[]>(initialNotifications || [])
+  const [allNotifications, setAllNotifications] = useState<UserNotification[]>(initialNotifications || [])
   const [loading, setLoading] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
@@ -27,7 +29,10 @@ export function NotificationBell({
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // 알림 새로고침 함수
+  // 읽지 않은 알림만 필터링
+  const unreadNotifications = allNotifications.filter(notification => !notification.read_at)
+
+  // 알림 새로고침 함수 - API 사용
   const refreshNotifications = async () => {
     if (!user) {
       console.log('사용자 정보가 없어서 알림 새로고침을 건너뜁니다')
@@ -35,31 +40,25 @@ export function NotificationBell({
     }
 
     try {
-      const { data: allNotifications, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .order('created_at', { ascending: false })
+      setLoading(true)
+      console.log('🔄 알림 새로고침 시작, 사용자 ID:', user.id)
 
-      if (error) {
-        console.error('❌ 알림 조회 오류:', error)
-        return
-      }
+      // API를 사용하여 알림 가져오기
+      const userNotifications = await notificationAPI.getUserNotifications(user.id)
 
-      // 사용자에게 보여줄 알림 필터링
-      const userNotifications = allNotifications?.filter(notification => {
-        if (notification.target_type === 'all') return true
-        if (notification.target_type === 'specific') return notification.user_id === user.id
-        if (notification.target_type === 'event_participants') return true
-        return false
-      }) || []
+      console.log('✅ API로 가져온 알림:', userNotifications)
+      console.log('📊 전체 알림 개수:', userNotifications?.length || 0)
 
-      setNotifications(userNotifications)
+      setAllNotifications(userNotifications || [])
       
-      // 읽지 않은 알림 개수 계산
+      // 읽지 않은 알림 개수 계산 (read_at이 null인 것만)
       const unread = userNotifications.filter(notification => !notification.read_at).length
       setUnreadCount(unread)
+      console.log('📊 읽지 않은 알림 개수:', unread)
     } catch (error) {
       console.error('알림 새로고침 오류:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -69,6 +68,7 @@ export function NotificationBell({
       if (!user) {
         const { data: { user: currentUser } } = await supabase.auth.getUser()
         if (currentUser) {
+          console.log('인증된 사용자 발견:', currentUser.id)
           setUser(currentUser as any)
         }
         return
@@ -108,12 +108,37 @@ export function NotificationBell({
 
           if (newNotification.target_type === 'all' ||
               (newNotification.target_type === 'specific' && newNotification.user_id === user.id)) {
-            setNotifications((prev) => [newNotification, ...prev])
+            // 새 알림 추가 (아직 읽지 않은 상태)
+            setAllNotifications((prev) => [newNotification, ...prev])
             setUnreadCount(prev => prev + 1)
             if (!isOpen) {
               toast.success('새 알림이 도착했습니다!')
             }
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications'
+        },
+        (payload) => {
+          const updatedNotification = payload.new as UserNotification
+          
+          // 알림 목록 업데이트
+          setAllNotifications(prev =>
+            prev.map(notification =>
+              notification.id === updatedNotification.id
+                ? updatedNotification
+                : notification
+            )
+          )
+          
+          // 읽지 않은 알림 개수 재계산
+          const currentUnreadCount = allNotifications.filter(n => !n.read_at).length
+          setUnreadCount(currentUnreadCount)
         }
       )
       .subscribe((status) => {
@@ -143,49 +168,83 @@ export function NotificationBell({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // 알림 읽음 처리 함수
+  // 알림 읽음 처리 함수 - API 사용
   const markAsRead = async (notificationId: string) => {
     if (!user) return
 
     try {
-      setNotifications(prev =>
-        prev.map(notification =>
-          notification.id === notificationId
-            ? { ...notification, is_read: true }
-            : notification
+      console.log('📝 알림 읽음 처리 시작:', notificationId)
+      
+      // 1. API 호출로 서버에 read_at 업데이트
+      const success = await notificationAPI.markNotificationAsRead(notificationId, user.id)
+      
+      if (success) {
+        // 2. 성공하면 로컬 상태 업데이트
+        setAllNotifications(prev =>
+          prev.map(notification =>
+            notification.id === notificationId
+              ? { 
+                  ...notification, 
+                  read_at: new Date().toISOString()
+                }
+              : notification
+          )
         )
-      )
-      setUnreadCount(prev => Math.max(0, prev - 1))
+        
+        // 읽지 않은 알림 개수 감소
+        setUnreadCount(prev => Math.max(0, prev - 1))
+        
+        console.log('✅ 알림 읽음 처리 완료:', notificationId)
+      } else {
+        console.error('❌ 알림 읽음 처리 실패')
+      }
     } catch (error) {
       console.error('알림 읽음 처리 오류:', error)
     }
   }
 
-  // 알림 클릭 처리
-  const handleNotificationClick = async (notification: UserNotification) => {
-    if (!notification.read_at) {
-      await markAsRead(notification.id)
-    }
-
-    setIsOpen(false)
-
-    // 알림 타입에 따른 라우팅
-    if (notification.target_event_id) {
-      router.push(`/client/events/${notification.target_event_id}`)
-    }
-  }
-
-  // 모든 알림 읽음 처리
+  // 모든 알림 읽음 처리 - API 사용
   const markAllAsRead = async () => {
-    if (!user) return
+    if (!user) {
+      toast.error('로그인이 필요합니다')
+      return
+    }
+
+    if (unreadCount === 0) {
+      toast.info('읽지 않은 알림이 없습니다')
+      return
+    }
 
     try {
-      setNotifications(prev =>
-        prev.map(notification => ({ ...notification, is_read: true }))
-      )
-      setUnreadCount(0)
+      setLoading(true)
+      console.log('📝 모두 읽음 처리 시작, 사용자 ID:', user.id)
+      
+      // 1. API 호출로 모든 알림 read_at 업데이트
+      const success = await notificationAPI.markAllNotificationsAsRead(user.id)
+      
+      if (success) {
+        // 2. 성공하면 로컬 상태 업데이트
+        setAllNotifications(prev =>
+          prev.map(notification => ({
+            ...notification,
+            read_at: notification.read_at || new Date().toISOString()
+          }))
+        )
+        
+        // 읽지 않은 알림 개수 0으로 설정
+        setUnreadCount(0)
+        
+        console.log('✅ 모두 읽음 처리 완료')
+        toast.success(`모든 알림(${unreadCount}개)을 읽음으로 표시했습니다`)
+      } else {
+        console.error('❌ 모두 읽음 처리 실패')
+        toast.error('모두 읽음 처리에 실패했습니다')
+      }
     } catch (error) {
-      console.error('모든 알림 읽음 처리 오류:', error)
+      console.error('모두 읽음 처리 오류:', error)
+      toast.error('모두 읽음 처리 중 오류가 발생했습니다')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -220,6 +279,38 @@ export function NotificationBell({
     }
   }
 
+  const [selectedNotification, setSelectedNotification] = useState<UserNotification | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  // 알림 클릭 처리 함수 수정
+  const handleNotificationClick = async (notification: UserNotification) => {
+    if (!user) return
+
+    console.log('🔔 알림 클릭:', notification.id, '읽음 상태:', notification.read_at)
+    
+    // 이미 읽은 알림인지 확인
+    const isRead = notification.read_at !== null
+    
+    if (!isRead) {
+      console.log('📝 읽지 않은 알림, 읽음 처리 시작')
+      await markAsRead(notification.id)
+    } else {
+      console.log('📌 이미 읽은 알림')
+    }
+
+    setIsOpen(false)
+    
+    // 모달에 알림 정보 설정하고 열기
+    setSelectedNotification(notification)
+    setIsModalOpen(true)
+  }
+
+  // 모달 닫기 함수
+  const closeModal = () => {
+    setIsModalOpen(false)
+    setSelectedNotification(null)
+  }
+
   return (
     <div className="relative" ref={dropdownRef}>
       {/* 벨 아이콘 버튼 */}
@@ -240,14 +331,32 @@ export function NotificationBell({
         <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
           {/* 헤더 */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-900">알림</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-gray-900">알림</h3>
+              {unreadCount > 0 && (
+                <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-xs text-purple-600 hover:text-purple-700"
+                  disabled={loading}
+                  className="text-xs text-purple-600 hover:text-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                 >
-                  모두 읽음
+                  {loading ? (
+                    <>
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                      처리중
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-3 w-3" />
+                      모두 읽음
+                    </>
+                  )}
                 </button>
               )}
               <button
@@ -259,27 +368,26 @@ export function NotificationBell({
             </div>
           </div>
 
-          {/* 알림 목록 */}
+          {/* 알림 목록 - 읽지 않은 알림만 표시 */}
           <div className="max-h-96 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
                 <span className="ml-2 text-sm text-gray-600">불러오는 중...</span>
               </div>
-            ) : notifications.length === 0 ? (
+            ) : unreadNotifications.length === 0 ? (
               <div className="text-center py-8">
                 <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">아직 받은 알림이 없습니다.</p>
+                <p className="text-gray-500 text-sm">읽지 않은 알림이 없습니다.</p>
               </div>
             ) : (
-              notifications.slice(0, 10).map((notification) => {
+              unreadNotifications.slice(0, 10).map((notification) => {
                 const { icon: Icon, color, bg } = getNotificationIcon(notification)
+                
                 return (
                   <div
                     key={notification.id}
-                    className={`p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                      !notification.read_at ? 'bg-blue-50' : ''
-                    }`}
+                    className="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors bg-blue-50"
                     onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="flex items-start gap-3">
@@ -291,16 +399,19 @@ export function NotificationBell({
                           <h4 className="font-medium text-gray-900 text-sm leading-tight">
                             {notification.title}
                           </h4>
-                          {!notification.read_at && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full ml-2 mt-1 flex-shrink-0"></div>
-                          )}
+                          <div className="w-2 h-2 bg-blue-500 rounded-full ml-2 mt-1 flex-shrink-0 animate-pulse"></div>
                         </div>
                         <p className="text-gray-600 text-sm mt-1 line-clamp-2">
                           {notification.message}
                         </p>
-                        <p className="text-gray-400 text-xs mt-2">
-                          {formatTime(notification.created_at)}
-                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-gray-400 text-xs">
+                            {formatTime(notification.created_at)}
+                          </p>
+                          <span className="text-xs text-blue-600">
+                            읽지 않음
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -310,19 +421,39 @@ export function NotificationBell({
           </div>
 
           {/* 푸터 */}
-          {notifications.length > 0 && (
+          {unreadNotifications.length > 0 && (
             <div className="p-3 border-t border-gray-200">
               <button
                 onClick={refreshNotifications}
-                className="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-purple-600 py-2 transition-colors"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-purple-600 py-2 transition-colors disabled:opacity-50"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 새로고침
               </button>
+              
+              {allNotifications.length > unreadNotifications.length && (
+                <div className="mt-2 text-center">
+                  <p className="text-xs text-gray-500">
+                    {allNotifications.length - unreadNotifications.length}개의 읽은 알림이 있습니다
+                  </p>
+                  <button
+                    onClick={() => router.push('/client/notifications')}
+                    className="text-xs text-purple-600 hover:text-purple-700 mt-1"
+                  >
+                    모든 알림 보기
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
+      <NotificationModal 
+        notification={selectedNotification}
+        isOpen={isModalOpen}
+        onClose={closeModal}
+      />
     </div>
   )
 }
