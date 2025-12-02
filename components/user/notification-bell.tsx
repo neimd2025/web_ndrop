@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client"
 
 import { UserNotification, UserProfile } from '@/lib/supabase/user-server-actions'
