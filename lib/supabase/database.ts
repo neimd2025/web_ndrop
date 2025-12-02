@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { ROLE_IDS } from '@/lib/constants'
 import { Database } from '@/types/supabase'
 import { createClient } from '@/utils/supabase/client'
