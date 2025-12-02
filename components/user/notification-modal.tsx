@@ -59,7 +59,7 @@ export function NotificationModal({ notification, isOpen, onClose }: Notificatio
             <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
               <Megaphone className="h-5 w-5 text-orange-600" />
             </div>
-            <DialogTitle className="text-xl">공지사항</DialogTitle>
+            <DialogTitle className="text-xl">알림</DialogTitle>
           </div>
         </DialogHeader>
 
