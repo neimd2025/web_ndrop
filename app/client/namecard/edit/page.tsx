@@ -10,7 +10,7 @@ import { useBusinessCards } from '@/hooks/use-business-cards'
 import { useUserProfile } from '@/hooks/use-user-profile'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Camera, User, X, Plus, Minus, Link, Youtube, Instagram, Linkedin, Globe } from 'lucide-react'
+import { ArrowLeft, Camera, User, X, Plus, Minus, Youtube, Instagram, Linkedin, Globe } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
@@ -866,16 +866,16 @@ export default function EditNamecardPage() {
                 {/* 플랫폼 선택 */}
                 <div className="mb-3">
                   <Select
-                    value={selectedLinkType}
-                    onValueChange={(value) => setSelectedLinkType(value as ExternalLinkType)}
+                    value={selectedType}
+                    onValueChange={(value) => setSelectedType(value as ExternalType)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="플랫폼 선택">
                         <div className="flex items-center gap-2">
-                          <PlatformIcon type={selectedLinkType} />
-                          {selectedLinkType === 'none' ? '플랫폼 선택' : 
-                           selectedLinkType === 'youtube' ? 'YouTube' :
-                           selectedLinkType === 'instagram' ? 'Instagram' :
+                          <PlatformIcon type={selectedType} />
+                          {selectedType === 'none' ? '플랫폼 선택' : 
+                           selectedType === 'youtube' ? 'YouTube' :
+                           selectedType === 'instagram' ? 'Instagram' :
                            selectedLinkType === 'linkedin' ? 'LinkedIn' :
                            '직접 입력'}
                         </div>
