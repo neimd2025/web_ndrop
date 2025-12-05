@@ -46,7 +46,7 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
 
       if (cardId) {
         // 로그인 여부와 관계없이 명함 상세 페이지로 이동
-        router.push(`/business-card/${cardId}`)
+        router.push(`/client/card-books/${cardId}`)
       } else {
         alert('유효하지 않은 명함 QR 코드입니다.')
         setIsScanning(true)

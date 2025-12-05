@@ -1,10 +1,10 @@
 //@ts-nocheck
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { UserBusinessCard, UserProfile } from "@/lib/supabase/user-server-actions";
-import { User, Mail, Phone, QrCode, Edit3, Trash2 } from "lucide-react";
+import { User, Mail, Phone, QrCode, Edit3, Trash2, Save } from "lucide-react";
 import { 
   FaInstagram, 
   FaLinkedin, 
@@ -26,34 +26,93 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
 interface UserCardDetailProps {
-  user?: UserProfile;
+  user?: UserProfile;           // 현재 로그인한 사용자 (currentUser)
+  cardOwner?: UserProfile;      // 명함 소유자 (폴백용)
   businessCards?: UserBusinessCard[];
 }
 
-export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps) {
-  const primaryCard = businessCards.find((c) => c.is_public) || businessCards[0];
+export function UserCardDetail({ user, cardOwner, businessCards = [] }: UserCardDetailProps) {
+  const primaryCard = businessCards.find((c) => c?.is_public) || businessCards[0];
   const router = useRouter();
+  
+  // 상태 추가
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isOwnCard, setIsOwnCard] = useState(false);
+  const [isCollectedCard, setIsCollectedCard] = useState(false);
 
-  // user가 undefined면 primaryCard에서 데이터 가져오기
-  const name = user?.full_name ?? primaryCard?.full_name ?? user?.email?.split("@")[0] ?? "사용자";
-  const handle = "@" + (user?.full_name ? user.full_name.split(" ")[0] : primaryCard?.name ?? user?.email?.split("@")[0]);
-  const intro = primaryCard?.introduction ?? primaryCard?.bio ?? user?.introduction ?? "";
+  // 컴포넌트 마운트 시 상태 확인
+  useEffect(() => {
+    const checkCardStatus = async () => {
+      if (!user?.id || !primaryCard?.id) return;
+      
+      try {
+        const supabase = createClient();
+        
+        // 자신의 명함인지 확인 (현재 사용자 ID vs 명함 소유자 ID)
+        const isOwn = user.id === primaryCard.user_id;
+        setIsOwnCard(isOwn);
+        
+        console.log('현재 사용자 ID:', user.id);
+        console.log('명함 소유자 ID:', primaryCard.user_id);
+        console.log('자신의 명함인가?', isOwn);
+        
+        // 자신의 명함이면 저장 상태 확인 불필요
+        if (isOwn) {
+          setIsSaved(false);
+          setIsCollectedCard(false);
+          return;
+        }
+        
+        // 다른 사람의 명함인 경우, 저장 여부 확인
+        const { data: existingCard } = await supabase
+          .from('collected_cards')
+          .select('id')
+          .eq('collector_id', user.id)
+          .eq('card_id', primaryCard.id)
+          .single();
+        
+        if (existingCard) {
+          setIsSaved(true);
+          setIsCollectedCard(true);
+        } else {
+          setIsSaved(false);
+          setIsCollectedCard(false);
+        }
+        
+      } catch (error) {
+        console.error('명함 상태 확인 오류:', error);
+        setIsSaved(false);
+        setIsCollectedCard(false);
+        setIsOwnCard(false);
+      }
+    };
+
+    checkCardStatus();
+  }, [user?.id, primaryCard?.id, primaryCard?.user_id]);
+
+  // 명함 소유자 정보 결정: primaryCard → cardOwner
+  const ownerProfile = cardOwner;
+
+  // 표시할 데이터: primaryCard 우선, 없으면 cardOwner
+  const name = primaryCard?.full_name ?? ownerProfile?.full_name ?? "";
+  const intro = primaryCard?.introduction ?? primaryCard?.bio ?? ownerProfile?.introduction ?? "";
   const company = primaryCard?.company ?? primaryCard?.affiliation ?? "미소속";
   const job = primaryCard?.work_field ?? primaryCard?.role ?? primaryCard?.job_title ?? "미입력";
   const phone = primaryCard?.phone ?? primaryCard?.contact ?? "";
-  const email = primaryCard?.email ?? user?.email ?? "";
+  const email = primaryCard?.email ?? ownerProfile?.email ?? "";
   
-  // external_links는 user가 없으면 primaryCard에서 가져오기
-  const externalLinks = user?.external_links ?? primaryCard?.external_links ?? [];
+  // external_links는 primaryCard에서 가져오기
+  const externalLinks = primaryCard?.external_links ?? ownerProfile?.external_links ?? [];
 
-  // user가 없으면 primaryCard에서 프로필 이미지 가져오기
-  const profileImage = user?.profile_image_url ?? primaryCard?.profile_image_url ?? "";
+  // 프로필 이미지는 primaryCard에서 가져오기
+  const profileImage = primaryCard?.profile_image_url ?? ownerProfile?.profile_image_url ?? "";
 
-  // user가 없으면 primaryCard에서 MBTI, 성격, 관심사, 취미 가져오기
-  const mbti = user?.mbti ?? primaryCard?.mbti ?? "";
-  const personalityKeywords = user?.personality_keywords ?? primaryCard?.personality_keywords ?? [];
-  const interestKeywords = user?.interest_keywords ?? primaryCard?.interest_keywords ?? [];
-  const hobbyKeywords = user?.hobby_keywords ?? primaryCard?.hobby_keywords ?? [];
+  // MBTI, 성격, 관심사, 취미는 primaryCard에서 가져오기
+  const mbti = primaryCard?.mbti ?? ownerProfile?.mbti ?? "";
+  const personalityKeywords = primaryCard?.personality_keywords ?? ownerProfile?.personality_keywords ?? [];
+  const interestKeywords = primaryCard?.interest_keywords ?? ownerProfile?.interest_keywords ?? [];
+  const hobbyKeywords = primaryCard?.hobby_keywords ?? ownerProfile?.hobby_keywords ?? [];
 
   const formatPhone = (num: string) => {
     const digits = num.replace(/\D/g, "");
@@ -62,9 +121,91 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
     return num;
   };
 
-  // Supabase 직접 접근 방식으로 삭제 처리
+  // 명함 저장 핸들러
+  const handleSaveCard = async () => {
+    if (!user) {
+      alert('명함을 저장하려면 로그인이 필요합니다.')
+      router.push('/login?type=user')
+      return
+    }
+
+    // 자신의 명함인지 확인
+    if (isOwnCard) {
+      alert('자신의 명함은 저장할 수 없습니다.')
+      return
+    }
+
+    if (isSaved) {
+      alert('이미 저장된 명함입니다!')
+      return
+    }
+
+    try {
+      setIsSaving(true)
+      const supabase = createClient()
+
+      // 명함 저장
+      const { data: savedCard, error: saveError } = await supabase
+        .from('collected_cards')
+        .insert({
+          collector_id: user.id,
+          card_id: primaryCard.id,
+          collected_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (saveError) {
+        console.error('명함 저장 오류:', saveError)
+        alert('명함 저장에 실패했습니다.')
+        return
+      }
+
+      setIsSaved(true)
+      setIsCollectedCard(true)
+      alert('명함이 성공적으로 저장되었습니다!')
+
+      // 저장된 명함 페이지로 이동
+      router.push(`/client/card-books/${savedCard.id}`)
+    } catch (error) {
+      console.error('명함 저장 중 오류:', error)
+      alert('명함 저장 중 오류가 발생했습니다.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+const handlePhoneClick = async (e) => {
+  e.preventDefault();
+  
+  try {
+    await navigator.clipboard.writeText(phone);
+    alert('전화번호가 복사되었습니다. 전화 앱에 붙여넣기 해주세요.');
+    
+    // iOS에서는 input을 만들어서 포커스
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+      const input = document.createElement('input');
+      input.setAttribute('type', 'tel');
+      input.setAttribute('value', phone);
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.appendChild(input);
+      input.focus();
+      setTimeout(() => {
+        document.body.removeChild(input);
+      }, 1000);
+    }
+  } catch (err) {
+    console.error('복사 실패:', err);
+    // 폴백: 일반 tel 링크로
+    window.location.href = `tel:${phone}`;
+  }
+};
+
+
+  // 명함 삭제 핸들러
   const handleDelete = async () => {
-    if (!primaryCard?.id) return;
+    if (!primaryCard?.id || !user?.id) return;
 
     if (!confirm('정말 이 명함을 삭제하시겠습니까?')) {
       return;
@@ -74,26 +215,127 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
       const supabase = createClient()
      
       // collected_cards 테이블에서 삭제
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from('collected_cards')
         .delete()
+        .eq('collector_id', user.id)
         .eq('card_id', primaryCard.id)
 
       if (error) {
         console.error('명함 삭제 오류:', error)
+        
+        // 삭제 실패 시 - 수집된 명함이 아니라면 저장 기능 제공
+        if (error.code === 'PGRST116') { // 존재하지 않는 행
+          const shouldSave = confirm('이 명함은 수집된 명함이 아닙니다. 대신 저장하시겠습니까?')
+          if (shouldSave) {
+            await handleSaveCard();
+          }
+          return;
+        }
+        
         alert('명함 삭제 중 오류가 발생했습니다.')
         return
       }
 
-      // 삭제 성공 시 명함첩 페이지로 이동
-      alert('명함이 삭제되었습니다.')
-      router.push('/client/card-books')
+      // 삭제 성공
+      if (count > 0) {
+        alert('명함이 삭제되었습니다.')
+        setIsSaved(false)
+        setIsCollectedCard(false)
+        router.push('/client/card-books')
+      } else {
+        // 삭제된 행이 없으면 수집된 명함이 아님
+        const shouldSave = confirm('이 명함은 수집된 명함이 아닙니다. 대신 저장하시겠습니까?')
+        if (shouldSave) {
+          await handleSaveCard();
+        }
+      }
       
     } catch (error) {
       console.error('명함 삭제 오류:', error)
       alert('명함 삭제 중 오류가 발생했습니다.')
     }
   };
+
+  // 버튼 렌더링 로직
+  const renderActionButtons = () => {
+    // 1. 자신의 명함인 경우
+    if (isOwnCard) {
+      return (
+        <>
+          <Link 
+            href="/client/namecard/edit"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md"
+          >
+            <Edit3 className="w-5 h-5" />
+            편집하기
+          </Link>
+          
+          <Link 
+            href="/client/my-qr"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white text-purple-600 border border-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-colors shadow-md"
+          >
+            <QrCode className="w-5 h-5" />
+            QR 보기
+          </Link>
+        </>
+      );
+    }
+
+    // 2. 수집된 명함인 경우 (삭제 버튼)
+    if (isCollectedCard) {
+      return (
+        <button
+          onClick={handleDelete}
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-md"
+        >
+          <Trash2 className="w-5 h-5" />
+          명함 삭제하기
+        </button>
+      );
+    }
+
+    // 3. 수집되지 않은 타인의 명함인 경우 (저장 버튼)
+    return (
+      <button
+        onClick={handleSaveCard}
+        disabled={isSaved || isSaving}
+        className="w-full flex items-center justify-center gap-2 py-2.5 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md disabled:bg-purple-400 disabled:cursor-not-allowed"
+      >
+        {isSaving ? (
+          <>저장 중...</>
+        ) : isSaved ? (
+          <>
+            <Save className="w-5 h-5" />
+            저장됨
+          </>
+        ) : (
+          <>
+            <Save className="w-5 h-5" />
+            명함 저장하기
+          </>
+        )}
+      </button>
+    );
+  };
+
+  // primaryCard가 없는 경우 처리
+  if (!primaryCard) {
+    return (
+      <div className="flex justify-center items-center w-full min-h-screen">
+        <Card className="w-full max-w-md p-8 text-center">
+          <h2 className="text-xl font-semibold text-gray-700 mb-4">명함을 찾을 수 없습니다</h2>
+          <p className="text-gray-500 mb-6">해당 명함이 존재하지 않거나 삭제되었습니다.</p>
+          <Link 
+            href="/client/card-books"
+            className="inline-block px-6 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+          >
+            명함첩으로 돌아가기
+          </Link>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex justify-center items-center w-full">
@@ -159,7 +401,8 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-gray-800">전화번호</span>
 <a 
-  href={`tel:${phone}`}
+  href="#"
+  onClick={handlePhoneClick}
   className="text-purple-600 font-medium text-sm hover:text-purple-800 transition-colors"
 >
   {formatPhone(phone)}
@@ -235,47 +478,17 @@ export function UserCardDetail({ user, businessCards = [] }: UserCardDetailProps
             )}
           </div>
 
-          {user ? (
-            <div className="my-6 flex gap-3">
-              {/* 편집하기 버튼 - 왼쪽, 보라색 배경 */}
-              <Link 
-                href="/client/namecard/edit"
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md"
-              >
-                <Edit3 className="w-5 h-5" />
-                편집하기
-              </Link>
-              
-              {/* QR 코드 보기 버튼 - 오른쪽, 흰색 배경 */}
-              <Link 
-                href="/client/my-qr"
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white text-purple-600 border border-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-colors shadow-md"
-              >
-                <QrCode className="w-5 h-5" />
-                QR 보기
-              </Link>
-            </div>
-          ) : (
-            // user가 없고 primaryCard가 있을 때만 삭제 버튼 표시
-            primaryCard && (
-              <div className="my-6">
-                <button
-                  onClick={handleDelete}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-100 text-gray-600 rounded-lg font-medium hover:bg-gray-200 transition-colors border border-gray-300"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  명함 삭제
-                </button>
-              </div>
-            )
-          )}
+          {/* 액션 버튼 */}
+          <div className="my-6 flex gap-3">
+            {renderActionButtons()}
+          </div>
         </div>
       </Card>
     </div>
   );
 }
 
-// TagSelector와 SocialLinks 컴포넌트는 동일하게 유지
+
 interface TagSelectorProps {
   tags: string[];
 }
@@ -341,35 +554,34 @@ export function SocialLinks({ links }: SocialLinksProps) {
     if (lowerUrl.includes("dribbble.com")) return <FaDribbble size={24} className="text-pink-500" />;
     if (lowerUrl.includes("medium.com")) return <FaMedium size={24} className="text-black" />;
     if (lowerUrl.includes("blog.naver.com") || lowerUrl.includes("blog.me")) return <SiNaver size={24} className="text-green-500" />;
-    if (lowerUrl.includes("brunch.co.kr")) return <FaFeatherAlt size={24} className="orange-500" />;
+    if (lowerUrl.includes("brunch.co.kr")) return <FaFeatherAlt size={24} className="text-orange-500" />;
     
     return <FaGlobe size={24} className="text-gray-700" />;
   };
 
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 gap-3">
       {links.map((link) => (
-<div className="flex flex-row gap-3">
-        <a
-          key={link}
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex justify-center items-center hover:opacity-80 transition hover:scale-110"
-          title={link}
-        >
-          {getIcon(link)}
-        </a>
-        <a
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex justify-center items-center"
-          title={link}
-        >
-          {link}
-        </a>
-</div>
+        <div key={link} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors">
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center hover:opacity-80 transition"
+            title={link}
+          >
+            {getIcon(link)}
+          </a>
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-gray-700 hover:text-purple-600 transition-colors truncate flex-1"
+            title={link}
+          >
+            {link}
+          </a>
+        </div>
       ))}
     </div>
   );

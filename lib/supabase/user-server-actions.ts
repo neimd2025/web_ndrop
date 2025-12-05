@@ -465,7 +465,18 @@ export async function getUserSavedCardsData(): Promise<{
 export async function getUserSavedCardsDataFromId(id?: string): Promise<{
   user: UserProfile
   savedCards: any[]
+  cardOwner?: UserProfile
 }> {
+  const user = await requireUserAuth()
+  
+  if (!id) {
+    return {
+      user,
+      savedCards: [],
+      cardOwner: undefined
+    }
+  }
+
   try {
     const supabase = await createClient()
 
@@ -477,14 +488,21 @@ export async function getUserSavedCardsDataFromId(id?: string): Promise<{
       .single()
 
     if (collectedError) {
-      console.error('수집된 명함 ID 찾기 오류:', collectedError)
-      throw new Error('수집된 명함을 찾을 수 없습니다.')
+      console.log('수집된 명함 ID 찾기 오류:', collectedError)
+      return {
+        user,
+        savedCards: [],
+        cardOwner: undefined
+      }
     }
 
-    // 2. 찾은 card_id로 실제 명함 정보를 가져옵니다
+    // 2. 찾은 card_id로 명함 정보와 함께 소유자 프로필도 조회
     const { data: savedCards, error } = await supabase
       .from('business_cards')
-      .select('*')
+      .select(`
+        *,
+        user_profile:user_profiles(*)
+      `)
       .eq('id', collectedCard.card_id)
 
     if (error) {
@@ -492,12 +510,185 @@ export async function getUserSavedCardsDataFromId(id?: string): Promise<{
       throw new Error('명함 데이터를 불러올 수 없습니다.')
     }
 
+    // 카드 소유자 정보 추출
+    let cardOwner: UserProfile | undefined = undefined
+    if (savedCards && savedCards.length > 0 && savedCards[0].user_profile) {
+      cardOwner = savedCards[0].user_profile
+    }
+
     return {
-      savedCards: savedCards || []
+      user,
+      savedCards: savedCards || [],
+      cardOwner
     }
   } catch (error) {
     console.error('저장된 명함 데이터 가져오기 오류:', error)
     throw new Error('저장된 명함 데이터를 불러올 수 없습니다.')
+  }
+}
+
+export async function getUserCardFromId(cardId: string): Promise<{
+  user: UserProfile | null
+  cardData: UserBusinessCard | null
+  cardOwner: UserProfile | null
+  isCollected: boolean
+  cardType: 'business_card' | 'collected_card' | 'none'
+}> {
+  console.log('🔍 getUserCardFromId 시작, cardId:', cardId)
+  
+  try {
+    const user = await requireUserAuth()
+    console.log('👤 인증된 사용자 ID:', user.id)
+    
+    const supabase = await createClient()
+    
+    // 1. 명함 찾기
+    console.log('1️⃣ business_cards에서 명함 찾기...')
+    const { data: businessCard, error: cardError } = await supabase
+      .from('business_cards')
+      .select('*')
+      .eq('id', cardId)
+      .maybeSingle()
+
+    if (cardError) {
+      console.error('명함 조회 에러:', cardError)
+    }
+
+    if (!businessCard) {
+      console.log('❌ business_cards에서 명함을 찾을 수 없음')
+      
+      // collected_cards에서 시도
+      console.log('🔄 collected_cards에서 시도...')
+      const { data: collectedCard } = await supabase
+        .from('collected_cards')
+        .select(`
+          *,
+          business_card:business_cards(*)
+        `)
+        .eq('id', cardId)
+        .maybeSingle()
+
+      if (collectedCard?.business_card) {
+        const card = collectedCard.business_card
+        console.log('✅ collected_cards에서 명함 발견:', card.id)
+        
+        // cardOwner 찾기
+        console.log(`🔍 명함 소유자 찾기 (user_id: ${card.user_id})...`)
+        const { data: ownerProfile } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', card.user_id)
+          .maybeSingle()
+        
+        console.log('소유자 프로필 결과:', ownerProfile ? '찾음' : '없음')
+        
+        return {
+          user: user,
+          cardData: card,
+          cardOwner: ownerProfile,
+          isCollected: true,
+          cardType: 'collected_card'
+        }
+      }
+      
+      return {
+        user: user,
+        cardData: null,
+        cardOwner: null,
+        isCollected: false,
+        cardType: 'none'
+      }
+    }
+
+    console.log('✅ business_cards에서 명함 발견:', businessCard.id)
+    console.log('📌 명함 소유자 user_id:', businessCard.user_id)
+    
+    // 2. 명함 소유자 프로필 찾기
+    console.log('2️⃣ user_profiles에서 소유자 프로필 찾기...')
+    const { data: ownerProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', businessCard.user_id)
+      .maybeSingle()
+
+    if (profileError) {
+      console.error('소유자 프로필 조회 에러:', profileError)
+    }
+    
+    console.log('소유자 프로필:', ownerProfile)
+    
+    // 3. 수집 여부 확인
+    console.log('3️⃣ 수집 여부 확인...')
+    const { data: collections } = await supabase
+      .from('collected_cards')
+      .select('id')
+      .eq('card_id', cardId)
+      .eq('collector_id', user.id)
+      .limit(1)
+
+    const isCollected = collections && collections.length > 0
+    console.log('수집 여부:', isCollected)
+    
+    // 4. cardOwner 정보 정리
+    let cardOwner: UserProfile | null = null
+    
+    if (ownerProfile) {
+      // user_profiles에서 찾은 경우
+      cardOwner = ownerProfile
+      console.log('✅ user_profiles에서 소유자 프로필 로드 완료')
+    } else {
+      // user_profiles에서 찾지 못한 경우
+      console.log('❌ user_profiles에서 프로필을 찾지 못함')
+      
+      // business_cards의 정보로 기본 프로필 생성
+      cardOwner = {
+        id: businessCard.user_id,
+        email: businessCard.email || '',
+        full_name: businessCard.full_name,
+        company: businessCard.company || '',
+        role: businessCard.role || '',
+        contact: businessCard.contact || '',
+        profile_image_url: businessCard.profile_image_url || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        role_id: 1,
+        affiliation_type: '소속',
+        has_business_card: true,
+        // 나머지 필드는 기본값
+        nickname: '',
+        birth_date: null,
+        affiliation: businessCard.company || '',
+        introduction: businessCard.introduction || '',
+        external_links: [],
+        mbti: businessCard.mbti || '',
+        keywords: businessCard.keywords || [],
+        qr_code_url: businessCard.qr_code_url || null,
+        personality_keywords: businessCard.personality_keywords || [],
+        interest_keywords: businessCard.interest_keywords || [],
+        work_field: businessCard.work_field || '',
+        hobby_keywords: businessCard.hobby_keywords || [],
+        job_title: businessCard.job_title || ''
+      }
+      console.log('📝 business_cards 정보로 기본 프로필 생성')
+    }
+    
+    return {
+      user: user,
+      cardData: businessCard,
+      cardOwner: cardOwner,
+      isCollected,
+      cardType: 'business_card'
+    }
+    
+  } catch (error) {
+    console.error('🚨 명함 데이터 가져오기 오류:', error)
+    return {
+      user: null,
+      cardData: null,
+      cardOwner: null,
+      isCollected: false,
+      cardType: 'none'
+    }
   }
 }
 

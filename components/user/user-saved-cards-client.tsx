@@ -205,9 +205,9 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
 
       <div className="flex-1 ml-3">
         <h3 className="font-bold text-gray-900">{businessCard.full_name || businessCard.name}</h3>
-        <p className="text-sm text-gray-600">
-          {businessCard.job_title || businessCard.title} / {businessCard.company || businessCard.affiliation}
-        </p>
+                  <p className="text-sm text-gray-600">
+                    {businessCard?.job_title || businessCard?.company || businessCard?.work_field }
+                  </p>
         {(businessCard.email || businessCard.contact) && (
           <p className="text-sm text-gray-500">{businessCard.email || businessCard.contact}</p>
         )}

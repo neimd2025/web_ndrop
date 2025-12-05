@@ -11,7 +11,7 @@ interface UserTheirCardDetailPageProps {
   businessCards?: UserBusinessCard[];
 }
 
-export default function UserTheirCardDetailPage({ businessCards = [] }: MyCardDetailPageProps) {
+export default function UserTheirCardDetailPage({ user, businessCards = [], cardOwner }: MyCardDetailPageProps) {
   const router = useRouter();
 
   return (
@@ -31,7 +31,7 @@ export default function UserTheirCardDetailPage({ businessCards = [] }: MyCardDe
         </div>
       </div>
 
-      <UserCardDetail businessCards={businessCards} />
+      <UserCardDetail user={user} businessCards={businessCards} cardOwner={cardOwner}/>
     </div>
   );
 }
