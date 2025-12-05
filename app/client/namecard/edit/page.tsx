@@ -10,7 +10,7 @@ import { useBusinessCards } from '@/hooks/use-business-cards'
 import { useUserProfile } from '@/hooks/use-user-profile'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Camera, User, X, Plus, Minus, Youtube, Instagram, Linkedin, Globe } from 'lucide-react'
+import { ArrowLeft, Camera, User, X, Plus, Minus, Link as LinkedIcon Youtube, Instagram, Linkedin, Globe } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
@@ -40,7 +40,7 @@ const profileSchema = z.object({
   interest_keywords: z.array(z.string()).max(3, '관심 키워드는 최대 3개까지 선택할 수 있습니다'),
   hobby_keywords: z.array(z.string()).max(3, '취미는 최대 3개까지 입력할 수 있습니다'),
   introduction: z.string().max(500, '자기소개는 500자 이하여야 합니다'),
-  external_link: z.string().optional()
+  external_: z.string().optional()
 })
 
 type ProfileFormData = z.infer<typeof profileSchema>
@@ -61,9 +61,9 @@ export default function EditNamecardPage() {
   const [hobbyInputs, setHobbyInputs] = useState<string[]>([''])
 
   // 외부 링크 관련 상태
-  const [selectedLinkType, setSelectedLinkType] = useState<ExternalLinkType>('none')
-  const [linkValue, setLinkValue] = useState('')
-  const [customLink, setCustomLink] = useState('')
+  const [selectedType, setSelectedType] = useState<ExternalType>('none')
+  const [Value, setValue] = useState('')
+  const [custom, setCustom] = useState('')
 
   const {
     register,
@@ -86,27 +86,27 @@ export default function EditNamecardPage() {
       interest_keywords: [],
       hobby_keywords: [],
       introduction: '',
-      external_link: ''
+      external_: ''
     }
   })
 
   // 외부 링크 타입 변경 시 처리
   useEffect(() => {
-    if (selectedLinkType === 'none') {
-      setValue('external_link', '')
-      setLinkValue('')
-      setCustomLink('')
-    } else if (selectedLinkType === 'custom') {
-      setValue('external_link', customLink)
+    if (selectedType === 'none') {
+      setValue('external_', '')
+      setValue('')
+      setCustom('')
+    } else if (selectedType === 'custom') {
+      setValue('external_', custom)
     } else {
       // 플랫폼별 링크 생성
-      updatePlatformLink(selectedLinkType, linkValue)
+      updatePlatform(selectedType, Value)
     }
-  }, [selectedLinkType, linkValue, customLink, setValue])
+  }, [selectedType, Value, custom, setValue])
 
-  const updatePlatformLink = (type: ExternalLinkType, value: string) => {
+  const updatePlatform = (type: ExternalType, value: string) => {
     if (!value.trim()) {
-      setValue('external_link', '')
+      setValue('external_', '')
       return
     }
 
@@ -118,20 +118,20 @@ export default function EditNamecardPage() {
       case 'instagram':
         fullUrl = `https://www.instagram.com/${value}`
         break
-      case 'linkedin':
-        // LinkedIn은 다양한 형식이 있을 수 있으므로 @가 포함된 경우와 아닌 경우 처리
+      case 'edin':
+        // edIn은 다양한 형식이 있을 수 있으므로 @가 포함된 경우와 아닌 경우 처리
         if (value.startsWith('@')) {
-          fullUrl = `https://www.linkedin.com/in/${value.substring(1)}`
+          fullUrl = `https://www.edin.com/in/${value.substring(1)}`
         } else if (value.startsWith('in/')) {
-          fullUrl = `https://www.linkedin.com/${value}`
+          fullUrl = `https://www.edin.com/${value}`
         } else {
-          fullUrl = `https://www.linkedin.com/in/${value}`
+          fullUrl = `https://www.edin.com/in/${value}`
         }
         break
       default:
         fullUrl = value
     }
-    setValue('external_link', fullUrl)
+    setValue('external_', fullUrl)
   }
 
   // 기존 데이터 로드 (명함 데이터 우선, 없으면 프로필 데이터 사용)
@@ -165,12 +165,12 @@ export default function EditNamecardPage() {
       
       setValue('introduction', dataSource?.introduction || '')
       
-      // external_link 설정 (Profile은 external_links 배열, BusinessCard는 external_link 단일 값)
-      let externalLinkValue = ''
-      if (userCard?.external_link) {
-        // 명함 데이터: external_link 단일 값
-        externalLinkValue = userCard.external_link
-      } else if (profile?.external_links && profile.external_links.length > 0) {
+      // external_ 설정 (Profile은 external_s 배열, BusinessCard는 external_ 단일 값)
+      let externalValue = ''
+      if (userCard?.external_) {
+        // 명함 데이터: external_ 단일 값
+        externalValue = userCard.external_
+      } else if (profile?.external_s && profile.external_links.length > 0) {
         // 프로필 데이터: external_links 배열의 첫 번째 값
         externalLinkValue = profile.external_links[0]
       }
@@ -498,7 +498,7 @@ export default function EditNamecardPage() {
       case 'custom':
         return <Globe className="w-4 h-4" />
       default:
-        return <Link className="w-4 h-4" />
+        return <LinkedIcon className="w-4 h-4" />
     }
   }
 
@@ -884,7 +884,7 @@ export default function EditNamecardPage() {
                     <SelectContent>
                       <SelectItem value="none">
                         <div className="flex items-center gap-2">
-                          <Link className="w-4 h-4" />
+                          <LinkedIcon className="w-4 h-4" />
                           없음
                         </div>
                       </SelectItem>
