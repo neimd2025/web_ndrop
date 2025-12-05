@@ -40,7 +40,7 @@ const profileSchema = z.object({
   interest_keywords: z.array(z.string()).max(3, '관심 키워드는 최대 3개까지 선택할 수 있습니다'),
   hobby_keywords: z.array(z.string()).max(3, '취미는 최대 3개까지 입력할 수 있습니다'),
   introduction: z.string().max(500, '자기소개는 500자 이하여야 합니다'),
-  external_: z.string().optional()
+  external_link: z.string().optional()
 })
 
 type ProfileFormData = z.infer<typeof profileSchema>
@@ -61,9 +61,9 @@ export default function EditNamecardPage() {
   const [hobbyInputs, setHobbyInputs] = useState<string[]>([''])
 
   // 외부 링크 관련 상태
-  const [selectedType, setSelectedType] = useState<ExternalType>('none')
-  const [Value, setValue] = useState('')
-  const [custom, setCustom] = useState('')
+  const [selectedLinkType, setSelectedLinkType] = useState<ExternalLinkType>('none')
+  const [linkValue, setLinkValue] = useState('')
+  const [customLink, setCustomLink] = useState('')
 
   const {
     register,
@@ -86,27 +86,27 @@ export default function EditNamecardPage() {
       interest_keywords: [],
       hobby_keywords: [],
       introduction: '',
-      external_: ''
+      external_link: ''
     }
   })
 
   // 외부 링크 타입 변경 시 처리
   useEffect(() => {
-    if (selectedType === 'none') {
-      setValue('external_', '')
-      setValue('')
-      setCustom('')
-    } else if (selectedType === 'custom') {
-      setValue('external_', custom)
+    if (selectedLinkType === 'none') {
+      setValue('external_link', '')
+      setLinkValue('')
+      setCustomLink('')
+    } else if (selectedLinkType === 'custom') {
+      setValue('external_link', customLink)
     } else {
       // 플랫폼별 링크 생성
-      updatePlatform(selectedType, Value)
+      updatePlatformLink(selectedLinkType, linkValue)
     }
-  }, [selectedType, Value, custom, setValue])
+  }, [selectedLinkType, linkValue, customLink, setValue])
 
-  const updatePlatform = (type: ExternalType, value: string) => {
+  const updatePlatformLink = (type: ExternalLinkType, value: string) => {
     if (!value.trim()) {
-      setValue('external_', '')
+      setValue('external_link', '')
       return
     }
 
@@ -118,20 +118,20 @@ export default function EditNamecardPage() {
       case 'instagram':
         fullUrl = `https://www.instagram.com/${value}`
         break
-      case 'edin':
-        // edIn은 다양한 형식이 있을 수 있으므로 @가 포함된 경우와 아닌 경우 처리
+      case 'linkedin':
+        // LinkedIn은 다양한 형식이 있을 수 있으므로 @가 포함된 경우와 아닌 경우 처리
         if (value.startsWith('@')) {
-          fullUrl = `https://www.edin.com/in/${value.substring(1)}`
+          fullUrl = `https://www.linkedin.com/in/${value.substring(1)}`
         } else if (value.startsWith('in/')) {
-          fullUrl = `https://www.edin.com/${value}`
+          fullUrl = `https://www.linkedin.com/${value}`
         } else {
-          fullUrl = `https://www.edin.com/in/${value}`
+          fullUrl = `https://www.linkedin.com/in/${value}`
         }
         break
       default:
         fullUrl = value
     }
-    setValue('external_', fullUrl)
+    setValue('external_link', fullUrl)
   }
 
   // 기존 데이터 로드 (명함 데이터 우선, 없으면 프로필 데이터 사용)
@@ -165,12 +165,12 @@ export default function EditNamecardPage() {
       
       setValue('introduction', dataSource?.introduction || '')
       
-      // external_ 설정 (Profile은 external_s 배열, BusinessCard는 external_ 단일 값)
-      let externalValue = ''
-      if (userCard?.external_) {
-        // 명함 데이터: external_ 단일 값
-        externalValue = userCard.external_
-      } else if (profile?.external_s && profile.external_links.length > 0) {
+      // external_link 설정 (Profile은 external_links 배열, BusinessCard는 external_link 단일 값)
+      let externalLinkValue = ''
+      if (userCard?.external_link) {
+        // 명함 데이터: external_link 단일 값
+        externalLinkValue = userCard.external_link
+      } else if (profile?.external_links && profile.external_links.length > 0) {
         // 프로필 데이터: external_links 배열의 첫 번째 값
         externalLinkValue = profile.external_links[0]
       }
@@ -680,7 +680,7 @@ export default function EditNamecardPage() {
                   />
                 )}
                 {errors.affiliation && (
-                  <p className="text-red500 text-sm mt-1">{errors.affiliation.message}</p>
+                  <p className="text-red-500 text-sm mt-1">{errors.affiliation.message}</p>
                 )}
               </div>
 
@@ -866,16 +866,16 @@ export default function EditNamecardPage() {
                 {/* 플랫폼 선택 */}
                 <div className="mb-3">
                   <Select
-                    value={selectedType}
-                    onValueChange={(value) => setSelectedType(value as ExternalType)}
+                    value={selectedLinkType}
+                    onValueChange={(value) => setSelectedLinkType(value as ExternalLinkType)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="플랫폼 선택">
                         <div className="flex items-center gap-2">
-                          <PlatformIcon type={selectedType} />
-                          {selectedType === 'none' ? '플랫폼 선택' : 
-                           selectedType === 'youtube' ? 'YouTube' :
-                           selectedType === 'instagram' ? 'Instagram' :
+                          <PlatformIcon type={selectedLinkType} />
+                          {selectedLinkType === 'none' ? '플랫폼 선택' : 
+                           selectedLinkType === 'youtube' ? 'YouTube' :
+                           selectedLinkType === 'instagram' ? 'Instagram' :
                            selectedLinkType === 'linkedin' ? 'LinkedIn' :
                            '직접 입력'}
                         </div>
