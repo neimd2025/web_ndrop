@@ -4,20 +4,23 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/hooks/use-auth'
 import { ROLE_IDS } from '@/lib/constants'
-import { userProfileAPI } from '@/lib/supabase/database'
 import { createClient } from '@/utils/supabase/client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Camera, User, X, Plus, Minus } from 'lucide-react'
+import { ArrowLeft, Camera, User, X, Plus, Minus, Link, Youtube, Instagram, Linkedin, Globe } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react' // useEffect 추가
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-// Zod 스키마 정의 - hobby_keywords를 문자열 배열로 유지
+// 외부 링크 타입 정의
+type ExternalLinkType = 'none' | 'youtube' | 'instagram' | 'linkedin' | 'custom'
+
+// Zod 스키마 정의 - external_link를 문자열로 유지
 const profileSchema = z.object({
   full_name: z.string().min(2, '이름은 2자 이상이어야 합니다').max(50, '이름은 50자 이하여야 합니다'),
   birth_date: z.string().optional(),
@@ -31,19 +34,24 @@ const profileSchema = z.object({
   interest_keywords: z.array(z.string()).max(3, '관심 키워드는 최대 3개까지 선택할 수 있습니다'),
   hobby_keywords: z.array(z.string()).max(3, '취미는 최대 3개까지 입력할 수 있습니다'),
   introduction: z.string().max(500, '자기소개는 500자 이하여야 합니다'),
-  external_link: z.string().url('올바른 URL 형식을 입력해주세요').optional().or(z.literal(''))
+  external_link: z.string().optional()
 })
 
 type ProfileFormData = z.infer<typeof profileSchema>
 
 export default function CreateNamecardPage() {
   const router = useRouter()
-  const { user, isLoading: authLoading } = useAuth() // authLoading 상태 추가
+  const { user, isLoading: authLoading } = useAuth()
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [hobbyInputs, setHobbyInputs] = useState<string[]>(['']) // 주관식 취미 입력 필드
-  const [isRedirecting, setIsRedirecting] = useState(false) // 리디렉션 상태 추가
+  const [hobbyInputs, setHobbyInputs] = useState<string[]>([''])
+  const [isRedirecting, setIsRedirecting] = useState(false)
+  
+  // 외부 링크 관련 상태
+  const [selectedLinkType, setSelectedLinkType] = useState<ExternalLinkType>('none')
+  const [linkValue, setLinkValue] = useState('')
+  const [customLink, setCustomLink] = useState('')
 
   const {
     register,
@@ -70,7 +78,7 @@ export default function CreateNamecardPage() {
     }
   })
 
-  // 인증 상태 확인 useEffect 추가
+  // 인증 상태 확인
   useEffect(() => {
     if (!authLoading && !user) {
       console.log('인증되지 않은 사용자, 로그인 페이지로 이동')
@@ -79,6 +87,50 @@ export default function CreateNamecardPage() {
       return
     }
   }, [user, authLoading, router])
+
+  // 외부 링크 타입 변경 시 처리
+  useEffect(() => {
+    if (selectedLinkType === 'none') {
+      setValue('external_link', '')
+      setLinkValue('')
+      setCustomLink('')
+    } else if (selectedLinkType === 'custom') {
+      setValue('external_link', customLink)
+    } else {
+      // 플랫폼별 링크 생성
+      updatePlatformLink(selectedLinkType, linkValue)
+    }
+  }, [selectedLinkType, linkValue, customLink, setValue])
+
+  const updatePlatformLink = (type: ExternalLinkType, value: string) => {
+    if (!value.trim()) {
+      setValue('external_link', '')
+      return
+    }
+
+    let fullUrl = ''
+    switch (type) {
+      case 'youtube':
+        fullUrl = `https://www.youtube.com/${value}`
+        break
+      case 'instagram':
+        fullUrl = `https://www.instagram.com/${value}`
+        break
+      case 'linkedin':
+        // LinkedIn은 다양한 형식이 있을 수 있으므로 @가 포함된 경우와 아닌 경우 처리
+        if (value.startsWith('@')) {
+          fullUrl = `https://www.linkedin.com/in/${value.substring(1)}`
+        } else if (value.startsWith('in/')) {
+          fullUrl = `https://www.linkedin.com/${value}`
+        } else {
+          fullUrl = `https://www.linkedin.com/in/${value}`
+        }
+        break
+      default:
+        fullUrl = value
+    }
+    setValue('external_link', fullUrl)
+  }
 
   const mbtiTypes = [
     'INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
@@ -111,7 +163,6 @@ export default function CreateNamecardPage() {
       const newHobbyInputs = hobbyInputs.filter((_, i) => i !== index)
       setHobbyInputs(newHobbyInputs)
       
-      // 폼 데이터도 업데이트
       const currentHobbies = watch('hobby_keywords')
       const newHobbies = currentHobbies.filter((_, i) => i !== index)
       setValue('hobby_keywords', newHobbies)
@@ -124,7 +175,6 @@ export default function CreateNamecardPage() {
     setValue('hobby_keywords', newHobbies)
   }
 
-  // 나머지 함수들은 동일하게 유지
   const onSubmit = async (data: ProfileFormData) => {
     console.log('=== 명함 생성 시작 ===')
 
@@ -192,7 +242,7 @@ export default function CreateNamecardPage() {
         mbti: data.mbti && data.mbti.trim() !== '' ? data.mbti : null,
         personality_keywords: data.personality_keywords.length > 0 ? data.personality_keywords : [],
         interest_keywords: data.interest_keywords.length > 0 ? data.interest_keywords : [],
-        hobby_keywords: data.hobby_keywords.filter(hobby => hobby.trim() !== ''), // 빈 문자열 제거
+        hobby_keywords: data.hobby_keywords.filter(hobby => hobby.trim() !== ''),
         introduction: data.introduction || null,
         external_links: data.external_link ? [data.external_link] : [],
         email: user.email || '',
@@ -234,7 +284,7 @@ export default function CreateNamecardPage() {
         mbti: data.mbti || null,
         personality_keywords: data.personality_keywords,
         interest_keywords: data.interest_keywords,
-        hobby_keywords: data.hobby_keywords.filter(hobby => hobby.trim() !== ''), // 빈 문자열 제거
+        hobby_keywords: data.hobby_keywords.filter(hobby => hobby.trim() !== ''),
         external_link: data.external_link || null,
         profile_image_url: profileImageUrl,
         is_public: true
@@ -273,7 +323,6 @@ export default function CreateNamecardPage() {
       setIsSubmitting(false)
       setIsRedirecting(false)
     }
-    // finally 블록 제거 - 리디렉션 중에는 상태 유지
   }
 
   const handleMBTISelect = (mbti: string) => {
@@ -325,6 +374,38 @@ export default function CreateNamecardPage() {
   const handleRemoveImage = () => {
     setProfileImage(null)
     setSelectedFile(null)
+  }
+
+  // 플랫폼 아이콘 컴포넌트
+  const PlatformIcon = ({ type }: { type: ExternalLinkType }) => {
+    switch (type) {
+      case 'youtube':
+        return <Youtube className="w-4 h-4" />
+      case 'instagram':
+        return <Instagram className="w-4 h-4" />
+      case 'linkedin':
+        return <Linkedin className="w-4 h-4" />
+      case 'custom':
+        return <Globe className="w-4 h-4" />
+      default:
+        return <Link className="w-4 h-4" />
+    }
+  }
+
+  // 플랫폼 예시 텍스트
+  const getPlatformPlaceholder = (type: ExternalLinkType) => {
+    switch (type) {
+      case 'youtube':
+        return '예: @username 또는 채널명'
+      case 'instagram':
+        return '예: username'
+      case 'linkedin':
+        return '예: username 또는 in/username'
+      case 'custom':
+        return '예: https://example.com'
+      default:
+        return ''
+    }
   }
 
   // 인증 로딩 중이면 로딩 표시
@@ -591,7 +672,7 @@ export default function CreateNamecardPage() {
               )}
             </div>
 
-            {/* 취미 키워드 - 주관식 입력으로 변경 */}
+            {/* 취미 키워드 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 취미 (선택, 최대 3개)
@@ -653,16 +734,97 @@ export default function CreateNamecardPage() {
               )}
             </div>
 
-            {/* 대표 외부 링크 */}
+            {/* 대표 외부 링크 - 개선된 버전 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 대표 외부 링크 (선택)
               </label>
-              <Input
-                {...register('external_link')}
-                placeholder="https://example.com"
-                className={errors.external_link ? 'border-red-500' : ''}
-              />
+              
+              {/* 플랫폼 선택 */}
+              <div className="mb-3">
+                <Select
+                  value={selectedLinkType}
+                  onValueChange={(value) => setSelectedLinkType(value as ExternalLinkType)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="플랫폼 선택">
+                      <div className="flex items-center gap-2">
+                        <PlatformIcon type={selectedLinkType} />
+                        {selectedLinkType === 'none' ? '플랫폼 선택' : 
+                         selectedLinkType === 'youtube' ? 'YouTube' :
+                         selectedLinkType === 'instagram' ? 'Instagram' :
+                         selectedLinkType === 'linkedin' ? 'LinkedIn' :
+                         '직접 입력'}
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <div className="flex items-center gap-2">
+                        <Link className="w-4 h-4" />
+                        없음
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="youtube">
+                      <div className="flex items-center gap-2">
+                        <Youtube className="w-4 h-4 text-red-600" />
+                        YouTube
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="instagram">
+                      <div className="flex items-center gap-2">
+                        <Instagram className="w-4 h-4 text-pink-600" />
+                        Instagram
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="linkedin">
+                      <div className="flex items-center gap-2">
+                        <Linkedin className="w-4 h-4 text-blue-700" />
+                        LinkedIn
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="custom">
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4" />
+                        직접 입력
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 입력 필드 */}
+              {selectedLinkType !== 'none' && (
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                    <PlatformIcon type={selectedLinkType} />
+                  </div>
+                  
+                  {selectedLinkType === 'custom' ? (
+                    <Input
+                      placeholder={getPlatformPlaceholder(selectedLinkType)}
+                      value={customLink}
+                      onChange={(e) => setCustomLink(e.target.value)}
+                      className={`pl-10 ${errors.external_link ? 'border-red-500' : ''}`}
+                    />
+                  ) : (
+                    <>
+                      <Input
+                        placeholder={getPlatformPlaceholder(selectedLinkType)}
+                        value={linkValue}
+                        onChange={(e) => setLinkValue(e.target.value)}
+                        className={`pl-10 ${errors.external_link ? 'border-red-500' : ''}`}
+                      />
+                      {linkValue && (
+                        <div className="mt-1 text-xs text-gray-500">
+                          생성된 링크: {watch('external_link')}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+              
               {errors.external_link && (
                 <p className="text-red-500 text-sm mt-1">{errors.external_link.message}</p>
               )}

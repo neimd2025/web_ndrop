@@ -331,16 +331,18 @@ export const eventAPI = {
 
 // 명함 관련 함수들
 export const businessCardAPI = {
-  // 사용자 비즈니스 카드 가져오기
   async getUserBusinessCard(userId: string): Promise<BusinessCard | null> {
     const supabase = createClient()
 
     try {
+      // LIMIT 1로 최신 카드 1개만 가져오기
       const { data, error } = await supabase
         .from('business_cards')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle()
+        .order('created_at', { ascending: false }) // 최신순 정렬
+        .limit(1) // 1개만 가져오기
+        .maybeSingle() // 단일 결과로 처리
 
       if (error) {
         console.error('Error fetching business card:', error)
@@ -352,23 +354,6 @@ export const businessCardAPI = {
             error: error.message,
             code: error.code
           })
-        }
-
-        // 여러 행이 있는 경우 중복 정리
-        if (error.code === 'PGRST116' && error.details?.includes('5 rows')) {
-          console.log('🔄 중복 비즈니스 카드 발견, 정리 중...')
-          await this.cleanupDuplicateBusinessCards(userId)
-
-          // 정리 후 다시 시도
-          const { data: retryData, error: retryError } = await supabase
-            .from('business_cards')
-            .select('*')
-            .eq('user_id', userId)
-            .maybeSingle()
-
-          if (!retryError && retryData) {
-            return retryData
-          }
         }
 
         return null

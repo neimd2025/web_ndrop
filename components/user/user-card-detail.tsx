@@ -204,58 +204,56 @@ const handlePhoneClick = async (e) => {
 
 
   // 명함 삭제 핸들러
-  const handleDelete = async () => {
-    if (!primaryCard?.id || !user?.id) return;
+// 명함 삭제 핸들러
+const handleDelete = async () => {
+  if (!primaryCard?.id || !user?.id) return;
 
-    if (!confirm('정말 이 명함을 삭제하시겠습니까?')) {
-      return;
-    }
+  if (!confirm('정말 이 명함을 삭제하시겠습니까?')) {
+    return;
+  }
 
-    try {
-      const supabase = createClient()
-     
-      // collected_cards 테이블에서 삭제
-      const { error, count } = await supabase
-        .from('collected_cards')
-        .delete()
-        .eq('collector_id', user.id)
-        .eq('card_id', primaryCard.id)
+  try {
+    const supabase = createClient()
+   
+    // collected_cards 테이블에서 삭제
+    const { error } = await supabase
+      .from('collected_cards')
+      .delete()
+      .eq('collector_id', user.id)
+      .eq('card_id', primaryCard.id)
 
-      if (error) {
-        console.error('명함 삭제 오류:', error)
-        
-        // 삭제 실패 시 - 수집된 명함이 아니라면 저장 기능 제공
-        if (error.code === 'PGRST116') { // 존재하지 않는 행
-          const shouldSave = confirm('이 명함은 수집된 명함이 아닙니다. 대신 저장하시겠습니까?')
-          if (shouldSave) {
-            await handleSaveCard();
-          }
-          return;
-        }
-        
-        alert('명함 삭제 중 오류가 발생했습니다.')
-        return
-      }
-
-      // 삭제 성공
-      if (count > 0) {
-        alert('명함이 삭제되었습니다.')
+    if (error) {
+      console.error('명함 삭제 오류:', error)
+      
+      // PGRST116은 "결과가 0개"라는 의미가 아니라 "단일 행을 요청했는데 0개 또는 여러 개의 행 반환"이라는 의미
+      // 삭제 실패 시 수집된 명함이 없는 경우
+      if (error.code === 'PGRST116') {
+        console.log('삭제할 수집 명함이 없음')
+        // 이미 삭제되었거나 수집되지 않은 명함
         setIsSaved(false)
         setIsCollectedCard(false)
-        router.push('/client/card-books')
-      } else {
-        // 삭제된 행이 없으면 수집된 명함이 아님
-        const shouldSave = confirm('이 명함은 수집된 명함이 아닙니다. 대신 저장하시겠습니까?')
-        if (shouldSave) {
-          await handleSaveCard();
-        }
+        alert('이미 삭제되었거나 수집되지 않은 명함입니다.')
+        return
       }
       
-    } catch (error) {
-      console.error('명함 삭제 오류:', error)
       alert('명함 삭제 중 오류가 발생했습니다.')
+      return
     }
-  };
+
+    // 삭제 성공 (Supabase delete는 성공시 오류가 없으면 삭제된 것으로 간주)
+    console.log('명함 삭제 성공')
+    alert('명함이 삭제되었습니다.')
+    setIsSaved(false)
+    setIsCollectedCard(false)
+    
+    // 페이지 새로고침이나 상태 업데이트
+    router.push('/client/card-books')
+    
+  } catch (error) {
+    console.error('명함 삭제 오류:', error)
+    alert('명함 삭제 중 오류가 발생했습니다.')
+  }
+};
 
   // 버튼 렌더링 로직
   const renderActionButtons = () => {
