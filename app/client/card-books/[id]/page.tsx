@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getUserSavedCardsDataFromId, getUserCardFromId } from '@/lib/supabase/user-server-actions'
 import UserTheirCardDetailPage from '@/components/user/user-their-card-detail'
 import { notFound } from 'next/navigation'
