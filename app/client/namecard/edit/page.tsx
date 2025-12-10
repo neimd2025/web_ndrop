@@ -10,7 +10,7 @@ import { useBusinessCards } from '@/hooks/use-business-cards'
 import { useUserProfile } from '@/hooks/use-user-profile'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Camera, User, X, Plus, Minus, Link, Youtube, Instagram, Linkedin, Globe } from 'lucide-react'
+import { ArrowLeft, Camera, User, X, Plus, Minus, Link as LinkedIcon, Youtube, Instagram, Linkedin, Globe } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
@@ -498,7 +498,7 @@ export default function EditNamecardPage() {
       case 'custom':
         return <Globe className="w-4 h-4" />
       default:
-        return <Link className="w-4 h-4" />
+        return <LinkedIcon className="w-4 h-4" />
     }
   }
 
@@ -680,7 +680,7 @@ export default function EditNamecardPage() {
                   />
                 )}
                 {errors.affiliation && (
-                  <p className="text-red500 text-sm mt-1">{errors.affiliation.message}</p>
+                  <p className="text-red-500 text-sm mt-1">{errors.affiliation.message}</p>
                 )}
               </div>
 
@@ -884,7 +884,7 @@ export default function EditNamecardPage() {
                     <SelectContent>
                       <SelectItem value="none">
                         <div className="flex items-center gap-2">
-                          <Link className="w-4 h-4" />
+                          <LinkedIcon className="w-4 h-4" />
                           없음
                         </div>
                       </SelectItem>
