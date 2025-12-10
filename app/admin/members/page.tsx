@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { getAdminMembersData } from '@/lib/supabase/admin-server-actions'
 import { AdminMembersClient } from '@/components/admin/admin-members-client'
 

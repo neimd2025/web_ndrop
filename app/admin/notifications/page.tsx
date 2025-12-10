@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { getAdminNotificationsData, getAdminEventsData } from '@/lib/supabase/admin-server-actions'
 import { AdminNotificationsClient } from '@/components/admin/admin-notifications-client'
 

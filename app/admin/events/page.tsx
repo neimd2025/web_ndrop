@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { AdminEventsClient } from '@/components/admin/admin-events-client'
 
 export const dynamic = 'force-dynamic'
