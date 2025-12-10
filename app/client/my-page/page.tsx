@@ -15,6 +15,6 @@ export default async function MyPage() {
     )
   } catch (error) {
     console.error('마이페이지 데이터 로드 오류:', error)
-    return <UserMyPageClient />
+    throw error;
   }
 }

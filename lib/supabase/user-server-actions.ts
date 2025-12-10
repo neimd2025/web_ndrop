@@ -138,11 +138,21 @@ export async function getUserAuth(): Promise<UserProfile | null> {
 
 export async function requireUserAuth(): Promise<UserProfile> {
   const user = await getUserAuth()
-
+  
   if (!user) {
-    redirect('/login?type=user')
+    const headersList = await headers()
+    const referer = headersList.get('referer')
+    
+    // 헤더를 직접 설정하여 리다이렉트
+    throw new Response('Unauthorized', {
+      status: 302,
+      headers: {
+        'Location': `/login?type=user&from=${referer || '/'}`,
+        'Cache-Control': 'no-store'
+      }
+    })
   }
-
+  
   return user
 }
 
@@ -424,7 +434,7 @@ export async function getUserMyPageData(): Promise<{
     }
   } catch (error) {
     console.error('마이페이지 데이터 가져오기 오류:', error)
-    throw new Error('마이페이지 데이터를 불러올 수 없습니다.')
+    throw error;
   }
 }
 
