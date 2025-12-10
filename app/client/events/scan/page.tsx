@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { UserEventScanClient } from '@/components/user/user-event-scan-client'
 import { getUserAuth } from '@/lib/supabase/user-server-actions'
 
