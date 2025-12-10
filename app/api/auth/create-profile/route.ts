@@ -53,33 +53,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '프로필 생성 실패', details: profileError }, { status: 500 })
     }
 
-    // 비즈니스 카드 생성
-    const { error: cardError } = await supabase
-      .from('business_cards')
-      .insert({
-        user_id: userId,
-        full_name: name || '',
-        email: email,
-        contact: '',
-        company: '',
-        role: '',
-        work_field: null,
-        introduction: '',
-        profile_image_url: null,
-        qr_code_url: null,
-        is_public: true
-      })
-
-    if (cardError) {
-      console.error('비즈니스 카드 생성 오류:', cardError)
-      return NextResponse.json({ error: '비즈니스 카드 생성 실패', details: cardError }, { status: 500 })
-    }
-
-    // 관리자는 이메일 인증 없이 바로 사용 가능
-
     return NextResponse.json({
       success: true,
-      message: finalRoleId === ROLE_IDS.ADMIN ? '관리자 프로필이 생성되었습니다.' : '프로필과 비즈니스 카드가 생성되었습니다.',
+      message: finalRoleId === ROLE_IDS.ADMIN ? '관리자 프로필이 생성되었습니다.' : '프로필이 생성되었습니다.',
       role: userRole
     })
 
