@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { UserMyPageClient } from '@/components/user/user-my-page-client'
 import { getUserMyPageData } from '@/lib/supabase/user-server-actions'
 
