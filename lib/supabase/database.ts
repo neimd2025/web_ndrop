@@ -123,81 +123,79 @@ export const userProfileAPI = {
     return data
   },
 
-  // 사용자 프로필 업데이트
-  async updateUserProfile(userId: string, updates: UserProfileUpdate): Promise<UserProfile | null> {
-    const supabase = createClient()
+// 사용자 프로필 업데이트
+async updateUserProfile(userId: string, updates: UserProfileUpdate): Promise<UserProfile | null> {
+  const supabase = createClient()
 
-    // 기본 역할 초기화 (필요한 경우)
-    await initializeDefaultRoles()
+  // 기본 역할 초기화 (필요한 경우)
+  await initializeDefaultRoles()
 
-    console.log('프로필 업데이트 시작:', { userId, updates })
+  console.log('프로필 업데이트 시작:', { userId, updates })
 
-    // birth_date 필터링
-    const cleanedUpdates = { ...updates }
-    if (cleanedUpdates.birth_date) {
-      const date = new Date(cleanedUpdates.birth_date)
-      if (isNaN(date.getTime()) || cleanedUpdates.birth_date === '123123123') {
-        console.log('잘못된 birth_date 값 제거:', cleanedUpdates.birth_date)
-        delete cleanedUpdates.birth_date
-      }
+  // birth_date 필터링
+  const cleanedUpdates = { ...updates }
+  
+  // birth_date 처리
+  if (cleanedUpdates.birth_date) {
+    const date = new Date(cleanedUpdates.birth_date)
+    if (isNaN(date.getTime()) || cleanedUpdates.birth_date === '123123123') {
+      console.log('잘못된 birth_date 값 제거:', cleanedUpdates.birth_date)
+      delete cleanedUpdates.birth_date
     }
+  }
 
-    // personality_keywords 필드가 빈 배열인 경우 null로 설정
-    if (cleanedUpdates.personality_keywords && Array.isArray(cleanedUpdates.personality_keywords) && cleanedUpdates.personality_keywords.length === 0) {
-      console.log('빈 personality_keywords 배열을 null로 설정')
-      cleanedUpdates.personality_keywords = null
+  // ⭐️ 중요: 배열 필드는 빈 배열로 유지해야 함!
+  // personality_keywords, interest_keywords, hobby_keywords는 빈 배열로 유지
+  // 이렇게 해야 프론트엔드에서 제대로 감지 가능
+  
+  // keywords 필드 처리 (personality_keywords로 마이그레이션 완료 후 제거)
+  // keywords는 더 이상 사용하지 않으므로 업데이트에서 제외
+  if ('keywords' in cleanedUpdates) {
+    delete cleanedUpdates.keywords
+    console.log('keywords 필드 제거 (personality_keywords 사용)')
+  }
+
+  // 빈 문자열 필드들을 null로 설정
+  const stringFieldsToNullify = ['affiliation', 'role', 'work_field', 'contact', 'introduction', 'mbti', 'external_link']
+  stringFieldsToNullify.forEach(field => {
+    if (cleanedUpdates[field as keyof typeof cleanedUpdates] === '') {
+      console.log(`${field} 빈 문자열을 null로 설정`)
+      ;(cleanedUpdates as any)[field] = null
     }
+  })
 
-    // interest_keywords 필드가 빈 배열인 경우 null로 설정
-    if (cleanedUpdates.interest_keywords && Array.isArray(cleanedUpdates.interest_keywords) && cleanedUpdates.interest_keywords.length === 0) {
-      console.log('빈 interest_keywords 배열을 null로 설정')
-      cleanedUpdates.interest_keywords = null
-    }
+  // role_id가 null이거나 undefined인 경우 기본값 설정 (일반 사용자)
+  if (cleanedUpdates.role_id === null || cleanedUpdates.role_id === undefined) {
+    console.log('role_id가 null이므로 기본값 USER(1)로 설정')
+    cleanedUpdates.role_id = ROLE_IDS.USER
+  }
 
-    // 기존 keywords 필드 처리 (하위 호환성)
-    if (cleanedUpdates.keywords && Array.isArray(cleanedUpdates.keywords) && cleanedUpdates.keywords.length === 0) {
-      console.log('빈 keywords 배열을 null로 설정')
-      cleanedUpdates.keywords = null
-    }
+  // ⭐️ 타임스탬프 업데이트 추가
+  cleanedUpdates.updated_at = new Date().toISOString()
 
-    // 빈 문자열 필드들을 null로 설정
-    const fieldsToNullify = ['affiliation', 'role', 'work_field', 'contact', 'introduction', 'mbti', 'external_link']
-    fieldsToNullify.forEach(field => {
-      if (cleanedUpdates[field as keyof typeof cleanedUpdates] === '') {
-        console.log(`${field} 빈 문자열을 null로 설정`)
-        ;(cleanedUpdates as any)[field] = null
-      }
+  console.log('정리된 업데이트 데이터:', cleanedUpdates)
+
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .update(cleanedUpdates)
+    .eq('id', userId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error updating user profile:', error)
+    console.error('Error details:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
     })
+    return null
+  }
 
-    // role_id가 null이거나 undefined인 경우 기본값 설정 (일반 사용자)
-    if (cleanedUpdates.role_id === null || cleanedUpdates.role_id === undefined) {
-      console.log('role_id가 null이므로 기본값 USER(1)로 설정')
-      cleanedUpdates.role_id = ROLE_IDS.USER
-    }
-
-    console.log('정리된 업데이트 데이터:', cleanedUpdates)
-
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .update(cleanedUpdates)
-      .eq('id', userId)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error updating user profile:', error)
-      console.error('Error details:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      })
-      return null
-    }
-
-    console.log('프로필 업데이트 성공:', data)
-    return data
-  },
+  console.log('프로필 업데이트 성공:', data)
+  return data
+},
 
   // 사용자 프로필 삭제
   async deleteUserProfile(userId: string): Promise<boolean> {

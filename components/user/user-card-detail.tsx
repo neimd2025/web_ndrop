@@ -110,7 +110,7 @@ export function UserCardDetail({ user, cardOwner, businessCards = [] }: UserCard
 
   // MBTI, 성격, 관심사, 취미는 primaryCard에서 가져오기
   const mbti = primaryCard?.mbti ?? ownerProfile?.mbti ?? "";
-  const personalityKeywords = primaryCard?.personality_keywords ?? ownerProfile?.personality_keywords ?? [];
+  const personalityKeywords = primaryCard?.keywords ?? ownerProfile?.keywords ?? [];
   const interestKeywords = primaryCard?.interest_keywords ?? ownerProfile?.interest_keywords ?? [];
   const hobbyKeywords = primaryCard?.hobby_keywords ?? ownerProfile?.hobby_keywords ?? [];
 

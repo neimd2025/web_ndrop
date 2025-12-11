@@ -14,7 +14,6 @@ export default async function UserCardClientPage({ params }: UserCardClientPageP
   
   try {
     const { user: cardUser, cardData, isCollected, cardType, cardOwner: cardOwner } = await getUserCardFromId(id);
-    console.log("씨발", cardOwner);
 
     // 3. 일반 명함 데이터로 명함 상세 페이지 렌더링
     return (

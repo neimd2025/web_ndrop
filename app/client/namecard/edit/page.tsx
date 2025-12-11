@@ -134,55 +134,74 @@ export default function EditNamecardPage() {
     setValue('external_link', fullUrl)
   }
 
-  // 기존 데이터 로드 (명함 데이터 우선, 없으면 프로필 데이터 사용)
-  useEffect(() => {
-    if (profile || userCard) {
-      // 명함 데이터가 있으면 우선 사용, 없으면 프로필 데이터 사용
-      const dataSource = userCard || profile
+const hasInitialized = useRef(false)
 
-      setValue('full_name', dataSource?.full_name || '')
-      setValue('birth_date', profile?.birth_date || '') // 생년월일은 프로필에서만
-      setValue('affiliation_type', (profile?.affiliation_type as '소속' | '미소속') || '소속')
-      setValue('affiliation', dataSource?.affiliation || dataSource?.company || '')
-      setValue('role', dataSource?.job_title || '') // 명함의 job_title 우선 사용
-      setValue('work_field', dataSource?.work_field || '')
-      setValue('contact', dataSource?.contact || '')
-      setValue('mbti', dataSource?.mbti || '')
-      // 기존 keywords를 personality_keywords로 마이그레이션
-      setValue('personality_keywords', dataSource?.personality_keywords || dataSource?.keywords || [])
-      setValue('interest_keywords', dataSource?.interest_keywords || [])
-      
-      // 취미 데이터 초기화
-      const existingHobbies = dataSource?.hobby_keywords || []
-      setValue('hobby_keywords', existingHobbies)
-      
-      // 취미 입력 필드 초기화
-      if (existingHobbies.length > 0) {
-        setHobbyInputs([...existingHobbies, ...Array(3 - existingHobbies.length).fill('')].slice(0, 3))
-      } else {
-        setHobbyInputs([''])
-      }
-      
-      setValue('introduction', dataSource?.introduction || '')
-      
-      // external_link 설정 (Profile은 external_links 배열, BusinessCard는 external_link 단일 값)
-      let externalLinkValue = ''
-      if (userCard?.external_link) {
-        // 명함 데이터: external_link 단일 값
-        externalLinkValue = userCard.external_link
-      } else if (profile?.external_links && profile.external_links.length > 0) {
-        // 프로필 데이터: external_links 배열의 첫 번째 값
-        externalLinkValue = profile.external_links[0]
-      }
-      setValue('external_link', externalLinkValue)
+useEffect(() => {
+  // 이미 초기화했으면 건너뛰기
+  if (hasInitialized.current) return
+  
+  if (profile || userCard) {
+    // 명함 데이터가 있으면 우선 사용, 없으면 프로필 데이터 사용
+    const dataSource = userCard || profile
 
-      // 외부 링크 타입과 값 파싱
-      parseExistingLink(externalLinkValue)
+    console.log('📥 초기 데이터 로드:', {
+      source: userCard ? 'userCard' : 'profile',
+      personalityKeywords: dataSource?.personality_keywords,
+      interestKeywords: dataSource?.interest_keywords
+    })
 
-      // 프로필 이미지 초기화
-      setProfileImage(dataSource?.profile_image_url || null)
+    setValue('full_name', dataSource?.full_name || '')
+    setValue('birth_date', profile?.birth_date || '') // 생년월일은 프로필에서만
+    setValue('affiliation_type', (profile?.affiliation_type as '소속' | '미소속') || '소속')
+    setValue('affiliation', dataSource?.affiliation || dataSource?.company || '')
+    setValue('role', dataSource?.job_title || '') // 명함의 job_title 우선 사용
+    setValue('work_field', dataSource?.work_field || '')
+    setValue('contact', dataSource?.contact || '')
+    setValue('mbti', dataSource?.mbti || '')
+    
+    // ⭐️ 중요: personality_keywords - keywords에서 마이그레이션
+    const personalityKeywords = dataSource?.personality_keywords || dataSource?.keywords || []
+    console.log('성격 키워드 설정:', personalityKeywords)
+    setValue('personality_keywords', personalityKeywords)
+    
+    setValue('interest_keywords', dataSource?.interest_keywords || [])
+    
+    // 취미 데이터 초기화
+    const existingHobbies = dataSource?.hobby_keywords || []
+    setValue('hobby_keywords', existingHobbies)
+    
+    // 취미 입력 필드 초기화
+    if (existingHobbies.length > 0) {
+      setHobbyInputs([...existingHobbies, ...Array(3 - existingHobbies.length).fill('')].slice(0, 3))
+    } else {
+      setHobbyInputs([''])
     }
-  }, [profile, userCard, setValue])
+    
+    setValue('introduction', dataSource?.introduction || '')
+    
+    // external_link 설정 (Profile은 external_links 배열, BusinessCard는 external_link 단일 값)
+    let externalLinkValue = ''
+    if (userCard?.external_link) {
+      // 명함 데이터: external_link 단일 값
+      externalLinkValue = userCard.external_link
+    } else if (profile?.external_links && profile.external_links.length > 0) {
+      // 프로필 데이터: external_links 배열의 첫 번째 값
+      externalLinkValue = profile.external_links[0]
+    }
+    setValue('external_link', externalLinkValue)
+
+    // 외부 링크 타입과 값 파싱
+    parseExistingLink(externalLinkValue)
+
+    // 프로필 이미지 초기화
+    setProfileImage(dataSource?.profile_image_url || null)
+    
+    // ⭐️ 초기화 완료 표시
+    hasInitialized.current = true
+    console.log('✅ 초기 데이터 로드 완료')
+  }
+}, [profile, userCard, setValue])
+  // 기존 데이터 로드 (명함 데이터 우선, 없으면 프로필 데이터 사용)
 
   // 기존 링크를 플랫폼 타입과 값으로 파싱하는 함수
   const parseExistingLink = (link: string) => {
