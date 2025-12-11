@@ -44,7 +44,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       organizer_kakao,
       overview_points,
       target_audience,
-      special_benefits
+      special_benefits,
+      is_public,
     } = body
 
     // 필수 필드 검증
@@ -115,7 +116,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       overview_points: overview_points || null,
       target_audience: target_audience || null,
       special_benefits: special_benefits || null,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      is_public: is_public || false,
     }
 
     const { data: updatedEvent, error: updateError } = await supabase
