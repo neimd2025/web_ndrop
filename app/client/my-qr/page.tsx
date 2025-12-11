@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { getUserBusinessCardsData } from '@/lib/supabase/user-server-actions'
 import { UserMyQRClient } from '@/components/user/user-my-qr-client'
 
