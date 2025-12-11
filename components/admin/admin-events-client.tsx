@@ -895,7 +895,7 @@ const fetchParticipants = async (eventId: string) => {
                 : participant.company && participant.profile?.job_title
                 ? `${participant.company} • ${participant.profile.job_title}`
                 : participant.profile?.affiliation_type === "미소속"
-                ? "미소속"
+                ? `${participant.profile?.work_field}`
                 : "정보 없음"
               }
             </p>
