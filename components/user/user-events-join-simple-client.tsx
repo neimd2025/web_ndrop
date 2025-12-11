@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { UserEvent, UserEventParticipation, UserProfile } from '@/lib/supabase/user-server-actions'
 import { createClient } from '@/utils/supabase/client'
-import { ArrowLeft, Calendar, QrCode } from 'lucide-react'
+import { ArrowLeft, Calendar, QrCode, CheckCircle, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 
 interface UserEventsJoinSimpleClientProps {
   user: UserProfile
@@ -19,6 +19,52 @@ export function UserEventsJoinSimpleClient({ user, userParticipations }: UserEve
   const [eventCode, setEventCode] = useState(['', '', '', '', '', ''])
   const [joiningByCode, setJoiningByCode] = useState(false)
   const [recentEvents, setRecentEvents] = useState<UserEvent[]>([])
+  const [joinSuccess, setJoinSuccess] = useState(false)
+  const [joinCooldown, setJoinCooldown] = useState(0)
+  const [successEventId, setSuccessEventId] = useState<string | null>(null)
+  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const lastJoinTimeRef = useRef<number>(0)
+
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current)
+      }
+    }
+  }, [])
+
+  // 쿨다운 타이머
+  useEffect(() => {
+    if (joinCooldown > 0) {
+      cooldownTimerRef.current = setInterval(() => {
+        setJoinCooldown((prev) => {
+          if (prev <= 1) {
+            if (cooldownTimerRef.current) {
+              clearInterval(cooldownTimerRef.current)
+            }
+            setJoinSuccess(false)
+            setSuccessEventId(null)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+
+    return () => {
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current)
+      }
+    }
+  }, [joinCooldown])
+
+  // 쿨다운 상태 확인
+  const isOnCooldown = () => {
+    const now = Date.now()
+    const timeSinceLastJoin = now - lastJoinTimeRef.current
+    return timeSinceLastJoin < 5000 // 5초 쿨다운
+  }
 
   // 이벤트 코드 입력 핸들러
   const handleCodeChange = (index: number, value: string) => {
@@ -48,6 +94,12 @@ export function UserEventsJoinSimpleClient({ user, userParticipations }: UserEve
 
   // 이벤트 코드로 참가
   const handleJoinByCode = useCallback(async () => {
+    // 쿨다운 확인
+    if (isOnCooldown()) {
+      alert(`잠시 후 다시 시도해주세요. (${Math.ceil((5000 - (Date.now() - lastJoinTimeRef.current)) / 1000)}초 남음)`)
+      return
+    }
+
     const code = eventCode.join('')
     if (code.length !== 6) {
       alert('6자리 이벤트 코드를 입력해주세요.')
@@ -110,8 +162,19 @@ export function UserEventsJoinSimpleClient({ user, userParticipations }: UserEve
         console.warn('참가자 수 업데이트 실패:', updateError)
       }
 
-      alert('이벤트에 참가했습니다!')
-      router.push(`/client/events/${event.id}`)
+      // 성공 상태 설정
+      setJoinSuccess(true)
+      setSuccessEventId(event.id)
+      setJoinCooldown(5) // 5초 쿨다운 시작
+      lastJoinTimeRef.current = Date.now() // 마지막 참가 시간 기록
+
+      // 입력 필드 초기화
+      setEventCode(['', '', '', '', '', ''])
+
+      // 3초 후 이벤트 상세 페이지로 이동
+      setTimeout(() => {
+        router.push(`/client/events/${event.id}`)
+      }, 3000)
 
     } catch (error) {
       console.error('이벤트 참가 오류:', error)
@@ -196,43 +259,88 @@ export function UserEventsJoinSimpleClient({ user, userParticipations }: UserEve
       <div className="px-5 py-8 space-y-8">
         {/* 아이콘 */}
         <div className="flex justify-center">
-          <div className="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center">
-            <Calendar className="w-8 h-8 text-purple-600" />
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+            joinSuccess ? 'bg-green-50' : 'bg-purple-50'
+          }`}>
+            {joinSuccess ? (
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            ) : (
+              <Calendar className="w-8 h-8 text-purple-600" />
+            )}
           </div>
         </div>
 
         {/* 제목과 설명 */}
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">이벤트 코드를 입력하세요</h2>
-          <p className="text-gray-600">주최자에게 받은 6자리 코드를 입력해주세요</p>
+          {joinSuccess ? (
+            <>
+              <h2 className="text-2xl font-bold text-green-700 mb-2">참가 성공!</h2>
+              <p className="text-green-600">
+                이벤트에 성공적으로 참가했습니다.
+              </p>
+              <p className="text-sm text-green-500 mt-2">
+                {joinCooldown}초 후 자동으로 이동합니다...
+              </p>
+              <Button
+                variant="outline"
+                className="mt-4 text-green-600 border-green-200 hover:bg-green-50"
+                onClick={() => {
+                  if (successEventId) {
+                    router.push(`/client/events/${successEventId}`)
+                  }
+                }}
+              >
+                바로 이동하기
+              </Button>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">이벤트 코드를 입력하세요</h2>
+              <p className="text-gray-600">주최자에게 받은 6자리 코드를 입력해주세요</p>
+            </>
+          )}
         </div>
 
         {/* 코드 입력 필드들 */}
-        <div className="flex justify-center gap-2">
-          {eventCode.map((digit, index) => (
-            <input
-              key={index}
-              id={`code-${index}`}
-              type="text"
-              maxLength={1}
-              value={digit}
-              onChange={(e) => handleCodeChange(index, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(index, e)}
-              className="w-12 h-12 text-center text-xl font-bold border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none"
-            />
-          ))}
-        </div>
+        {!joinSuccess && (
+          <>
+            <div className="flex justify-center gap-2">
+              {eventCode.map((digit, index) => (
+                <input
+                  key={index}
+                  id={`code-${index}`}
+                  type="text"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleCodeChange(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  className="w-12 h-12 text-center text-xl font-bold border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none disabled:bg-gray-100"
+                  disabled={isOnCooldown()}
+                />
+              ))}
+            </div>
 
-        {/* 참가 버튼 */}
-        <div className="flex justify-center">
-          <Button
-            onClick={handleJoinByCode}
-            disabled={joiningByCode || eventCode.some(digit => !digit)}
-            className="w-full max-w-xs bg-purple-600 hover:bg-purple-700 text-white py-3"
-          >
-            {joiningByCode ? '참가 중...' : '이벤트 참가하기'}
-          </Button>
-        </div>
+            {/* 참가 버튼 */}
+            <div className="flex justify-center">
+              <Button
+                onClick={handleJoinByCode}
+                disabled={joiningByCode || eventCode.some(digit => !digit) || isOnCooldown()}
+                className="w-full max-w-xs bg-purple-600 hover:bg-purple-700 text-white py-3"
+              >
+                {joiningByCode ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    참가 중...
+                  </>
+                ) : isOnCooldown() ? (
+                  `잠시 후 다시 시도 (${Math.ceil((5000 - (Date.now() - lastJoinTimeRef.current)) / 1000)}초)`
+                ) : (
+                  '이벤트 참가하기'
+                )}
+              </Button>
+            </div>
+          </>
+        )}
 
         {/* 최근 참가한 이벤트 */}
         {recentEvents.length > 0 && (
@@ -274,6 +382,13 @@ export function UserEventsJoinSimpleClient({ user, userParticipations }: UserEve
               ))}
             </CardContent>
           </Card>
+        )}
+
+        {/* 쿨다운 안내 메시지 */}
+        {joinCooldown > 0 && (
+          <div className="text-center text-sm text-gray-500">
+            <p>새로운 이벤트 참가는 {joinCooldown}초 후에 가능합니다.</p>
+          </div>
         )}
       </div>
     </div>

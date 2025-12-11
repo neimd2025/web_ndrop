@@ -886,23 +886,19 @@ const fetchParticipants = async (eventId: string) => {
               </span>
             )}
           </div>
-          <p className="text-sm text-gray-500">{participant.profile?.nickname || participant.name}</p>
           
           {/* 소속 정보 */}
           <div className="mt-1">
             <p className="text-sm text-gray-700 font-medium">
               {participant.profile?.work_field && participant.profile?.job_title
                 ? `${participant.profile.work_field} • ${participant.profile.job_title}`
-                : participant.company && participant.position
-                ? `${participant.company} • ${participant.position}`
+                : participant.company && participant.profile?.job_title
+                ? `${participant.company} • ${participant.profile.job_title}`
                 : participant.profile?.affiliation_type === "미소속"
                 ? "미소속"
                 : "정보 없음"
               }
             </p>
-            {participant.profile?.company && (
-              <p className="text-xs text-gray-500">{participant.profile.company}</p>
-            )}
           </div>
         </div>
       </div>
@@ -1021,15 +1017,6 @@ const fetchParticipants = async (eventId: string) => {
         }`}>
           {participant.status === "confirmed" ? "확정" : "대기"}
         </span>
-      </div>
-      
-      <div className="flex space-x-1">
-        <Button variant="ghost" size="sm" className="h-7 text-xs">
-          프로필 보기
-        </Button>
-        <Button variant="ghost" size="sm" className="h-7 text-xs">
-          메시지
-        </Button>
       </div>
     </div>
   </CardContent>

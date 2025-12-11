@@ -68,7 +68,14 @@ const EventsPage = () => {
       try {
         setLoading(true);
         const eventsData = await eventAPI.getAllEvents();
-        setEvents(eventsData);
+        
+        // is_public이 true인 이벤트만 필터링
+        // is_public이 undefined/null인 경우도 공개로 간주 (기본값이 true)
+        const publicEvents = eventsData.filter(event => 
+          event.is_public === true || event.is_public === undefined || event.is_public === null
+        );
+        
+        setEvents(publicEvents);
       } catch (err) {
         setError('이벤트를 불러오는 중 오류가 발생했습니다.');
         console.error('Error fetching events:', err);
@@ -94,6 +101,11 @@ const EventsPage = () => {
       const event = await eventAPI.getEvent(eventId);
       if (!event) {
         throw new Error('이벤트를 찾을 수 없습니다.');
+      }
+
+      // 공개 이벤트인지 확인
+      if (event.is_public === false) {
+        throw new Error('비공개 이벤트는 참가할 수 없습니다.');
       }
 
       if (event.max_participants && event.current_participants >= event.max_participants) {
@@ -175,7 +187,10 @@ const EventsPage = () => {
     // 지역 필터링
     const matchesRegion = !selectedRegion || selectedRegion === '전체' || event.region === selectedRegion;
 
-    return matchesSearch && matchesRegion;
+    // 공개 이벤트만 필터링 (이미 데이터를 가져올 때 필터링했지만 추가 확인)
+    const isPublic = event.is_public !== false;
+
+    return matchesSearch && matchesRegion && isPublic;
   });
 
   // 참가 버튼 컴포넌트
@@ -269,7 +284,10 @@ const EventsPage = () => {
 
         {/* 이벤트 카드 목록 */}
         {loading ? (
-          <div className="text-center py-12" />
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+            <p className="text-gray-600 mt-2">이벤트를 불러오는 중...</p>
+          </div>
         ) : filteredEvents.length > 0 ? (
           <div className="space-y-4">
             {filteredEvents.map((event) => (
@@ -288,7 +306,7 @@ const EventsPage = () => {
           <div className="text-center py-12">
             <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              해당 조건의 이벤트가 없습니다
+              공개된 이벤트가 없습니다
             </h3>
             <p className="text-gray-600 mb-6">
               다른 지역을 선택하거나 검색어를 변경해보세요.

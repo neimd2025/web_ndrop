@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ArrowLeft, Upload } from "lucide-react"
+import { ArrowLeft, Upload, Eye, EyeOff } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useForm } from 'react-hook-form'
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-// Zod 스키마 정의 (생성과 동일)
+// Zod 스키마 정의 (is_public 필드 추가)
 const eventSchema = z.object({
   title: z.string().min(1, '이벤트 이름을 입력해주세요').max(100, '이벤트 이름은 100자 이하여야 합니다'),
   startDate: z.string().min(1, '시작 날짜를 입력해주세요'),
@@ -39,6 +39,7 @@ const eventSchema = z.object({
   overviewPoints: z.string().optional(),
   targetAudience: z.string().optional(),
   specialBenefits: z.string().optional(),
+  is_public: z.boolean().default(true) // 공개 여부 필드 추가
 }).refine((data) => {
   const startDateTime = new Date(`${data.startDate}T${data.startTime}`)
   const endDateTime = new Date(`${data.endDate}T${data.endTime}`)
@@ -69,6 +70,7 @@ interface EventData {
   overview_points?: string[]
   target_audience?: string[]
   special_benefits?: string[]
+  is_public?: boolean // 공개 여부 필드 추가
 }
 
 const REGIONS = [
@@ -93,8 +95,13 @@ export default function AdminEventEditPage() {
     watch,
     formState: { errors }
   } = useForm<EventFormData>({
-    resolver: zodResolver(eventSchema)
+    resolver: zodResolver(eventSchema),
+    defaultValues: {
+      is_public: true // 기본값을 공개로 설정
+    }
   })
+
+  const isPublic = watch('is_public')
 
   // 이벤트 데이터 로드
   useEffect(() => {
@@ -151,6 +158,7 @@ export default function AdminEventEditPage() {
         setValue('region', event.region || '')
         setValue('description', event.description)
         setValue('maxParticipants', event.max_participants.toString())
+        setValue('is_public', event.is_public !== false) // DB에 값이 없으면 true로 설정
 
         // 배열 필드들을 문자열로 변환
         setValue('overviewPoints', event.overview_points?.join('\n') || '')
@@ -255,7 +263,7 @@ export default function AdminEventEditPage() {
         ? data.specialBenefits.split('\n').filter(benefit => benefit.trim())
         : null
 
-      // 이벤트 업데이트 API 호출
+      // 이벤트 업데이트 API 호출 (is_public 필드 추가)
       const updateResponse = await fetch(`/api/admin/update-event/${params.id}`, {
         method: 'PUT',
         headers: {
@@ -277,7 +285,8 @@ export default function AdminEventEditPage() {
           organizer_kakao: '@ndrop_official',
           overview_points: overviewPoints,
           target_audience: targetAudience,
-          special_benefits: specialBenefits
+          special_benefits: specialBenefits,
+          is_public: data.is_public // 공개 여부 필드 추가
         })
       })
 
@@ -289,7 +298,7 @@ export default function AdminEventEditPage() {
         return
       }
 
-      toast.success('이벤트가 성공적으로 수정되었습니다!')
+      toast.success(`이벤트가 성공적으로 ${data.is_public ? '공개' : '비공개'} 수정되었습니다!`)
       router.push('/admin/events')
 
     } catch (error) {
@@ -347,255 +356,299 @@ export default function AdminEventEditPage() {
 
       <div className="px-6 py-8">
         <div className="max-w-2xl mx-auto">
-          <Card className="bg-white border border-gray-200 shadow-sm rounded-xl">
-            <CardContent className="p-8">
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                {/* 기본 정보 */}
-                <div className="space-y-4">
-                  <h2 className="text-lg font-semibold text-gray-900">기본 정보</h2>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="title">이벤트 이름 *</Label>
-                      <Input
-                        id="title"
-                        {...register('title')}
-                        placeholder="이벤트 이름을 입력하세요"
-                        className={errors.title ? 'border-red-500' : ''}
-                      />
-                      {errors.title && (
-                        <p className="text-sm text-red-600">{errors.title.message}</p>
-                      )}
-                    </div>
-
-                                        <div className="space-y-2">
-                      <Label htmlFor="region">지역 *</Label>
-                      <Select onValueChange={(value) => setValue('region', value)} value={watch('region')}>
-                        <SelectTrigger className={errors.region ? 'border-red-500' : ''}>
-                          <SelectValue placeholder="지역을 선택하세요" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {REGIONS.map((region) => (
-                            <SelectItem key={region} value={region}>
-                              {region}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {errors.region && (
-                        <p className="text-sm text-red-600">{errors.region.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="location">장소 *</Label>
-                      <Input
-                        id="location"
-                        {...register('location')}
-                        placeholder="장소를 입력하세요"
-                        className={errors.location ? 'border-red-500' : ''}
-                      />
-                      {errors.location && (
-                        <p className="text-sm text-red-600">{errors.location.message}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">이벤트 설명 *</Label>
-                    <Textarea
-                      id="description"
-                      {...register('description')}
-                      placeholder="이벤트에 대한 자세한 설명을 입력하세요"
-                      rows={4}
-                      className={errors.description ? 'border-red-500' : ''}
-                    />
-                    {errors.description && (
-                      <p className="text-sm text-red-600">{errors.description.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* 일정 정보 */}
-                <div className="space-y-4">
-                  <h2 className="text-lg font-semibold text-gray-900">일정 정보</h2>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="startDate">시작 날짜 *</Label>
-                      <Input
-                        id="startDate"
-                        type="date"
-                        {...register('startDate')}
-                        className={errors.startDate ? 'border-red-500' : ''}
-                      />
-                      {errors.startDate && (
-                        <p className="text-sm text-red-600">{errors.startDate.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="startTime">시작 시간 *</Label>
-                      <Input
-                        id="startTime"
-                        type="time"
-                        {...register('startTime')}
-                        className={errors.startTime ? 'border-red-500' : ''}
-                      />
-                      {errors.startTime && (
-                        <p className="text-sm text-red-600">{errors.startTime.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="endDate">종료 날짜 *</Label>
-                      <Input
-                        id="endDate"
-                        type="date"
-                        {...register('endDate')}
-                        className={errors.endDate ? 'border-red-500' : ''}
-                      />
-                      {errors.endDate && (
-                        <p className="text-sm text-red-600">{errors.endDate.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="endTime">종료 시간 *</Label>
-                      <Input
-                        id="endTime"
-                        type="time"
-                        {...register('endTime')}
-                        className={errors.endTime ? 'border-red-500' : ''}
-                      />
-                      {errors.endTime && (
-                        <p className="text-sm text-red-600">{errors.endTime.message}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 참가자 정보 */}
-                <div className="space-y-4">
-                  <h2 className="text-lg font-semibold text-gray-900">참가자 정보</h2>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="maxParticipants">최대 참가자 수 *</Label>
-                    <Input
-                      id="maxParticipants"
-                      type="number"
-                      min="1"
-                      max="1000"
-                      {...register('maxParticipants')}
-                      placeholder="100"
-                      className={errors.maxParticipants ? 'border-red-500' : ''}
-                    />
-                    {errors.maxParticipants && (
-                      <p className="text-sm text-red-600">{errors.maxParticipants.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* 이벤트 이미지 */}
-                <div className="space-y-4">
-                  <h2 className="text-lg font-semibold text-gray-900">이벤트 이미지</h2>
-
-                  <div className="space-y-4">
-                    {imagePreview && (
-                      <div className="relative">
-                        <img
-                          src={imagePreview}
-                          alt="이벤트 이미지 미리보기"
-                          className="w-full h-48 object-cover rounded-lg border border-gray-200"
-                        />
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* 공개/비공개 설정 카드 */}
+            <Card className="bg-white border border-gray-200 shadow-sm rounded-xl">
+              <CardContent className="p-6">
+                <Label className="text-gray-700 font-medium mb-4 block">이벤트 공개 설정</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* 공개 이벤트 */}
+                  <div 
+                    className={`flex items-center justify-center p-6 border-2 rounded-xl transition-all cursor-pointer ${
+                      isPublic 
+                        ? 'border-purple-500 bg-purple-50 shadow-sm' 
+                        : 'border-gray-200 hover:border-purple-300 bg-white'
+                    }`}
+                    onClick={() => setValue('is_public', true)}
+                  >
+                    <div className="flex flex-col items-center space-y-3">
+                      <div className={`p-3 rounded-full ${isPublic ? 'bg-green-100' : 'bg-gray-100'}`}>
+                        <Eye className={`h-6 w-6 ${isPublic ? 'text-green-600' : 'text-gray-400'}`} />
                       </div>
-                    )}
+                      <span className="font-medium text-gray-900">공개 이벤트</span>
+                    </div>
+                  </div>
 
-                    <div>
-                      <Label htmlFor="image" className="cursor-pointer">
-                        <div className="flex items-center gap-2 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 transition-colors">
-                          <Upload className="w-5 h-5 text-gray-400" />
-                          <span className="text-gray-600">
-                            {imageFile ? '이미지가 선택되었습니다' : '이벤트 이미지를 업로드하세요'}
-                          </span>
-                        </div>
-                      </Label>
-                      <input
-                        id="image"
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png,image/webp"
-                        onChange={handleImageSelect}
-                        className="hidden"
-                      />
-                      <p className="text-xs text-gray-500 mt-2">
-                        JPG, PNG, WebP 파일만 가능합니다. 최대 5MB
-                      </p>
+                  {/* 비공개 이벤트 */}
+                  <div 
+                    className={`flex items-center justify-center p-6 border-2 rounded-xl transition-all cursor-pointer ${
+                      !isPublic 
+                        ? 'border-purple-500 bg-purple-50 shadow-sm' 
+                        : 'border-gray-200 hover:border-purple-300 bg-white'
+                    }`}
+                    onClick={() => setValue('is_public', false)}
+                  >
+                    <div className="flex flex-col items-center space-y-3">
+                      <div className={`p-3 rounded-full ${!isPublic ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                        <EyeOff className={`h-6 w-6 ${!isPublic ? 'text-blue-600' : 'text-gray-400'}`} />
+                      </div>
+                      <span className="font-medium text-gray-900">비공개 이벤트</span>
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
 
-                {/* 동적 콘텐츠 */}
-                <div className="space-y-4">
-                  <h2 className="text-lg font-semibold text-gray-900">동적 콘텐츠</h2>
-
+            <Card className="bg-white border border-gray-200 shadow-sm rounded-xl">
+              <CardContent className="p-8">
+                <div className="space-y-6">
+                  {/* 기본 정보 */}
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="overviewPoints">이벤트 개요 포인트</Label>
-                      <Textarea
-                        id="overviewPoints"
-                        {...register('overviewPoints')}
-                        placeholder="각 포인트를 새 줄로 구분하여 입력하세요"
-                        rows={3}
-                      />
-                      <p className="text-xs text-gray-500">예: 네트워킹 기회 제공, 전문가 강연, 실무 경험 공유</p>
+                    <h2 className="text-lg font-semibold text-gray-900">기본 정보</h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="title">이벤트 이름 *</Label>
+                        <Input
+                          id="title"
+                          {...register('title')}
+                          placeholder="이벤트 이름을 입력하세요"
+                          className={errors.title ? 'border-red-500' : ''}
+                        />
+                        {errors.title && (
+                          <p className="text-sm text-red-600">{errors.title.message}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="region">지역 *</Label>
+                        <Select onValueChange={(value) => setValue('region', value)} value={watch('region')}>
+                          <SelectTrigger className={errors.region ? 'border-red-500' : ''}>
+                            <SelectValue placeholder="지역을 선택하세요" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {REGIONS.map((region) => (
+                              <SelectItem key={region} value={region}>
+                                {region}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {errors.region && (
+                          <p className="text-sm text-red-600">{errors.region.message}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="location">장소 *</Label>
+                        <Input
+                          id="location"
+                          {...register('location')}
+                          placeholder="장소를 입력하세요"
+                          className={errors.location ? 'border-red-500' : ''}
+                        />
+                        {errors.location && (
+                          <p className="text-sm text-red-600">{errors.location.message}</p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="targetAudience">대상 청중</Label>
+                      <Label htmlFor="description">이벤트 설명 *</Label>
                       <Textarea
-                        id="targetAudience"
-                        {...register('targetAudience')}
-                        placeholder="대상 청중을 새 줄로 구분하여 입력하세요"
-                        rows={3}
+                        id="description"
+                        {...register('description')}
+                        placeholder="이벤트에 대한 자세한 설명을 입력하세요"
+                        rows={4}
+                        className={errors.description ? 'border-red-500' : ''}
                       />
-                      <p className="text-xs text-gray-500">예: 신입 개발자, 경력 3-5년 개발자, 프론트엔드 개발자</p>
+                      {errors.description && (
+                        <p className="text-sm text-red-600">{errors.description.message}</p>
+                      )}
                     </div>
+                  </div>
+
+                  {/* 일정 정보 */}
+                  <div className="space-y-4">
+                    <h2 className="text-lg font-semibold text-gray-900">일정 정보</h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="startDate">시작 날짜 *</Label>
+                        <Input
+                          id="startDate"
+                          type="date"
+                          {...register('startDate')}
+                          className={errors.startDate ? 'border-red-500' : ''}
+                        />
+                        {errors.startDate && (
+                          <p className="text-sm text-red-600">{errors.startDate.message}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="startTime">시작 시간 *</Label>
+                        <Input
+                          id="startTime"
+                          type="time"
+                          {...register('startTime')}
+                          className={errors.startTime ? 'border-red-500' : ''}
+                        />
+                        {errors.startTime && (
+                          <p className="text-sm text-red-600">{errors.startTime.message}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="endDate">종료 날짜 *</Label>
+                        <Input
+                          id="endDate"
+                          type="date"
+                          {...register('endDate')}
+                          className={errors.endDate ? 'border-red-500' : ''}
+                        />
+                        {errors.endDate && (
+                          <p className="text-sm text-red-600">{errors.endDate.message}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="endTime">종료 시간 *</Label>
+                        <Input
+                          id="endTime"
+                          type="time"
+                          {...register('endTime')}
+                          className={errors.endTime ? 'border-red-500' : ''}
+                        />
+                        {errors.endTime && (
+                          <p className="text-sm text-red-600">{errors.endTime.message}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 참가자 정보 */}
+                  <div className="space-y-4">
+                    <h2 className="text-lg font-semibold text-gray-900">참가자 정보</h2>
 
                     <div className="space-y-2">
-                      <Label htmlFor="specialBenefits">특별 혜택</Label>
-                      <Textarea
-                        id="specialBenefits"
-                        {...register('specialBenefits')}
-                        placeholder="특별 혜택을 새 줄로 구분하여 입력하세요"
-                        rows={3}
+                      <Label htmlFor="maxParticipants">최대 참가자 수 *</Label>
+                      <Input
+                        id="maxParticipants"
+                        type="number"
+                        min="1"
+                        max="1000"
+                        {...register('maxParticipants')}
+                        placeholder="100"
+                        className={errors.maxParticipants ? 'border-red-500' : ''}
                       />
-                      <p className="text-xs text-gray-500">예: 선착순 10명 스타벅스 기프티콘, 이벤트 한정 굿즈 증정</p>
+                      {errors.maxParticipants && (
+                        <p className="text-sm text-red-600">{errors.maxParticipants.message}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 동적 콘텐츠 */}
+                  <div className="space-y-4">
+                    <h2 className="text-lg font-semibold text-gray-900">동적 콘텐츠</h2>
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="overviewPoints">이벤트 개요 포인트</Label>
+                        <Textarea
+                          id="overviewPoints"
+                          {...register('overviewPoints')}
+                          placeholder="각 포인트를 새 줄로 구분하여 입력하세요"
+                          rows={3}
+                        />
+                        <p className="text-xs text-gray-500">예: 네트워킹 기회 제공, 전문가 강연, 실무 경험 공유</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="targetAudience">대상 청중</Label>
+                        <Textarea
+                          id="targetAudience"
+                          {...register('targetAudience')}
+                          placeholder="대상 청중을 새 줄로 구분하여 입력하세요"
+                          rows={3}
+                        />
+                        <p className="text-xs text-gray-500">예: 신입 개발자, 경력 3-5년 개발자, 프론트엔드 개발자</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="specialBenefits">특별 혜택</Label>
+                        <Textarea
+                          id="specialBenefits"
+                          {...register('specialBenefits')}
+                          placeholder="특별 혜택을 새 줄로 구분하여 입력하세요"
+                          rows={3}
+                        />
+                        <p className="text-xs text-gray-500">예: 선착순 10명 스타벅스 기프티콘, 이벤트 한정 굿즈 증정</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 이벤트 이미지 */}
+                  <div className="space-y-4">
+                    <h2 className="text-lg font-semibold text-gray-900">이벤트 이미지</h2>
+
+                    <div className="space-y-4">
+                      {imagePreview && (
+                        <div className="relative">
+                          <img
+                            src={imagePreview}
+                            alt="이벤트 이미지 미리보기"
+                            className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <Label htmlFor="image" className="cursor-pointer">
+                          <div className="flex items-center gap-2 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 transition-colors">
+                            <Upload className="w-5 h-5 text-gray-400" />
+                            <span className="text-gray-600">
+                              {imageFile ? '이미지가 선택되었습니다' : '이벤트 이미지를 업로드하세요'}
+                            </span>
+                          </div>
+                        </Label>
+                        <input
+                          id="image"
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
+                          onChange={handleImageSelect}
+                          className="hidden"
+                        />
+                        <p className="text-xs text-gray-500 mt-2">
+                          JPG, PNG, WebP 파일만 가능합니다. 최대 5MB
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
 
-                {/* 버튼 */}
-                <div className="flex gap-3 pt-6">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => router.back()}
-                    className="flex-1"
-                    disabled={loading}
-                  >
-                    취소
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
-                    disabled={loading}
-                  >
-                    {loading ? '수정 중...' : '이벤트 수정'}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+            {/* 버튼 */}
+            <div className="flex gap-3 pt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+                className="flex-1"
+                disabled={loading}
+              >
+                취소
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+                disabled={loading}
+              >
+                {loading ? '수정 중...' : `이벤트 ${isPublic ? '공개' : '비공개'} 수정`}
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
