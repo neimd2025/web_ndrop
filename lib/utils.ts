@@ -48,5 +48,5 @@ export function getSiteUrl(): string {
 // QR 코드 URL 생성
 export function generateQRCodeUrl(cardId: string): string {
   const siteUrl = getSiteUrl()
-  return `${siteUrl}/client/card-books/${cardId}`
+  return `${siteUrl}/card-books/${cardId}`
 }

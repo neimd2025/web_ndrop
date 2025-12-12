@@ -163,7 +163,7 @@ export async function getUserAuth(options: GetUserAuthOptions = {}): Promise<Use
   }
 }
 
-export async function requireUserAuth({ requireAuth }): Promise<UserProfile> {
+export async function requireUserAuth(): Promise<UserProfile> {
   const user = await getUserAuth({ requireAuth: false })
   
   if (!user) {
