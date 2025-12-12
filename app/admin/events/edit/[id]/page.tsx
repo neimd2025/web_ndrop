@@ -13,6 +13,7 @@ import { useEffect, useState } from "react"
 import { useForm } from 'react-hook-form'
 import { toast } from "sonner"
 import { z } from 'zod'
+import { v4 as uuidv4 } from 'uuid' // uuid import 추가
 import {
   Select,
   SelectContent,
@@ -184,21 +185,60 @@ export default function AdminEventEditPage() {
     }
   }, [params.id, setValue, router])
 
+  // 이미지 업로드 함수 (생성 페이지와 동일한 방식)
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        console.error('인증 토큰이 없습니다.')
+        return null
+      }
+
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${uuidv4()}.${fileExt}`
+      const filePath = `events/${fileName}`
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('path', filePath)
+
+      const response = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('이미지 업로드 오류:', result)
+        return null
+      }
+
+      return result.publicUrl
+    } catch (error) {
+      console.error('이미지 업로드 오류:', error)
+      return null
+    }
+  }
+
   // 이미지 파일 선택 핸들러
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      // 파일 크기 확인 (5MB 제한)
-      const maxSize = 5 * 1024 * 1024
+      // 파일 크기 확인 (10MB 제한 - 생성 페이지와 동일하게)
+      const maxSize = 10 * 1024 * 1024
       if (file.size > maxSize) {
-        toast.error('파일 크기는 5MB를 초과할 수 없습니다.')
+        toast.error('파일 크기는 10MB를 초과할 수 없습니다.')
         return
       }
 
       // 파일 형식 확인
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
       if (!allowedTypes.includes(file.type)) {
-        toast.error('지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP만 허용)')
+        toast.error('지원하지 않는 파일 형식입니다. (JPEG, PNG, GIF만 허용)')
         return
       }
 
@@ -225,24 +265,11 @@ export default function AdminEventEditPage() {
         return
       }
 
-      // 이미지 업로드 (새 이미지가 있는 경우)
+      // 이미지 업로드 (새 이미지가 있는 경우 - 생성 페이지와 동일한 방식)
       let imageUrl = eventData?.image_url || null
       if (imageFile) {
-        const formData = new FormData()
-        formData.append('file', imageFile)
-
-        const uploadResponse = await fetch('/api/admin/upload-image', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${adminToken}`
-          },
-          body: formData
-        })
-
-        const uploadResult = await uploadResponse.json()
-        if (uploadResponse.ok) {
-          imageUrl = uploadResult.publicUrl
-        } else {
+        imageUrl = await uploadImage(imageFile)
+        if (!imageUrl) {
           toast.error('이미지 업로드에 실패했습니다.')
           return
         }
@@ -252,16 +279,16 @@ export default function AdminEventEditPage() {
       const startDateTime = new Date(`${data.startDate}T${data.startTime}`).toISOString()
       const endDateTime = new Date(`${data.endDate}T${data.endTime}`).toISOString()
 
-      // 배열 필드 처리
-      const overviewPoints = data.overviewPoints
-        ? data.overviewPoints.split('\n').filter(point => point.trim())
-        : null
-      const targetAudience = data.targetAudience
-        ? data.targetAudience.split('\n').filter(audience => audience.trim())
-        : null
-      const specialBenefits = data.specialBenefits
-        ? data.specialBenefits.split('\n').filter(benefit => benefit.trim())
-        : null
+      // 배열 필드 처리 (생성 페이지와 동일한 방식)
+      const overviewPoints = data.overviewPoints 
+        ? data.overviewPoints.split('\n').filter(line => line.trim())
+        : []
+      const targetAudience = data.targetAudience 
+        ? data.targetAudience.split('\n').filter(line => line.trim())
+        : []
+      const specialBenefits = data.specialBenefits 
+        ? data.specialBenefits.split('\n').filter(line => line.trim())
+        : []
 
       // 이벤트 업데이트 API 호출 (is_public 필드 추가)
       const updateResponse = await fetch(`/api/admin/update-event/${params.id}`, {
@@ -600,6 +627,20 @@ export default function AdminEventEditPage() {
                             alt="이벤트 이미지 미리보기"
                             className="w-full h-48 object-cover rounded-lg border border-gray-200"
                           />
+                          <div className="absolute top-2 right-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setImageFile(null)
+                                setImagePreview(null)
+                              }}
+                              className="bg-white"
+                            >
+                              변경
+                            </Button>
+                          </div>
                         </div>
                       )}
 
@@ -615,12 +656,12 @@ export default function AdminEventEditPage() {
                         <input
                           id="image"
                           type="file"
-                          accept="image/jpeg,image/jpg,image/png,image/webp"
+                          accept="image/jpeg,image/jpg,image/png,image/gif"
                           onChange={handleImageSelect}
                           className="hidden"
                         />
                         <p className="text-xs text-gray-500 mt-2">
-                          JPG, PNG, WebP 파일만 가능합니다. 최대 5MB
+                          PNG, JPG, GIF 파일만 가능합니다. 최대 10MB
                         </p>
                       </div>
                     </div>
