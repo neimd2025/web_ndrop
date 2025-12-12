@@ -11,7 +11,7 @@ export default function BottomNavigation() {
 
   const navItems = [
     { href: "/client/home", icon: Home, label: "홈" },
-    { href: "/client/card-books", icon: Bookmark, label: "명함첩" },
+    { href: "/card-books", icon: Bookmark, label: "명함첩" },
     { href: "/client/events", icon: Bell, label: "행사" },
     { href: "/client/my-page", icon: User, label: "마이 페이지" },
   ]
