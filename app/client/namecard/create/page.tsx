@@ -30,7 +30,7 @@ const profileSchema = z.object({
   work_field: z.string().max(100, '하는일은 100자 이하여야 합니다'),
   contact: z.string().max(100, '연락처는 100자 이하여야 합니다'),
   mbti: z.string().optional(),
-  : z.array(z.string()).min(1, '성격 키워드는 최소 1개 이상 선택해주세요').max(3, '성격 키워드는 최대 3개까지 선택할 수 있습니다'),
+  personality_keywords: z.array(z.string()).min(1, '성격 키워드는 최소 1개 이상 선택해주세요').max(3, '성격 키워드는 최대 3개까지 선택할 수 있습니다'),
   interest_keywords: z.array(z.string()).max(3, '관심 키워드는 최대 3개까지 선택할 수 있습니다'),
   hobby_keywords: z.array(z.string()).max(3, '취미는 최대 3개까지 입력할 수 있습니다'),
   introduction: z.string().max(500, '자기소개는 500자 이하여야 합니다'),
