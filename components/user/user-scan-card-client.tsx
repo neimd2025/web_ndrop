@@ -38,13 +38,13 @@ export function UserScanCardClient({ user }: UserScanCardClientProps) {
       // ndrop.link 형식의 URL에서 카드 ID 추출
       let cardId = null
 
-      if (qrData.includes('client/card-books/')) {
-        cardId = qrData.split('client/card-books/')[1]
+      if (qrData.includes('card-books/')) {
+        cardId = qrData.split('card-books/')[1]
       } 
 
       if (cardId) {
         // 로그인 여부와 관계없이 명함 상세 페이지로 이동
-        router.push(`/client/card-books/${cardId}`)
+        router.push(`card-books/${cardId}`)
       } else {
         alert('유효하지 않은 명함 QR 코드입니다.')
         setIsScanning(true)
