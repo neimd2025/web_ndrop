@@ -113,7 +113,7 @@ export function UserMyCard({ user, businessCards = [] }: UserMyCardProps) {
       편집하기
   </Link>
             <Link 
-              href="/client/card-books/my-card-detail"
+              href="/card-books/my-card-detail"
               className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white text-purple-600 border border-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-colors shadow-md"
             >
       더보기

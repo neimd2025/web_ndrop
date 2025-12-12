@@ -21,12 +21,17 @@ export async function middleware(req: NextRequest) {
   const adminRoutes = ['/admin']
   const adminAuthRoutes = ['/admin/login', '/admin/signup']
 
-  // 공개 명함 페이지와 QR 스캔 페이지는 인증 불필요
+  // 공개적으로 접근 가능한 페이지들
   const isPublicBusinessCard = req.nextUrl.pathname.startsWith('/business-card/') && req.nextUrl.pathname.split('/').length === 3
   const isScanCardPage = req.nextUrl.pathname === '/client/scan-card'
   const isEventScanPage = req.nextUrl.pathname === '/client/events/scan'
+  // 🔥 추가: 공개 명함북 페이지
+  const isPublicCardBook = req.nextUrl.pathname.startsWith('/client/card-books/')
 
-  const isProtectedRoute = protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route)) && !isPublicBusinessCard && !isScanCardPage && !isEventScanPage
+  const isProtectedRoute = protectedRoutes.some(route => 
+    req.nextUrl.pathname.startsWith(route)
+  ) && !isPublicBusinessCard && !isScanCardPage && !isEventScanPage && !isPublicCardBook // 🔥 isPublicCardBook 제외 추가
+
   const isAuthRoute = authRoutes.some(route => req.nextUrl.pathname.startsWith(route))
   const isAdminRoute = adminRoutes.some(route => req.nextUrl.pathname.startsWith(route))
   const isAdminAuthRoute = adminAuthRoutes.some(route => req.nextUrl.pathname === route)
@@ -149,16 +154,6 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - api routes (except auth)
-     * - api-docs
-     * - .well-known
-     */
     '/((?!_next/static|_next/image|favicon.ico|public|api(?!/auth)|api-docs|\\.well-known).*)',
   ],
 }

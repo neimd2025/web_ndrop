@@ -299,7 +299,7 @@ export function UserHomeClient({
                 </Button>
               </Link>
             </div>
-<Link href={`/client/card-books/${userCard?.id}`}>
+<Link href={`/card-books/${userCard?.id}`}>
               <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-500 rounded-full flex items-center justify-center overflow-hidden">
                   {profile?.profile_image_url ? (

@@ -100,13 +100,28 @@ export interface UserEventParticipation {
   event: UserEvent
 }
 
-export async function getUserAuth(): Promise<UserProfile | null> {
+interface GetUserAuthOptions {
+  requireAuth?: boolean  // 인증 필수 여부
+  throwOnError?: boolean // 에러 발생 시 예외 던질지 여부
+}
+
+export async function getUserAuth(options: GetUserAuthOptions = {}): Promise<UserProfile | null> {
+  const { requireAuth = true, throwOnError = false } = options
+  
   try {
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
+      if (requireAuth) {
+        if (throwOnError) {
+          throw new Error('인증이 필요합니다')
+        }
+        console.warn('인증 필요')
+        return null
+      }
+      // 🔥 인증이 필수가 아닌 경우 null 반환
       return null
     }
 
@@ -117,7 +132,6 @@ export async function getUserAuth(): Promise<UserProfile | null> {
       .single()
 
     if (profileError) {
-      // 프로필이 없는 경우도 정상적인 상황으로 처리
       if (profileError.code === 'PGRST116') {
         return {
           id: user.id,
@@ -125,19 +139,32 @@ export async function getUserAuth(): Promise<UserProfile | null> {
           created_at: user.created_at
         } as UserProfile
       }
-      console.error('프로필 가져오기 오류:', profileError)
-      return null
+      
+      if (throwOnError) {
+        throw new Error('프로필 조회 실패')
+      }
+      
+      console.warn('프로필 가져오기 오류:', profileError)
+      return {
+        id: user.id,
+        email: user.email!,
+        created_at: user.created_at
+      } as UserProfile
     }
 
     return profile
   } catch (error) {
-    console.error('사용자 인증 확인 오류:', error)
+    if (throwOnError) {
+      throw error
+    }
+    
+    console.warn('사용자 인증 확인 오류:', error)
     return null
   }
 }
 
-export async function requireUserAuth(): Promise<UserProfile> {
-  const user = await getUserAuth()
+export async function requireUserAuth({ requireAuth }): Promise<UserProfile> {
+  const user = await getUserAuth({ requireAuth: false })
   
   if (!user) {
     const headersList = await headers()
@@ -547,8 +574,8 @@ export async function getUserCardFromId(cardId: string): Promise<{
   console.log('🔍 getUserCardFromId 시작, cardId:', cardId)
   
   try {
-    const user = await requireUserAuth()
-    console.log('👤 인증된 사용자 ID:', user.id)
+    const user = await getUserAuth({ requireAuth: false })
+    console.log('👤 인증된 사용자:', user ? `ID: ${user.id}` : '없음')
     
     const supabase = await createClient()
     
@@ -593,7 +620,7 @@ export async function getUserCardFromId(cardId: string): Promise<{
         console.log('소유자 프로필 결과:', ownerProfile ? '찾음' : '없음')
         
         return {
-          user: user,
+          user: user, // null일 수 있음
           cardData: card,
           cardOwner: ownerProfile,
           isCollected: true,
@@ -602,7 +629,7 @@ export async function getUserCardFromId(cardId: string): Promise<{
       }
       
       return {
-        user: user,
+        user: user, // null일 수 있음
         cardData: null,
         cardOwner: null,
         isCollected: false,
@@ -627,17 +654,22 @@ export async function getUserCardFromId(cardId: string): Promise<{
     
     console.log('소유자 프로필:', ownerProfile)
     
-    // 3. 수집 여부 확인
-    console.log('3️⃣ 수집 여부 확인...')
-    const { data: collections } = await supabase
-      .from('collected_cards')
-      .select('id')
-      .eq('card_id', cardId)
-      .eq('collector_id', user.id)
-      .limit(1)
+    // 3. 수집 여부 확인 (사용자가 있을 때만)
+    let isCollected = false
+    if (user) {
+      console.log('3️⃣ 수집 여부 확인 (사용자 있음)...')
+      const { data: collections } = await supabase
+        .from('collected_cards')
+        .select('id')
+        .eq('card_id', cardId)
+        .eq('collector_id', user.id)
+        .limit(1)
 
-    const isCollected = collections && collections.length > 0
-    console.log('수집 여부:', isCollected)
+      isCollected = collections && collections.length > 0
+      console.log('수집 여부:', isCollected)
+    } else {
+      console.log('3️⃣ 사용자 없음 - 수집 여부 확인 생략')
+    }
     
     // 4. cardOwner 정보 정리
     let cardOwner: UserProfile | null = null
@@ -683,7 +715,7 @@ export async function getUserCardFromId(cardId: string): Promise<{
     }
     
     return {
-      user: user,
+      user: user, // null일 수 있음
       cardData: businessCard,
       cardOwner: cardOwner,
       isCollected,

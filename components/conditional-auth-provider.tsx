@@ -14,11 +14,12 @@ interface ConditionalAuthProviderProps {
 export default function ConditionalAuthProvider({ children }: ConditionalAuthProviderProps) {
   const pathname = usePathname()
 
-  // 관리자 페이지에서는 AuthProvider를 제외
+  // AuthProvider를 제외할 경로 패턴들
   const isAdminPage = pathname?.startsWith('/admin')
+  const isPublicCardBookPage = pathname?.startsWith('/card-books/')
 
-  if (isAdminPage) {
-    // 관리자 페이지: AuthProvider 없이 렌더링
+  // AuthProvider가 필요 없는 페이지들
+  if (isAdminPage || isPublicCardBookPage) {
     return (
       <ClientOnly>
         <LoadingProvider>
