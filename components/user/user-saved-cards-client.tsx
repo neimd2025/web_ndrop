@@ -99,7 +99,7 @@ export function UserSavedCardsClient({ user: initialUser, savedCards: initialSav
       e.preventDefault()
       return
     }
-    router.push(`/client/card-books/${cardId}`)
+    router.push(`/card-books/${cardId}`)
   }, [router])
 
   return (
