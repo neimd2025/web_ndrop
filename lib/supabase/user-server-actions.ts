@@ -103,17 +103,113 @@ export interface UserEventParticipation {
 interface GetUserAuthOptions {
   requireAuth?: boolean  // 인증 필수 여부
   throwOnError?: boolean // 에러 발생 시 예외 던질지 여부
+  maxProfileRetries?: number // 프로필 조회 최대 재시도 횟수
+}
+
+// 프로필 조회 재시도 함수
+async function getUserProfileWithRetry(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  maxRetries = 3,
+  initialDelay = 500
+) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle() // 🔥 .single() 대신 .maybeSingle()
+
+      // 프로필이 있으면 반환
+      if (profile && !error) {
+        console.log(`프로필 조회 성공 (시도 ${attempt})`)
+        return profile
+      }
+
+      // 프로필이 없으면 생성 시도 (첫 번째 시도에서만)
+      if (attempt === 1 && (!profile || error?.code === 'PGRST116')) {
+        console.log(`사용자 프로필 없음, 생성 시도 (${userId})`)
+        
+        const { data: userData } = await supabase.auth.getUser()
+        const userEmail = userData.user?.email || ''
+        
+        const { error: insertError } = await supabase
+          .from('user_profiles')
+          .upsert({
+            id: userId,
+            email: userEmail,
+            role_id: 1, // 기본 사용자
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'id',
+            ignoreDuplicates: false
+          })
+
+        if (insertError && insertError.code !== '23505') {
+          console.error('프로필 생성 오류:', insertError)
+        } else {
+          console.log('프로필 생성 완료')
+        }
+
+        // 생성 후 잠시 대기
+        await new Promise(resolve => setTimeout(resolve, 300))
+        continue // 생성 후 다시 조회
+      }
+
+      // 재시도
+      if (attempt < maxRetries) {
+        const delay = initialDelay * Math.pow(1.5, attempt - 1)
+        console.log(`프로필 재시도 ${attempt}/${maxRetries}, ${delay}ms 후 재시도`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    } catch (error) {
+      console.error(`프로필 조회 시도 ${attempt} 실패:`, error)
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, initialDelay * attempt))
+      }
+    }
+  }
+  
+  console.warn(`프로필 조회 실패 (최대 재시도 ${maxRetries}회)`)
+  return null
+}
+
+// 세션 복구 함수
+async function recoverUserSession(supabase: ReturnType<typeof createClient>) {
+  try {
+    // 1. getUser() 먼저 시도
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError) {
+      console.log('getUser 실패, getSession 시도:', userError.message)
+      // getUser 실패 시 getSession으로 폴백
+      const { data: { session } } = await supabase.auth.getSession()
+      return session?.user || null
+    }
+    
+    return user
+  } catch (error) {
+    console.error('세션 복구 오류:', error)
+    return null
+  }
 }
 
 export async function getUserAuth(options: GetUserAuthOptions = {}): Promise<UserProfile | null> {
-  const { requireAuth = true, throwOnError = false } = options
+  const { 
+    requireAuth = true, 
+    throwOnError = false,
+    maxProfileRetries = 3
+  } = options
   
   try {
     const supabase = await createClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // 🔥 세션 복구 시도
+    const user = await recoverUserSession(supabase)
 
-    if (authError || !user) {
+    if (!user) {
       if (requireAuth) {
         if (throwOnError) {
           throw new Error('인증이 필요합니다')
@@ -125,26 +221,11 @@ export async function getUserAuth(options: GetUserAuthOptions = {}): Promise<Use
       return null
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+    // 🔥 프로필 조회 재시도 로직 적용
+    const profile = await getUserProfileWithRetry(supabase, user.id, maxProfileRetries)
 
-    if (profileError) {
-      if (profileError.code === 'PGRST116') {
-        return {
-          id: user.id,
-          email: user.email!,
-          created_at: user.created_at
-        } as UserProfile
-      }
-      
-      if (throwOnError) {
-        throw new Error('프로필 조회 실패')
-      }
-      
-      console.warn('프로필 가져오기 오류:', profileError)
+    if (!profile) {
+      // 프로필이 없어도 기본 정보 반환
       return {
         id: user.id,
         email: user.email!,
@@ -152,7 +233,11 @@ export async function getUserAuth(options: GetUserAuthOptions = {}): Promise<Use
       } as UserProfile
     }
 
-    return profile
+    return {
+      ...profile,
+      email: user.email!, // 최신 이메일 정보 사용
+      created_at: user.created_at
+    } as UserProfile
   } catch (error) {
     if (throwOnError) {
       throw error
@@ -163,18 +248,139 @@ export async function getUserAuth(options: GetUserAuthOptions = {}): Promise<Use
   }
 }
 
-export async function requireUserAuth(): Promise<UserProfile> {
-  const user = await getUserAuth({ requireAuth: false })
+export async function requireUserAuth(options: { 
+  maxRetries?: number,
+  redirectTo?: string 
+} = {}): Promise<UserProfile> {
+  const { maxRetries = 2, redirectTo } = options
+  
+  let user: UserProfile | null = null
+  
+  // 최대 2회 재시도
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    user = await getUserAuth({ 
+      requireAuth: false, 
+      throwOnError: false,
+      maxProfileRetries: 3 
+    })
+    
+    if (user) break
+    
+    // 마지막 시도가 아니면 대기 후 재시도
+    if (attempt < maxRetries) {
+      const delay = 500 * attempt
+      console.log(`인증 재시도 ${attempt}/${maxRetries}, ${delay}ms 후 재시도`)
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
   
   if (!user) {
     const headersList = await headers()
     const referer = headersList.get('referer')
+    const fromPath = referer || '/'
+    
+    const redirectUrl = redirectTo || `/login?type=user&from=${encodeURIComponent(fromPath)}`
     
     // 헤더를 직접 설정하여 리다이렉트
     throw new Response('Unauthorized', {
       status: 302,
       headers: {
-        'Location': `/login?type=user&from=${referer || '/'}`,
+        'Location': redirectUrl,
+        'Cache-Control': 'no-store'
+      }
+    })
+  }
+  
+  return user
+}
+
+// 🔥 새로운 함수: 사용자 인증 상태 확인 (지연 대기 포함)
+export async function waitForUserAuth(
+  timeout = 5000,
+  interval = 500
+): Promise<UserProfile | null> {
+  const startTime = Date.now()
+  
+  while (Date.now() - startTime < timeout) {
+    const user = await getUserAuth({ 
+      requireAuth: false, 
+      throwOnError: false,
+      maxProfileRetries: 1 // 빠른 확인
+    })
+    
+    if (user) {
+      console.log('사용자 인증 대기 성공:', user.id)
+      return user
+    }
+    
+    // 대기 후 재시도
+    await new Promise(resolve => setTimeout(resolve, interval))
+  }
+  
+  console.warn(`사용자 인증 대기 시간 초과 (${timeout}ms)`)
+  return null
+}
+
+// 🔥 새로운 함수: 세션 강제 갱신
+export async function forceRefreshUserSession(): Promise<UserProfile | null> {
+  try {
+    const supabase = await createClient()
+    
+    // 세션 강제 갱신
+    const { data: { session } } = await supabase.auth.refreshSession()
+    
+    if (!session?.user) {
+      return null
+    }
+    
+    // 프로필 정보 가져오기
+    const profile = await getUserProfileWithRetry(supabase, session.user.id, 2, 1000)
+    
+    if (!profile) {
+      return {
+        id: session.user.id,
+        email: session.user.email!,
+        created_at: session.user.created_at
+      } as UserProfile
+    }
+    
+    return {
+      ...profile,
+      email: session.user.email!,
+      created_at: session.user.created_at
+    } as UserProfile
+  } catch (error) {
+    console.error('세션 강제 갱신 오류:', error)
+    return null
+  }
+}
+
+// 🔥 새로운 함수: 인증 상태 확인 및 리다이렉트 처리
+export async function checkAndRedirectAuth(
+  requireAuthType: 'user' | 'admin' = 'user',
+  fallbackRedirect = '/login'
+) {
+  const user = await getUserAuth({ requireAuth: false })
+  
+  if (!user) {
+    const headersList = await headers()
+    const referer = headersList.get('referer') || '/'
+    
+    throw new Response('Unauthorized', {
+      status: 302,
+      headers: {
+        'Location': `${fallbackRedirect}?type=${requireAuthType}&from=${encodeURIComponent(referer)}`,
+        'Cache-Control': 'no-store'
+      }
+    })
+  }
+  
+  // 관리자 권한 확인 (필요한 경우)
+  if (requireAuthType === 'admin' && user.role !== 'admin') {
+    throw new Response('Forbidden', {
+      status: 302,
+      headers: {
+        'Location': `/unauthorized?from=${encodeURIComponent(referer)}`,
         'Cache-Control': 'no-store'
       }
     })
