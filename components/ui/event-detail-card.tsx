@@ -38,12 +38,16 @@ interface EventDetailCardProps {
   }
   showEventCode?: boolean
   showOrganizerInfo?: boolean
+  onJoinSuccess?: () => void
+  onLeaveSuccess?: () => void
 }
 
 export function EventDetailCard({
   event: initialEvent,
   showEventCode = true,
   showOrganizerInfo = true,
+  onJoinSuccess,
+  onLeaveSuccess,
 }: EventDetailCardProps) {
   const [event, setEvent] = useState(initialEvent)
   const [actionLoading, setActionLoading] = useState(false)
@@ -149,6 +153,7 @@ export function EventDetailCard({
           current_participants: prev.current_participants + 1
         }))
         toast.success('이벤트에 성공적으로 참가했습니다!')
+        onJoinSuccess?.()
       } else {
         throw new Error('이벤트 참가에 실패했습니다.')
       }
@@ -181,6 +186,7 @@ export function EventDetailCard({
           current_participants: Math.max(0, prev.current_participants - 1)
         }))
         toast.success('이벤트 참가를 취소했습니다.')
+        onLeaveSuccess?.()
       } else {
         throw new Error('이벤트 참가 취소에 실패했습니다.')
       }

@@ -373,7 +373,7 @@ export function UserHomeClient({
                 }
 
                 return filteredEvents.length > 0 ? (
-                  filteredEvents.slice(0, 1).map((event) => (
+                  filteredEvents.map((event) => (
                     <div key={event.id} className="border border-gray-200 rounded-lg p-5">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-semibold text-gray-900 text-sm">{event.title}</h4>
@@ -389,6 +389,15 @@ export function UserHomeClient({
                         <p className="text-sm text-gray-500">
                           {new Date(event.start_date).toLocaleDateString()} 참가 신청
                         </p>
+                      </div>
+
+                      <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                        <Link href={`/client/events/${event.id}?tab=info`} className="flex-1">
+                          <Button variant="outline" className="w-full h-10">이벤트 상세</Button>
+                        </Link>
+                        <Link href={`/client/events/${event.id}?tab=matching`} className="flex-1">
+                          <Button className="w-full h-10 bg-purple-600 hover:bg-purple-700">네트워킹</Button>
+                        </Link>
                       </div>
                     </div>
                   ))

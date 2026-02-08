@@ -1,5 +1,5 @@
 //@ts-nocheck
-import { EventDetailCard } from '@/components/ui/event-detail-card'
+import { EventDetailPageClient } from '@/components/user/event-detail-page-client'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 
@@ -47,16 +47,14 @@ export default async function ClientEventDetailPage({ params }: EventDetailPageP
     .eq('user_id', user.id)
     .single()
 
-  // 참가하지 않은 이벤트의 경우 이벤트 코드 숨김
-  const showEventCode = !!participation
+  const isParticipating = !!participation
 
   return (
-    <div className="min-h-screen ">
-      <EventDetailCard
+    <div className="min-h-screen">
+      <EventDetailPageClient
         event={event}
-        showEventCode={showEventCode}
-        showOrganizerInfo={true}
-        backUrl="/client/public-events"
+        initialParticipation={isParticipating}
+        userId={user.id}
       />
     </div>
   )
