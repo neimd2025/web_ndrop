@@ -1,12 +1,17 @@
 import { createClient, createAdminClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { Database } from "@/types/supabase";
 
-interface UserProfile {
-  id: string;
-  interest_keywords: string[] | null;
-  work_field: string | null;
-  company: string | null;
-  role: string | null;
+type UserProfile = Database["public"]["Tables"]["user_profiles"]["Row"];
+type EventParticipant = Database["public"]["Tables"]["event_participants"]["Row"] & {
+  user_profiles: UserProfile | null;
+};
+type MatchRecommendationInsert = Database["public"]["Tables"]["event_match_recommendations"]["Insert"];
+
+interface ScoredCandidate {
+  candidateId: string;
+  score: number;
+  reasons: Record<string, any>;
 }
 
 export async function POST(
@@ -103,12 +108,12 @@ export async function POST(
 
   // 4. 매칭 알고리즘 실행
   const batchId = crypto.randomUUID();
-  const recommendationsToInsert: any[] = [];
+  const recommendationsToInsert: MatchRecommendationInsert[] = [];
 
   for (const participant of participants) {
     const userId = participant.user_id;
     // 타입 단언을 사용하여 안전하게 접근
-    const userProfile = participant.user_profiles as unknown as UserProfile;
+    const userProfile = (participant as unknown as EventParticipant).user_profiles;
 
     if (!userProfile) continue;
 
@@ -123,7 +128,7 @@ export async function POST(
     });
 
     const scoredCandidates = candidates.map((candidate: any) => {
-      const candidateProfile = candidate.user_profiles as unknown as UserProfile;
+      const candidateProfile = (candidate as unknown as EventParticipant).user_profiles;
       if (!candidateProfile) return { candidateId: candidate.user_id, score: 0, reasons: {} };
 
 

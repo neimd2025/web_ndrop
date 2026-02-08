@@ -216,6 +216,139 @@ export type Database = {
           },
         ]
       }
+      event_match_recommendations: {
+        Row: {
+          batch_id: string
+          created_at: string
+          event_id: string
+          id: string
+          match_reasons: Json | null
+          recommended_user_id: string
+          score: number
+          user_id: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          event_id: string
+          id?: string
+          match_reasons?: Json | null
+          recommended_user_id: string
+          score: number
+          user_id: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          match_reasons?: Json | null
+          recommended_user_id?: string
+          score?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_match_recommendations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_matching_configs: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          is_active: boolean | null
+          max_requests_per_user: number | null
+          scoring_weights: Json | null
+          slot_duration: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          is_active?: boolean | null
+          max_requests_per_user?: number | null
+          scoring_weights?: Json | null
+          slot_duration?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          is_active?: boolean | null
+          max_requests_per_user?: number | null
+          scoring_weights?: Json | null
+          slot_duration?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_matching_configs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_meetings: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          message: string | null
+          receiver_id: string
+          requester_id: string
+          slot_id: string | null
+          status: Database["public"]["Enums"]["meeting_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          message?: string | null
+          receiver_id: string
+          requester_id: string
+          slot_id?: string | null
+          status?: Database["public"]["Enums"]["meeting_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          message?: string | null
+          receiver_id?: string
+          requester_id?: string
+          slot_id?: string | null
+          status?: Database["public"]["Enums"]["meeting_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_meetings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_meetings_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "event_time_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_participants: {
         Row: {
           event_id: string | null
@@ -254,6 +387,41 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_time_slots: {
+        Row: {
+          created_at: string
+          end_time: string
+          event_id: string
+          id: string
+          is_blocked: boolean | null
+          start_time: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          event_id: string
+          id?: string
+          is_blocked?: boolean | null
+          start_time: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          event_id?: string
+          id?: string
+          is_blocked?: boolean | null
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_time_slots_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -532,6 +700,7 @@ export type Database = {
           role: string | null
           role_id: number
           updated_at: string | null
+          user_id: string
           work_field: string | null
         }
         Insert: {
@@ -559,6 +728,7 @@ export type Database = {
           role?: string | null
           role_id: number
           updated_at?: string | null
+          user_id: string
           work_field?: string | null
         }
         Update: {
@@ -586,6 +756,7 @@ export type Database = {
           role?: string | null
           role_id?: number
           updated_at?: string | null
+          user_id?: string
           work_field?: string | null
         }
         Relationships: [
@@ -617,7 +788,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      meeting_status: "pending" | "accepted" | "confirmed" | "declined" | "canceled"
     }
     CompositeTypes: {
       [_ in never]: never

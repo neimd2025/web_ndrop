@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Database } from "@/types/supabase";
 
 type RecommendationRow = Database["public"]["Tables"]["event_match_recommendations"]["Row"];
-type ProfileRow = Pick<Database["public"]["Tables"]["user_profiles"]["Row"], "id" | "nickname" | "role" | "work_field" | "company" | "interest_keywords" | "profile_image_url">;
+type ProfileRow = Pick<Database["public"]["Tables"]["user_profiles"]["Row"], "id" | "user_id" | "nickname" | "role" | "work_field" | "company" | "interest_keywords" | "profile_image_url">;
 
 export async function GET(
   request: NextRequest,
@@ -46,6 +46,7 @@ export async function GET(
     .from("user_profiles")
     .select(`
       id,
+      user_id,
       nickname,
       role,
       work_field,
@@ -53,15 +54,15 @@ export async function GET(
       interest_keywords,
       profile_image_url
     `)
-    .in("id", recommendedUserIds);
+    .in("user_id", recommendedUserIds);
 
   if (profilesError) {
      return NextResponse.json({ error: profilesError.message }, { status: 500 });
   }
 
-  // 3. 데이터 병합 (event_match_recommendations.recommended_user_id ↔ user_profiles.id)
-  // user_profiles.id는 auth.users.id와 동일하므로 user_id로 취급
-  const profileMap = new Map((profiles as ProfileRow[]).map((p) => [p.id, p]));
+  // 3. 데이터 병합 (event_match_recommendations.recommended_user_id ↔ user_profiles.user_id)
+  // user_profiles.user_id 기준 조인
+  const profileMap = new Map((profiles as ProfileRow[]).map((p) => [p.user_id, p]));
   
   const joinedRecommendations = recommendations.map((rec: RecommendationRow) => ({
     ...rec,
