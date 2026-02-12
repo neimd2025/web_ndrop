@@ -360,7 +360,8 @@ export async function checkAndRedirectAuth(
     const headersList = await headers()
     const referer = headersList.get('referer') || '/'
     
-    redirect(`${fallbackRedirect}?type=${requireAuthType}&from=${encodeURIComponent(referer)}`)
+    // 인증 실패 시 명시적으로 로그아웃 라우트로 이동하여 쿠키 삭제 후 로그인 페이지로
+    redirect(`/auth/signout?type=${requireAuthType}&from=${encodeURIComponent(referer)}`)
   }
   
   // 관리자 권한 확인 (필요한 경우)
