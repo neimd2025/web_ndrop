@@ -10,10 +10,10 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "ndrop - AI 기반 행사 네트워킹 매칭 플랫폼",
-  description: "행사 성과를 극대화하는 AI 네트워킹 플랫폼. 정교한 AI 매칭 기술로 최적의 참가자 연결을 추천하고, 현장에서 실질적인 비즈니스 네트워킹이 이루어지도록 지원합니다.",
+  description: "행사 참가자를 AI로 연결하는 네트워킹 매칭 플랫폼 ndrop.",
   openGraph: {
     title: "ndrop - AI 기반 행사 네트워킹 매칭 플랫폼",
-    description: "행사 성과를 극대화하는 AI 네트워킹 플랫폼. 정교한 AI 매칭 기술로 최적의 참가자 연결을 추천하고, 현장에서 실질적인 비즈니스 네트워킹이 이루어지도록 지원합니다.",
+    description: "행사 참가자를 AI로 연결하는 네트워킹 매칭 플랫폼 ndrop.",
     url: "https://www.ndrop.kr",
     siteName: "ndrop",
     images: [
