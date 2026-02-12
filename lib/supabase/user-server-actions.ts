@@ -281,14 +281,8 @@ export async function requireUserAuth(options: {
     
     const redirectUrl = redirectTo || `/login?type=user&from=${encodeURIComponent(fromPath)}`
     
-    // 헤더를 직접 설정하여 리다이렉트
-    throw new Response('Unauthorized', {
-      status: 302,
-      headers: {
-        'Location': redirectUrl,
-        'Cache-Control': 'no-store'
-      }
-    })
+    // 헤더를 직접 설정하여 리다이렉트 대신 next/navigation의 redirect 사용
+    redirect(redirectUrl)
   }
   
   return user
@@ -366,24 +360,12 @@ export async function checkAndRedirectAuth(
     const headersList = await headers()
     const referer = headersList.get('referer') || '/'
     
-    throw new Response('Unauthorized', {
-      status: 302,
-      headers: {
-        'Location': `${fallbackRedirect}?type=${requireAuthType}&from=${encodeURIComponent(referer)}`,
-        'Cache-Control': 'no-store'
-      }
-    })
+    redirect(`${fallbackRedirect}?type=${requireAuthType}&from=${encodeURIComponent(referer)}`)
   }
   
   // 관리자 권한 확인 (필요한 경우)
   if (requireAuthType === 'admin' && user.role !== 'admin') {
-    throw new Response('Forbidden', {
-      status: 302,
-      headers: {
-        'Location': `/unauthorized?from=${encodeURIComponent(referer)}`,
-        'Cache-Control': 'no-store'
-      }
-    })
+    redirect(`/unauthorized?from=${encodeURIComponent(referer)}`)
   }
   
   return user
