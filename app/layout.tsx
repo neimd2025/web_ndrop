@@ -9,8 +9,22 @@ import "../styles/globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "ndrop - 모두의 특별함이 나답게 연결되는 시작",
-  description: "당신의 이름에 담긴 의미를 발견하고, 특별한 명함을 만들어 세상과 연결되세요.",
+  title: "ndrop - AI 기반 행사 네트워킹 매칭 플랫폼",
+  description: "행사 참가자를 위한 AI 매칭 서비스 ndrop. 현장에서 실제 만남이 일어나는 네트워킹 SaaS.",
+  openGraph: {
+    title: "ndrop - AI 기반 행사 네트워킹 매칭 플랫폼",
+    description: "행사 참가자 프로필 기반 AI 추천으로 현장 네트워킹을 연결합니다.",
+    url: "https://www.ndrop.kr",
+    siteName: "ndrop",
+    images: [
+      {
+        url: "https://www.ndrop.kr/og-image.png",
+        width: 1200,
+        height: 630,
+      },
+    ],
+    type: "website",
+  },
 }
 
 export const viewport = {
