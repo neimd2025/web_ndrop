@@ -3,34 +3,20 @@
 import { createClient } from '@/utils/supabase/middleware'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { Redis } from '@upstash/redis'
+// import { Redis } from '@upstash/redis'
 
 // Redis 클라이언트 초기화 (싱글톤)
-let redisClient: Redis | null = null
+let redisClient: any = null
 
-function getRedisClient(): Redis {
-  if (!redisClient) {
-    const url = process.env.UPSTASH_REDIS_REST_URL
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN
-    
-    if (!url || !token) {
-      console.warn('⚠️ UPSTASH_REDIS 환경변수가 없습니다. Redis 캐싱이 비활성화됩니다.')
-      // 더미 클라이언트 반환
-      return {
-        get: async () => null,
-        setex: async () => 'OK',
-        del: async () => 0,
-        keys: async () => [],
-        info: async () => '',
-      } as any
-    }
-    
-    redisClient = new Redis({
-      url,
-      token,
-    })
+function getRedisClient(): any {
+  // Edge Runtime 호환성 문제로 Redis 비활성화
+  return {
+    get: async () => null,
+    setex: async () => 'OK',
+    del: async () => 0,
+    keys: async () => [],
+    info: async () => '',
   }
-  return redisClient
 }
 
 // 메모리 캐시 (짧은 TTL용)
@@ -195,7 +181,6 @@ export async function middleware(req: NextRequest) {
           .select('role_id')
           .eq('id', userId)
           .single()
-          .timeout(1000)
         
         if (!error && profile) {
           userRole = profile.role_id
@@ -237,10 +222,12 @@ export async function middleware(req: NextRequest) {
   
   // 루트 경로 처리
   if (pathname === '/') {
+    // 세션이 없으면 랜딩 페이지(app/page.tsx)를 보여줌
     if (!session) {
-      return NextResponse.redirect(new URL('/login?type=user', req.url))
+      return supabaseResponse
     }
     
+    // 세션이 있으면 역할에 따라 대시보드로 리다이렉트
     if (userRole === 2) {
       return NextResponse.redirect(new URL('/admin', req.url))
     } else {

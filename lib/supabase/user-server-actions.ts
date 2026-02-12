@@ -84,7 +84,7 @@ export interface UserNotification {
   sent_by?: string
   read_at?: string
   created_at: string
-  notification_type: 'announcement' | 'business_card_collected' | 'event_joined' | 'event_created' | 'profile_updated' | 'system'
+  notification_type: 'announcement' | 'business_card_collected' | 'event_joined' | 'event_created' | 'profile_updated' | 'system' | 'meeting_request' | 'meeting_chat'
   metadata?: Record<string, any>
   related_user_id?: string
   related_business_card_id?: string

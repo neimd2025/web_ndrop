@@ -340,18 +340,18 @@ export function UserNotificationsClient({
   const getNotificationIcon = (notification: UserNotification) => {
     switch (notification.notification_type) {
       case 'business_card_collected':
-        return { icon: Plus, color: 'text-blue-600', bg: 'bg-blue-100' }
+        return { icon: Plus, color: 'text-blue-400', bg: 'bg-blue-500/20' }
       case 'event_joined':
-        return { icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-100' }
+        return { icon: Calendar, color: 'text-purple-400', bg: 'bg-purple-500/20' }
       case 'event_created':
-        return { icon: Megaphone, color: 'text-orange-600', bg: 'bg-orange-100' }
+        return { icon: Megaphone, color: 'text-orange-400', bg: 'bg-orange-500/20' }
       case 'profile_updated':
-        return { icon: User, color: 'text-green-600', bg: 'bg-green-100' }
+        return { icon: User, color: 'text-green-400', bg: 'bg-green-500/20' }
       case 'system':
-        return { icon: Bell, color: 'text-gray-600', bg: 'bg-gray-100' }
+        return { icon: Bell, color: 'text-gray-400', bg: 'bg-gray-500/20' }
       case 'announcement':
       default:
-        return { icon: Megaphone, color: 'text-orange-600', bg: 'bg-orange-100' }
+        return { icon: Megaphone, color: 'text-orange-400', bg: 'bg-orange-500/20' }
     }
   }
 
@@ -375,136 +375,142 @@ export function UserNotificationsClient({
   }
 
   return (
-    <div className="min-h-screen bg-white pb-24">
-      <MobileHeader title="최근 활동 및 알림" />
-
-      {/* 액션 버튼들 */}
-      <div className="px-4 py-2 flex items-center justify-between border-b border-gray-200">
-        <button
-          onClick={refreshNotifications}
-          disabled={loading}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-purple-600 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          새로고침
-        </button>
-
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <span className="text-xs text-gray-500">
-              {unreadCount}개 읽지 않음
-            </span>
-          )}
-          
-          <Button
-            onClick={markAllAsRead}
-            disabled={loading || unreadCount === 0}
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1 text-xs"
-          >
-            <Check className="h-3 w-3" />
-            모두 읽음
-          </Button>
-        </div>
+    <div className="min-h-screen bg-slate-950 pb-24 relative text-white overflow-hidden">
+      {/* Background Animation Elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#1a103c] to-slate-950 opacity-80"></div>
+        <div className="absolute top-[-5%] left-[-10%] w-96 h-96 bg-purple-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute top-[-5%] right-[-10%] w-96 h-96 bg-blue-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob" style={{ animationDelay: "2s" }}></div>
+        <div className="absolute bottom-[20%] left-[20%] w-96 h-96 bg-indigo-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob" style={{ animationDelay: "4s" }}></div>
+        
+        {/* Shooting Stars */}
+        <div className="absolute top-0 left-[10%] w-[1px] h-[100px] bg-gradient-to-b from-transparent via-white to-transparent rotate-[215deg] animate-shooting-star opacity-0" style={{ animationDelay: "3s" }}></div>
+        <div className="absolute top-[10%] right-[20%] w-[1px] h-[120px] bg-gradient-to-b from-transparent via-blue-200 to-transparent rotate-[215deg] animate-shooting-star opacity-0" style={{ animationDelay: "8s" }}></div>
       </div>
 
-      <div className="px-4 py-6 space-y-4">
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-            <span className="ml-2 text-gray-600">알림을 불러오는 중입니다...</span>
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <Megaphone className="w-8 h-8 text-gray-400" />
-            </div>
-            <p className="text-gray-500">아직 받은 알림이 없습니다.</p>
-            <p className="text-sm text-gray-400 mt-1">새로운 알림이 오면 여기에 표시됩니다.</p>
-          </div>
-        ) : (
-          <>
-            {/* 알림 목록 */}
-            {notifications.map((notification) => {
-              const { icon: Icon, color, bg } = getNotificationIcon(notification)
-              const badgeText = getNotificationBadgeText(notification)
-              const isRead = notification.read_at || 
-                           (notification.read_by_users && notification.read_by_users.includes(user?.id || ''))
+      <div className="relative z-10">
+        <MobileHeader title="최근 활동 및 알림" />
 
-              return (
-                <Card
-                  key={notification.id}
-                  className={`border border-gray-200 hover:border-purple-300 transition-colors cursor-pointer ${
-                    isRead ? 'opacity-80' : 'bg-purple-50/50'
-                  }`}
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-3">
-                      <div
-                        className={`w-10 h-10 ${bg} rounded-full flex items-center justify-center flex-shrink-0 ${
-                          isRead ? 'opacity-70' : ''
-                        }`}
-                      >
-                        <Icon className={`h-5 w-5 ${color}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h3 className={`font-semibold ${
-                            isRead ? 'text-gray-700' : 'text-gray-900'
+        {/* 액션 버튼들 */}
+        <div className="px-4 py-2 flex items-center justify-between border-b border-white/10 backdrop-blur-sm bg-slate-950/50">
+          <button
+            onClick={refreshNotifications}
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-purple-400 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            새로고침
+          </button>
+
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <span className="text-xs text-slate-500">
+                {unreadCount}개 읽지 않음
+              </span>
+            )}
+            
+            <Button
+              onClick={markAllAsRead}
+              disabled={loading || unreadCount === 0}
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1 text-xs border-white/20 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+            >
+              <Check className="h-3 w-3" />
+              모두 읽음
+            </Button>
+          </div>
+        </div>
+
+        <div className="px-4 py-6 space-y-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+              <span className="ml-2 text-slate-400">알림을 불러오는 중입니다...</span>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 mx-auto mb-4 bg-white/5 rounded-full flex items-center justify-center">
+                <Megaphone className="w-8 h-8 text-slate-600" />
+              </div>
+              <p className="text-slate-500">아직 받은 알림이 없습니다.</p>
+              <p className="text-sm text-slate-600 mt-1">새로운 알림이 오면 여기에 표시됩니다.</p>
+            </div>
+          ) : (
+            <>
+              {/* 알림 목록 */}
+              {notifications.map((notification) => {
+                const { icon: Icon, color, bg } = getNotificationIcon(notification)
+                const badgeText = getNotificationBadgeText(notification)
+                const isRead = notification.read_at || 
+                             (notification.read_by_users && notification.read_by_users.includes(user?.id || ''))
+
+                return (
+                  <Card
+                    key={notification.id}
+                    className={`border border-white/10 hover:border-purple-500/50 transition-colors cursor-pointer backdrop-blur-sm ${
+                      isRead ? 'bg-slate-900/50 opacity-60' : 'bg-slate-800/80 shadow-lg shadow-purple-900/10'
+                    }`}
+                    onClick={() => handleNotificationClick(notification)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start space-x-3">
+                        <div
+                          className={`w-10 h-10 ${bg} rounded-full flex items-center justify-center flex-shrink-0 ${
+                            isRead ? 'opacity-50' : ''
+                          }`}
+                        >
+                          <Icon className={`h-5 w-5 ${color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h3 className={`font-semibold ${
+                              isRead ? 'text-slate-400' : 'text-white'
+                            }`}>
+                              {notification.title}
+                            </h3>
+                            <div className="flex items-center space-x-2">
+                              <Badge
+                                variant="secondary"
+                                className={`text-xs ${
+                                  notification.notification_type === "business_card_collected" || notification.notification_type === "event_joined"
+                                    ? "bg-white/10 text-slate-300"
+                                    : "bg-purple-500/20 text-purple-300"
+                                } ${isRead ? 'opacity-50' : ''}`}
+                              >
+                                {badgeText}
+                              </Badge>
+                              {!isRead && (
+                                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(168,85,247,0.5)]"></div>
+                              )}
+                            </div>
+                          </div>
+                          <p className={`text-sm mt-1 ${
+                            isRead ? 'text-slate-500' : 'text-slate-300'
                           }`}>
-                            {notification.title}
-                          </h3>
-                          <div className="flex items-center space-x-2">
-                            <Badge
-                              variant="secondary"
-                              className={`text-xs ${
-                                notification.notification_type === "business_card_collected" || notification.notification_type === "event_joined"
-                                  ? "bg-gray-100 text-gray-700"
-                                  : "bg-purple-100 text-purple-700"
-                              } ${isRead ? 'opacity-70' : ''}`}
-                            >
-                              {badgeText}
-                            </Badge>
-                            {!isRead && (
-                              <div className="w-2 h-2 bg-purple-600 rounded-full animate-pulse"></div>
+                            {notification.message}
+                          </p>
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-xs text-slate-500">
+                              {formatTime(notification.created_at)}
+                            </p>
+                            {isRead && (
+                              <span className="text-xs text-green-400 flex items-center gap-1">
+                                <Check className="h-3 w-3" />
+                                읽음
+                              </span>
                             )}
                           </div>
                         </div>
-                        <p className={`text-sm mt-1 ${
-                          isRead ? 'text-gray-500' : 'text-gray-600'
-                        }`}>
-                          {notification.message}
-                        </p>
-                        <div className="flex items-center justify-between mt-2">
-                          <p className="text-xs text-gray-400">
-                            {formatTime(notification.created_at)}
-                          </p>
-                          {isRead && (
-                            <span className="text-xs text-green-600 flex items-center gap-1">
-                              <Check className="h-3 w-3" />
-                              읽음
-                            </span>
-                          )}
-                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </>
-        )}
-      </div>
-
-      {/* 실시간 연결 상태 표시 */}
-      {isConnected && (
-        <div className="fixed bottom-4 right-4 bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full flex items-center gap-1">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          실시간 연결됨
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }

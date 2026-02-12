@@ -263,7 +263,7 @@ const handleDelete = async () => {
         <>
           <Link 
             href="/client/namecard/edit"
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md"
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-bold hover:from-purple-500 hover:to-indigo-500 transition-all shadow-lg shadow-purple-500/25 active:scale-[0.98]"
           >
             <Edit3 className="w-5 h-5" />
             편집하기
@@ -271,7 +271,7 @@ const handleDelete = async () => {
           
           <Link 
             href="/client/my-qr"
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white text-purple-600 border border-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-colors shadow-md"
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-slate-800 text-purple-300 border border-purple-500/30 rounded-2xl font-bold hover:bg-slate-700 hover:text-purple-200 transition-all shadow-lg active:scale-[0.98]"
           >
             <QrCode className="w-5 h-5" />
             QR 보기
@@ -285,7 +285,7 @@ const handleDelete = async () => {
       return (
         <button
           onClick={handleDelete}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-md"
+          className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-2xl font-bold hover:from-red-500 hover:to-rose-500 transition-all shadow-lg shadow-red-500/25 active:scale-[0.98]"
         >
           <Trash2 className="w-5 h-5" />
           명함 삭제하기
@@ -298,7 +298,7 @@ const handleDelete = async () => {
       <button
         onClick={handleSaveCard}
         disabled={isSaved || isSaving}
-        className="w-full flex items-center justify-center gap-2 py-2.5 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md disabled:bg-purple-400 disabled:cursor-not-allowed"
+        className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-bold hover:from-purple-500 hover:to-indigo-500 transition-all shadow-lg shadow-purple-500/30 disabled:from-purple-400 disabled:to-indigo-400 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
       >
         {isSaving ? (
           <>저장 중...</>
@@ -337,100 +337,112 @@ const handleDelete = async () => {
 
   return (
     <div className="flex justify-center items-center w-full">
-      <Card className="w-full max-w-md overflow-hidden border-0 rounded-none shadow-none flex flex-col items-center text-center">
+      <Card className="w-full max-w-md overflow-hidden border-0 rounded-none shadow-none flex flex-col items-center text-center bg-transparent">
         {/* 상단 배경 */}
-        <div className="relative w-full bg-[#242E3A] h-60 flex flex-col items-center justify-end pb-6">
+        <div className="relative w-full h-60 flex flex-col items-center justify-end pb-6">
+          <div className="absolute inset-0 bg-gradient-to-b from-purple-500/20 via-slate-900/50 to-transparent"></div>
+          
           {/* 프로필 이미지 */}
-          <div className="relative mt-8 w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-md border-0 border-white overflow-hidden">
+          <div className="relative mt-8 w-24 h-24 rounded-full bg-slate-950 shadow-2xl shadow-purple-500/20 border-2 border-purple-500/50 overflow-hidden z-10 ring-4 ring-slate-900/50 shrink-0 transform-gpu">
             {profileImage ? (
               <img
                 src={profileImage}
                 alt={name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover block"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-purple-600 text-white">
+              <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-500">
                 <User className="w-10 h-10" />
               </div>
             )}
           </div>
 
-          <div className="my-4">
-            <h2 className="text-2xl font-semibold text-white">{name}</h2>
+          <div className="my-4 relative z-10">
+            <h2 className="text-2xl font-bold text-white drop-shadow-lg">{name}</h2>
           </div>
         </div>
 
-        {/* 상단 흰색 둥근 부분 */}
-        <div className="w-full h-12 bg-[#242E3A]">
-          <div className="w-full h-full bg-white rounded-t-full"></div>
+        {/* 상단 둥근 부분 */}
+        <div className="w-full h-12 relative -mt-6 z-0">
+          <div className="w-full h-full bg-slate-950 rounded-t-[3rem] border-t border-white/10 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.5)]"></div>
         </div>
 
-        <div className="w-full px-8 bg-white text-left">
+        <div className="w-full px-8 bg-slate-950 text-left pb-10 min-h-[500px]">
           <div className="flex flex-col gap-3">
             { company !== "미소속" && (
-            <div className="w-full flex flex-row items-center justify-between">
-              <button className="px-4 py-1.5 rounded-full border-2 border-purple-300 text-purple-700 font-medium text-md bg-white">소속</button>
-              <p className="text-md font-medium text-gray-700">{company}</p>
+            <div className="w-full flex flex-row items-center justify-between group hover:bg-white/5 p-2 rounded-xl transition-colors -mx-2">
+              <span className="px-4 py-1.5 rounded-full border border-purple-500/30 text-purple-300 font-medium text-sm bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors shadow-[0_0_15px_rgba(168,85,247,0.15)]">소속</span>
+              <p className="text-lg font-bold text-white tracking-wide drop-shadow-sm">{company}</p>
             </div>
             )}
-            <div className="w-full flex flex-row items-center justify-between">
-              <button className="px-4 py-1.5 rounded-full border-2 border-gray-200 text-gray-700 font-medium text-md bg-white">{ company !== "미소속" ? "직무" : "하는 일" }</button>
-              <p className="text-md font-medium text-gray-700">{job}</p>
+            <div className="w-full flex flex-row items-center justify-between group hover:bg-white/5 p-2 rounded-xl transition-colors -mx-2">
+              <span className="px-4 py-1.5 rounded-full border border-slate-700 text-slate-300 font-medium text-sm bg-slate-800 group-hover:bg-slate-700 transition-colors shadow-inner">{ company !== "미소속" ? "직무" : "하는 일" }</span>
+              <p className="text-lg font-bold text-white tracking-wide drop-shadow-sm">{job}</p>
             </div>
           </div>
 
           {/* 소개 */}
           {intro ? (
-            <div className="mt-6 bg-gray-100 rounded-xl p-4 text-sm text-gray-700 leading-relaxed max-h-28 overflow-hidden">
+            <div className="mt-6 bg-slate-900/80 backdrop-blur-sm border border-white/10 rounded-2xl p-6 text-[15px] text-slate-200 leading-relaxed shadow-inner relative group hover:border-purple-500/30 transition-colors">
               <p className="line-clamp-4">{intro}</p>
             </div>
           ) : (
-            <div className="mt-6 bg-gray-100 rounded-xl p-4 text-sm text-gray-400">
+            <div className="mt-6 bg-slate-900 border border-white/5 rounded-2xl p-5 text-sm text-slate-600 text-center">
               소개가 없습니다.
             </div>
           )}
 
-          <div className="mt-6 px-1">
-            <h3 className="text-md font-semibold text-gray-800 mb-3">연락처</h3>
+          <div className="mt-8 px-1">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span className="w-1 h-5 bg-purple-500 rounded-full"></span>
+              연락처
+            </h3>
             <div className="flex flex-col gap-4">
               {phone && (
-                <div className="flex items-center gap-4">
-                  <Phone className="w-5 h-5 text-gray-600" />
+                <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors">
+                  <div className="w-10 h-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center group-hover:border-purple-500/50 transition-colors">
+                    <Phone className="w-5 h-5 text-slate-400 group-hover:text-purple-400" />
+                  </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-gray-800">전화번호</span>
-<a 
-  href="#"
-  onClick={handlePhoneClick}
-  className="text-purple-600 font-medium text-sm hover:text-purple-800 transition-colors"
->
-  {formatPhone(phone)}
-</a>
+                    <span className="text-xs font-medium text-slate-500 mb-0.5">전화번호</span>
+                    <a 
+                      href="#"
+                      onClick={handlePhoneClick}
+                      className="text-white font-medium text-base hover:text-purple-400 transition-colors"
+                    >
+                      {formatPhone(phone)}
+                    </a>
                   </div>
                 </div>
               )}
               {email && (
-                <div className="flex items-center gap-4">
-                  <Mail className="w-5 h-5 text-gray-600" />
+                <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors">
+                  <div className="w-10 h-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center group-hover:border-purple-500/50 transition-colors">
+                    <Mail className="w-5 h-5 text-slate-400 group-hover:text-purple-400" />
+                  </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-gray-800">이메일</span>
-                    <span className="text-purple-600 font-medium text-sm">{email}</span>
+                    <span className="text-xs font-medium text-slate-500 mb-0.5">이메일</span>
+                    <span className="text-white font-medium text-base break-all">{email}</span>
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="w-full border-t-2 border-gray-300 my-9"></div>
+          <div className="w-full border-t border-white/10 my-8"></div>
 
           <div className="mt-6 px-1">
-            <h3 className="text-md font-semibold text-gray-800 mb-3">나는 이런 사람입니다</h3>
-            <div className="mt-6 w-full">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span className="w-1 h-5 bg-blue-500 rounded-full"></span>
+              나는 이런 사람입니다
+            </h3>
+            <div className="mt-6 w-full space-y-8">
 
               {/* MBTI */}
               {mbti && (
-                <div className="mb-6">
-                  <h4 className="text-md font-medium text-gray-600 mb-3">MBTI</h4>
-                  <span className="px-3 py-1 rounded-full border bg-gray-100 text-gray-700 border-gray-300">
+                <div>
+                  <h4 className="text-sm font-medium text-slate-400 mb-3 ml-1">MBTI</h4>
+                  <span className="inline-block px-4 py-1.5 rounded-full border bg-slate-900 text-purple-300 border-purple-500/30 font-semibold shadow-lg shadow-purple-900/20">
                     {mbti}
                   </span>
                 </div>
@@ -438,46 +450,49 @@ const handleDelete = async () => {
 
               {/* 성격 */}
               {personalityKeywords.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="text-md font-medium text-gray-600 mb-3">성격</h4>
+                <div>
+                  <h4 className="text-sm font-medium text-slate-400 mb-3 ml-1">성격</h4>
                   <TagSelector tags={personalityKeywords} />
                 </div>
               )}
 
               {/* 관심사 */}
               {interestKeywords.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="text-md font-medium text-gray-600 mb-3">관심사</h4>
+                <div>
+                  <h4 className="text-sm font-medium text-slate-400 mb-3 ml-1">관심사</h4>
                   <TagSelector tags={interestKeywords.map(tag => `#${tag}`)} />
                 </div>
               )}
 
               {/* 취미 */}
               {hobbyKeywords.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="text-md font-medium text-gray-600 mb-3">취미</h4>
+                <div>
+                  <h4 className="text-sm font-medium text-slate-400 mb-3 ml-1">취미</h4>
                   <TagSelector tags={hobbyKeywords} />
                 </div>
               )}
             </div>
           </div>
 
-          <div className="w-full border-t-2 border-gray-300 my-9"></div>
+          <div className="w-full border-t border-white/10 my-8"></div>
 
           {/* 외부 링크 섹션 - 항상 표시 */}
           <div className="my-6 px-1">
-            <h3 className="text-md font-semibold text-gray-800 mb-3">외부 링크</h3>
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span className="w-1 h-5 bg-green-500 rounded-full"></span>
+              외부 링크
+            </h3>
             {externalLinks.length > 0 ? (
               <SocialLinks links={externalLinks} />
             ) : (
-              <div className="text-center py-4 text-gray-400">
-                아직 사이트가 없어요
+              <div className="text-center py-8 text-slate-600 bg-slate-900/50 rounded-xl border border-white/5 border-dashed">
+                아직 등록된 링크가 없어요
               </div>
             )}
           </div>
 
           {/* 액션 버튼 */}
-          <div className="my-6 flex gap-3">
+          <div className="my-8 flex gap-3 sticky bottom-4 z-20">
             {renderActionButtons()}
           </div>
         </div>
@@ -509,11 +524,11 @@ export function TagSelector({ tags }: TagSelectorProps) {
         <button
           key={tag}
           onClick={() => toggleTag(tag)}
-          className={`px-3 py-1.5 rounded-lg border ${
+          className={`px-3 py-1.5 rounded-lg border text-sm font-medium ${
             selectedTags.includes(tag)
-              ? "bg-purple-600 text-white border-purple-600"
-              : "bg-gray-100 text-gray-700 border-gray-300"
-          } transition`}
+              ? "bg-purple-600 text-white border-purple-500 shadow-lg shadow-purple-900/50"
+              : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:border-slate-600"
+          } transition-all duration-200`}
         >
           {tag}
         </button>
@@ -522,7 +537,7 @@ export function TagSelector({ tags }: TagSelectorProps) {
       {!showAll && tags.length > 3 && (
         <button
           onClick={() => setShowAll(true)}
-          className="px-3 py-1 rounded-lg border bg-gray-200 text-gray-700 border-gray-300"
+          className="px-3 py-1.5 rounded-lg border bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-200 transition-colors text-sm font-medium"
         >
           +{tags.length - 3}
         </button>
@@ -539,33 +554,33 @@ export function SocialLinks({ links }: SocialLinksProps) {
   const getIcon = (url: string) => {
     const lowerUrl = url.toLowerCase();
     
-    if (lowerUrl.includes("instagram.com")) return <FaInstagram size={24} className="text-pink-500" />;
-    if (lowerUrl.includes("linkedin.com")) return <FaLinkedin size={24} className="text-blue-700" />;
-    if (lowerUrl.includes("youtube.com") || lowerUrl.includes("youtu.be")) return <FaYoutube size={24} className="text-red-600" />;
-    if (lowerUrl.includes("facebook.com")) return <FaFacebook size={24} className="text-blue-600" />;
-    if (lowerUrl.includes("twitter.com") || lowerUrl.includes("x.com")) return <FaTwitter size={24} className="text-black" />;
-    if (lowerUrl.includes("tiktok.com")) return <FaTiktok size={24} className="text-black" />;
-    if (lowerUrl.includes("github.com")) return <FaGithub size={24} className="text-gray-800" />;
-    if (lowerUrl.includes("notion.so") || lowerUrl.includes("notion.site")) return <SiNotion size={24} className="text-black" />;
-    if (lowerUrl.includes("figma.com")) return <FaFigma size={24} className="text-purple-600" />;
-    if (lowerUrl.includes("behance.net")) return <FaBehance size={24} className="text-blue-800" />;
-    if (lowerUrl.includes("dribbble.com")) return <FaDribbble size={24} className="text-pink-500" />;
-    if (lowerUrl.includes("medium.com")) return <FaMedium size={24} className="text-black" />;
-    if (lowerUrl.includes("blog.naver.com") || lowerUrl.includes("blog.me")) return <SiNaver size={24} className="text-green-500" />;
-    if (lowerUrl.includes("brunch.co.kr")) return <FaFeatherAlt size={24} className="text-orange-500" />;
+    if (lowerUrl.includes("instagram.com")) return <FaInstagram size={20} className="text-pink-500" />;
+    if (lowerUrl.includes("linkedin.com")) return <FaLinkedin size={20} className="text-blue-500" />;
+    if (lowerUrl.includes("youtube.com") || lowerUrl.includes("youtu.be")) return <FaYoutube size={20} className="text-red-500" />;
+    if (lowerUrl.includes("facebook.com")) return <FaFacebook size={20} className="text-blue-600" />;
+    if (lowerUrl.includes("twitter.com") || lowerUrl.includes("x.com")) return <FaTwitter size={20} className="text-white" />;
+    if (lowerUrl.includes("tiktok.com")) return <FaTiktok size={20} className="text-white" />;
+    if (lowerUrl.includes("github.com")) return <FaGithub size={20} className="text-white" />;
+    if (lowerUrl.includes("notion.so") || lowerUrl.includes("notion.site")) return <SiNotion size={20} className="text-white" />;
+    if (lowerUrl.includes("figma.com")) return <FaFigma size={20} className="text-purple-500" />;
+    if (lowerUrl.includes("behance.net")) return <FaBehance size={20} className="text-blue-500" />;
+    if (lowerUrl.includes("dribbble.com")) return <FaDribbble size={20} className="text-pink-500" />;
+    if (lowerUrl.includes("medium.com")) return <FaMedium size={20} className="text-white" />;
+    if (lowerUrl.includes("blog.naver.com") || lowerUrl.includes("blog.me")) return <SiNaver size={18} className="text-green-500" />;
+    if (lowerUrl.includes("brunch.co.kr")) return <FaFeatherAlt size={20} className="text-orange-500" />;
     
-    return <FaGlobe size={24} className="text-gray-700" />;
+    return <FaGlobe size={20} className="text-slate-400" />;
   };
 
   return (
     <div className="grid grid-cols-1 gap-3">
       {links.map((link) => (
-        <div key={link} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors">
+        <div key={link} className="flex items-center gap-4 p-3 hover:bg-white/5 rounded-xl border border-transparent hover:border-white/10 transition-all group">
           <a
             href={link}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center hover:opacity-80 transition"
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 border border-white/10 group-hover:border-purple-500/50 transition-colors"
             title={link}
           >
             {getIcon(link)}
@@ -574,7 +589,7 @@ export function SocialLinks({ links }: SocialLinksProps) {
             href={link}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-gray-700 hover:text-purple-600 transition-colors truncate flex-1"
+            className="text-sm font-medium text-slate-300 group-hover:text-purple-400 transition-colors truncate flex-1"
             title={link}
           >
             {link}

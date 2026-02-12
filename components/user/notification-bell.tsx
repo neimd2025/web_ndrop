@@ -4,7 +4,7 @@
 import { UserNotification, UserProfile } from '@/lib/supabase/user-server-actions'
 import { notificationAPI } from '@/lib/supabase/database'
 import { createClient } from "@/utils/supabase/client"
-import { Bell, Calendar, Check, Megaphone, Plus, RefreshCw, User, X } from "lucide-react"
+import { Bell, Calendar, Check, Megaphone, Plus, RefreshCw, User, X, MessageSquare } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -21,17 +21,25 @@ export function NotificationBell({
 }: NotificationBellProps = {}) {
   const [user, setUser] = useState<UserProfile | null>(initialUser || null)
   const [allNotifications, setAllNotifications] = useState<UserNotification[]>(initialNotifications || [])
+  
+  // Sync user state with prop
+  useEffect(() => {
+    if (initialUser) {
+      setUser(initialUser)
+    }
+  }, [initialUser])
+
   const [loading, setLoading] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
   const supabase = createClient()
   const channelRef = useRef<any>(null)
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // 읽지 않은 알림만 필터링
+  // 읽지 않은 알림만 필터링 (Derived State)
   const unreadNotifications = allNotifications.filter(notification => !notification.read_at)
+  const unreadCount = unreadNotifications.length
 
   // 알림 새로고침 함수 - API 사용
   const refreshNotifications = async () => {
@@ -45,16 +53,15 @@ export function NotificationBell({
       console.log('🔄 알림 새로고침 시작, 사용자 ID:', user.id)
 
       // API를 사용하여 알림 가져오기
-      const userNotifications = await notificationAPI.getUserNotifications(user.id)
+      const userNotifications = await notificationAPI.getUserNotifications(user.id, supabase)
 
       console.log('✅ API로 가져온 알림:', userNotifications)
       console.log('📊 전체 알림 개수:', userNotifications?.length || 0)
 
       setAllNotifications(userNotifications || [])
       
-      // 읽지 않은 알림 개수 계산 (read_at이 null인 것만)
-      const unread = userNotifications.filter(notification => !notification.read_at).length
-      setUnreadCount(unread)
+      // 읽지 않은 알림 개수 로깅
+      const unread = (userNotifications || []).filter(n => !n.read_at).length
       console.log('📊 읽지 않은 알림 개수:', unread)
     } catch (error) {
       console.error('알림 새로고침 오류:', error)
@@ -105,15 +112,37 @@ export function NotificationBell({
           table: 'notifications'
         },
         (payload) => {
+          console.log('🔔 [Realtime] Notification received:', payload);
           const newNotification = payload.new as UserNotification
-
+          
+          // RLS가 적용되어 있어도 클라이언트 필터링 유지 (안전장치)
           if (newNotification.target_type === 'all' ||
               (newNotification.target_type === 'specific' && newNotification.user_id === user.id)) {
+            console.log('✅ [Realtime] Notification accepted for user:', user.id);
             // 새 알림 추가 (아직 읽지 않은 상태)
             setAllNotifications((prev) => [newNotification, ...prev])
-            setUnreadCount(prev => prev + 1)
+            
             if (!isOpen) {
-              toast.success('새 알림이 도착했습니다!')
+              // 알림 타입에 따라 다른 토스트 메시지 표시
+              if (newNotification.notification_type === 'meeting_chat') {
+                 toast.info('새로운 메시지가 도착했습니다', {
+                   description: newNotification.message,
+                   action: {
+                     label: '보기',
+                     onClick: () => handleNotificationClick(newNotification)
+                   }
+                 });
+              } else if (newNotification.notification_type === 'meeting_request') {
+                toast.success('새로운 미팅 요청이 있습니다', {
+                   description: newNotification.message,
+                   action: {
+                     label: '확인',
+                     onClick: () => handleNotificationClick(newNotification)
+                   }
+                });
+              } else {
+                toast.success(newNotification.title || '새 알림이 도착했습니다!');
+              }
             }
           }
         }
@@ -136,14 +165,17 @@ export function NotificationBell({
                 : notification
             )
           )
-          
-          // 읽지 않은 알림 개수 재계산
-          const currentUnreadCount = allNotifications.filter(n => !n.read_at).length
-          setUnreadCount(currentUnreadCount)
         }
       )
       .subscribe((status) => {
-        setIsConnected(status === 'SUBSCRIBED')
+        console.log(`📡 [Realtime] Subscription status for channel notifications:${user.id}:`, status);
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true);
+          // 연결 성공 시 한 번만 표시 (옵션)
+          // toast.success('실시간 알림 서버에 연결되었습니다.');
+        } else {
+          setIsConnected(false);
+        }
       })
 
     channelRef.current = channel
@@ -155,7 +187,7 @@ export function NotificationBell({
       }
       setIsConnected(false)
     }
-  }, [user, isOpen])
+  }, [user]) // Removed isOpen from dependencies to prevent reconnection on toggle
 
   // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
@@ -192,9 +224,6 @@ export function NotificationBell({
           )
         )
         
-        // 읽지 않은 알림 개수 감소
-        setUnreadCount(prev => Math.max(0, prev - 1))
-        
         console.log('✅ 알림 읽음 처리 완료:', notificationId)
       } else {
         console.error('❌ 알림 읽음 처리 실패')
@@ -211,13 +240,14 @@ export function NotificationBell({
       return
     }
 
-    if (unreadCount === 0) {
+    if (unreadNotifications.length === 0) {
       toast.info('읽지 않은 알림이 없습니다')
       return
     }
 
     try {
       setLoading(true)
+      const countToMark = unreadNotifications.length
       console.log('📝 모두 읽음 처리 시작, 사용자 ID:', user.id)
       
       // 1. API 호출로 모든 알림 read_at 업데이트
@@ -232,11 +262,8 @@ export function NotificationBell({
           }))
         )
         
-        // 읽지 않은 알림 개수 0으로 설정
-        setUnreadCount(0)
-        
         console.log('✅ 모두 읽음 처리 완료')
-        toast.success(`모든 알림(${unreadCount}개)을 읽음으로 표시했습니다`)
+        toast.success(`모든 알림(${countToMark}개)을 읽음으로 표시했습니다`)
       } else {
         console.error('❌ 모두 읽음 처리 실패')
         toast.error('모두 읽음 처리에 실패했습니다')
@@ -265,18 +292,20 @@ export function NotificationBell({
   const getNotificationIcon = (notification: UserNotification) => {
     switch (notification.notification_type) {
       case 'business_card_collected':
-        return { icon: Plus, color: 'text-blue-600', bg: 'bg-blue-100' }
+        return { icon: Plus, color: 'text-blue-400', bg: 'bg-blue-500/20' }
       case 'event_joined':
-        return { icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-100' }
+        return { icon: Calendar, color: 'text-purple-400', bg: 'bg-purple-500/20' }
       case 'event_created':
-        return { icon: Megaphone, color: 'text-orange-600', bg: 'bg-orange-100' }
+        return { icon: Megaphone, color: 'text-orange-400', bg: 'bg-orange-500/20' }
       case 'profile_updated':
-        return { icon: User, color: 'text-green-600', bg: 'bg-green-100' }
+        return { icon: User, color: 'text-green-400', bg: 'bg-green-500/20' }
+      case 'meeting_chat':
+        return { icon: MessageSquare, color: 'text-indigo-400', bg: 'bg-indigo-500/20' }
       case 'system':
-        return { icon: Bell, color: 'text-gray-600', bg: 'bg-gray-100' }
+        return { icon: Bell, color: 'text-gray-400', bg: 'bg-gray-500/20' }
       case 'announcement':
       default:
-        return { icon: Megaphone, color: 'text-orange-600', bg: 'bg-orange-100' }
+        return { icon: Megaphone, color: 'text-orange-400', bg: 'bg-orange-500/20' }
     }
   }
 
@@ -300,6 +329,24 @@ export function NotificationBell({
     }
 
     setIsOpen(false)
+
+    // 채팅 알림인 경우 바로 페이지 이동
+    if (notification.notification_type === 'meeting_chat' && notification.metadata?.meeting_id) {
+      const eventId = notification.related_event_id || notification.target_event_id;
+      if (eventId) {
+        router.push(`/client/events/${eventId}?tab=meetings&meetingId=${notification.metadata.meeting_id}&openChat=true`);
+        return;
+      }
+    }
+
+    // 미팅 요청 알림인 경우 바로 미팅 탭으로 이동
+    if (notification.notification_type === 'meeting_request' && notification.metadata?.meeting_id) {
+      const eventId = notification.related_event_id || notification.target_event_id;
+      if (eventId) {
+        router.push(`/client/events/${eventId}?tab=meetings&meetingId=${notification.metadata.meeting_id}`);
+        return;
+      }
+    }
     
     // 모달에 알림 정보 설정하고 열기
     setSelectedNotification(notification)
@@ -317,11 +364,11 @@ export function NotificationBell({
       {/* 벨 아이콘 버튼 */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
+        className="relative p-2 text-gray-200 hover:text-purple-400 hover:bg-white/10 rounded-full transition-colors"
       >
         <Bell className="h-6 w-6" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center border border-slate-950">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -329,11 +376,11 @@ export function NotificationBell({
 
       {/* 말풍선 형태의 알림 드롭다운 */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900/90 backdrop-blur-md rounded-lg shadow-2xl shadow-purple-500/10 border border-white/10 z-50">
           {/* 헤더 */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between p-4 border-b border-white/10">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-gray-900">알림</h3>
+              <h3 className="font-semibold text-white">알림</h3>
               {unreadCount > 0 && (
                 <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                   {unreadCount}
@@ -345,7 +392,7 @@ export function NotificationBell({
                 <button
                   onClick={markAllAsRead}
                   disabled={loading}
-                  className="text-xs text-purple-600 hover:text-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="text-xs text-purple-400 hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                 >
                   {loading ? (
                     <>
@@ -362,7 +409,7 @@ export function NotificationBell({
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-white"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -373,13 +420,13 @@ export function NotificationBell({
           <div className="max-h-96 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-                <span className="ml-2 text-sm text-gray-600">불러오는 중...</span>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
+                <span className="ml-2 text-sm text-gray-400">불러오는 중...</span>
               </div>
             ) : unreadNotifications.length === 0 ? (
               <div className="text-center py-8">
-                <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">읽지 않은 알림이 없습니다.</p>
+                <Bell className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+                <p className="text-slate-500 text-sm">읽지 않은 알림이 없습니다.</p>
               </div>
             ) : (
               unreadNotifications.slice(0, 10).map((notification) => {
@@ -388,7 +435,7 @@ export function NotificationBell({
                 return (
                   <div
                     key={notification.id}
-                    className="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors bg-blue-50"
+                    className="p-3 border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors bg-slate-800/30"
                     onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="flex items-start gap-3">
@@ -397,19 +444,19 @@ export function NotificationBell({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
-                          <h4 className="font-medium text-gray-900 text-sm leading-tight">
+                          <h4 className="font-medium text-white text-sm leading-tight">
                             {notification.title}
                           </h4>
                           <div className="w-2 h-2 bg-blue-500 rounded-full ml-2 mt-1 flex-shrink-0 animate-pulse"></div>
                         </div>
-                        <p className="text-gray-600 text-sm mt-1 line-clamp-2">
+                        <p className="text-slate-400 text-sm mt-1 line-clamp-2">
                           {notification.message}
                         </p>
                         <div className="flex items-center justify-between mt-2">
-                          <p className="text-gray-400 text-xs">
+                          <p className="text-slate-500 text-xs">
                             {formatTime(notification.created_at)}
                           </p>
-                          <span className="text-xs text-blue-600">
+                          <span className="text-xs text-blue-400">
                             읽지 않음
                           </span>
                         </div>
@@ -423,11 +470,11 @@ export function NotificationBell({
 
           {/* 푸터 */}
           {unreadNotifications.length > 0 && (
-            <div className="p-3 border-t border-gray-200">
+            <div className="p-3 border-t border-white/10">
               <button
                 onClick={refreshNotifications}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-purple-600 py-2 transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 text-sm text-slate-400 hover:text-purple-400 py-2 transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 새로고침
@@ -435,12 +482,12 @@ export function NotificationBell({
               
               {allNotifications.length > unreadNotifications.length && (
                 <div className="mt-2 text-center">
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-slate-500">
                     {allNotifications.length - unreadNotifications.length}개의 읽은 알림이 있습니다
                   </p>
                   <button
                     onClick={() => router.push('/client/notifications')}
-                    className="text-xs text-purple-600 hover:text-purple-700 mt-1"
+                    className="text-xs text-purple-400 hover:text-purple-300 mt-1"
                   >
                     모든 알림 보기
                   </button>

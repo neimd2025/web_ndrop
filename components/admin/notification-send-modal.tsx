@@ -32,22 +32,30 @@ export default function NotificationSendModal({ open, onClose, onSuccess }: Noti
     setIsSubmitting(true)
 
     try {
-      const notificationData = {
-        title: formData.title,
-        message: formData.message,
-        target_type: formData.target_type,
-        status: "sent" as "draft" | "sent" | "scheduled",
-        delivered_count: 0,
-        read_count: 0,
-        sent_date: new Date().toISOString()
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
+        return
       }
 
-      const { error } = await supabase
-        .from('notifications')
-        .insert([notificationData])
+      const response = await fetch('/api/admin/send-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({
+          title: formData.title,
+          message: formData.message,
+          target_type: formData.target_type,
+          // target_event_id: ... (Modal doesn't support selecting event yet, defaulting to null)
+        })
+      })
 
-      if (error) {
-        toast.error('알림 발송에 실패했습니다.')
+      const result = await response.json()
+
+      if (!response.ok) {
+        toast.error(result.error || '알림 발송에 실패했습니다.')
         return
       }
 

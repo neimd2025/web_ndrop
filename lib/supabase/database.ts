@@ -675,8 +675,8 @@ export const collectedCardAPI = {
 // 알림 관련 함수들
 export const notificationAPI = {
   // 사용자 알림 가져오기
-  async getUserNotifications(userId: string): Promise<Notification[]> {
-    const supabase = createClient()
+  async getUserNotifications(userId: string, supabaseClient?: ReturnType<typeof createClient>): Promise<Notification[]> {
+    const supabase = supabaseClient || createClient()
 
     // 모든 알림을 가져와서 필터링
     const { data: allNotifications, error } = await supabase

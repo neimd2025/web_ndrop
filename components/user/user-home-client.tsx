@@ -1,17 +1,18 @@
 "use client"
 
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
 import { useUserProfile } from '@/hooks/use-user-profile'
 import { businessCardAPI, collectedCardAPI } from '@/lib/supabase/database'
 import { UserEvent, UserNotification, UserProfile } from '@/lib/supabase/user-server-actions'
 import { createClient } from '@/utils/supabase/client'
-import { Calendar, Camera, Star } from 'lucide-react'
+import { Calendar, Camera, Sparkles, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { NotificationBell } from "./notification-bell"
+import { cn } from "@/lib/utils"
 
 interface UserHomeClientProps {
   user?: UserProfile
@@ -37,30 +38,41 @@ export function UserHomeClient({
   const [businessCardStats, setBusinessCardStats] = useState(initialStats || { totalViews: 0, totalShares: 0, publicCards: 0 })
   const [userCard, setUserCard] = useState<any>(null)
   const [collectedCards, setCollectedCards] = useState<any[]>([])
-  const [loading, setLoading] = useState(!initialUser)
+  
+  // useAuth hooks with loading state
+  const { profile: authUser, loading: authLoading, initialized: authInitialized } = useAuth('user')
+  
+  // Loading state management
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (initialUser) return false
+    return true
+  })
+  
   const [activeTab, setActiveTab] = useState<'진행중' | '예정' | '종료'>('진행중')
 
-  const { profile: authUser } = useAuth('user')
-
-  // 초기 데이터 로딩
+  // Auth & Initial Data Loading Effect
   useEffect(() => {
-    const loadInitialData = async () => {
-      if (!initialUser && authUser) {
-        setLoading(true)
-        try {
-          setUser(authUser as any)
-          // 사용자 정보가 로드된 후 다른 데이터들 로드
-          await loadUserCard()
-        } catch (error) {
-          console.error('초기 데이터 로딩 실패:', error)
-        } finally {
-          setLoading(false)
-        }
-      }
+    // 1. If props provided, use them.
+    if (initialUser) {
+      setLoading(false)
+      return
     }
 
-    loadInitialData()
-  }, [initialUser, authUser])
+    // 2. Wait for auth to initialize
+    if (authLoading || !authInitialized) {
+      return
+    }
+
+    // 3. Auth finished. Check user.
+    if (authUser) {
+      // User found. Update local state.
+      // This will trigger the next useEffect (dependent on user?.id) to load data.
+      setUser(authUser as any)
+    } else {
+      // No user found (not logged in). Stop loading to show "Login required".
+      setLoading(false)
+    }
+  }, [initialUser, authUser, authLoading, authInitialized])
 
   // 데이터 로딩 함수들
   const loadUserCard = async () => {
@@ -208,16 +220,16 @@ export function UserHomeClient({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto animate-pulse">
+          <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto animate-pulse shadow-[0_0_20px_rgba(124,58,237,0.5)]">
             <span className="text-white font-bold text-xl">N</span>
           </div>
           <div className="space-y-2">
-            <h1 className="text-xl font-semibold text-gray-900">
+            <h1 className="text-xl font-semibold text-white">
               ndrop
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-400">
               로딩 중...
             </p>
           </div>
@@ -228,12 +240,12 @@ export function UserHomeClient({
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="text-center space-y-4">
-          <h1 className="text-xl font-semibold text-gray-900">
+          <h1 className="text-xl font-semibold text-white">
             로그인이 필요합니다
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-400">
             홈페이지를 보려면 로그인해주세요.
           </p>
         </div>
@@ -242,174 +254,221 @@ export function UserHomeClient({
   }
 
   return (
-    <div className="min-h-screen">
-      {/* 헤더 섹션 */}
-      <div className="bg-white border-b border-gray-200 px-5 pt-10 pb-5">
-        <div className="flex items-center justify-between mb-4">
-          {/* 프로필 아바타 */}
-<div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-500 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-lg">{getInitial()}</span>
-          </div>
-          {/* 환영 메시지 */}
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">
-              안녕하세요, {getDisplayName()}님!
-            </h1>
-            <p className="text-gray-600 text-sm">
-              오늘도 좋은 만남이 있기를 🤝
-            </p>
-          </div>
-</div>
-          <NotificationBell />
-        </div>
-
-        {/* 액션 버튼들 */}
-        <div className="flex gap-3">
-          <Link href="/client/scan-card" className="flex-1">
-            <Card className="bg-purple-600 text-white border-0 hover:bg-purple-700 transition-colors h-[87px]">
-              <CardContent className="p-5 text-center">
-                <Camera className="w-4 h-4 mx-auto mb-2 text-white" />
-                <p className="text-sm">명함 스캔</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/client/events/join" className="flex-1">
-            <Card className="bg-white border border-gray-200 hover:border-gray-300 transition-colors h-[87px]">
-              <CardContent className="p-5 text-center">
-                <Calendar className="w-4 h-4 mx-auto mb-2 text-gray-700" />
-                <p className="text-sm text-gray-700">행사참가</p>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
+    <div className="min-h-screen bg-slate-950 relative text-white pb-20 overflow-x-hidden">
+      {/* Background Animation Elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#1a103c] to-slate-950 opacity-80"></div>
+        <div className="absolute top-[-5%] left-[-10%] w-96 h-96 bg-purple-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute top-[-5%] right-[-10%] w-96 h-96 bg-blue-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob" style={{ animationDelay: "2s" }}></div>
+        <div className="absolute bottom-[20%] left-[20%] w-96 h-96 bg-indigo-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob" style={{ animationDelay: "4s" }}></div>
+        
+        {/* Shooting Stars */}
+        <div className="absolute top-0 left-[10%] w-[1px] h-[100px] bg-gradient-to-b from-transparent via-white to-transparent rotate-[215deg] animate-shooting-star opacity-0" style={{ animationDelay: "3s" }}></div>
+        <div className="absolute top-[10%] right-[20%] w-[1px] h-[120px] bg-gradient-to-b from-transparent via-blue-200 to-transparent rotate-[215deg] animate-shooting-star opacity-0" style={{ animationDelay: "8s" }}></div>
+        
+        {/* Twinkling Stars Effect */}
+        {[...Array(15)].map((_, i) => (
+          <div 
+            key={i}
+            className={`absolute rounded-full bg-white animate-twinkle ${i % 3 === 0 ? 'w-1 h-1' : i % 3 === 1 ? 'w-0.5 h-0.5' : 'w-1.5 h-1.5'}`}
+            style={{ 
+              top: `${Math.random() * 100}%`, 
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+              opacity: Math.random() * 0.7 + 0.3
+            }}
+          ></div>
+        ))}
       </div>
 
-      {/* 메인 콘텐츠 */}
-      <div className="px-5 py-6 space-y-6">
-        {/* 내 명함 섹션 */}
-        <Card className="bg-white border border-gray-200 shadow-md">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-[]">내 명함</h2>
-              <Link href="/client/my-qr">
-                <Button variant="ghost" size="sm" className="text-purple-600 hover:text-purple-700">
-                  내 QR코드
-                </Button>
+      <div className="relative z-10">
+        {/* 헤더 섹션 */}
+        <div className="px-5 pt-10 pb-2">
+          <div className="flex items-center justify-between mb-6">
+            {/* 프로필 아바타 */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-500 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(124,58,237,0.3)] border border-purple-400/30">
+                <span className="text-white font-bold text-lg">{getInitial()}</span>
+              </div>
+              {/* 환영 메시지 */}
+              <div>
+                <h1 className="text-xl font-bold text-white">
+                  안녕하세요, {getDisplayName()}님!
+                </h1>
+                <p className="text-gray-400 text-sm flex items-center gap-1">
+                  오늘도 좋은 만남이 있기를 <Sparkles className="w-3 h-3 text-yellow-300" />
+                </p>
+              </div>
+            </div>
+            <NotificationBell user={user || undefined} />
+          </div>
+
+          {/* 액션 버튼들 */}
+          <div className="flex gap-3 mt-4">
+            <Link href="/client/scan-card" className="flex-1">
+              <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-[0_4px_20px_rgba(124,58,237,0.3)] border border-purple-500/30 hover:scale-[1.02] transition-transform h-[100px] relative overflow-hidden group">
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-1 backdrop-blur-sm">
+                  <Camera className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-sm font-semibold">명함 스캔</span>
+              </div>
+            </Link>
+
+            <Link href="/client/events/join" className="flex-1">
+              <div className="bg-white/5 backdrop-blur-md text-white border border-white/10 rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-white/10 transition-colors h-[100px] hover:scale-[1.02] transition-transform">
+                <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center mb-1">
+                  <Calendar className="w-5 h-5 text-gray-300" />
+                </div>
+                <span className="text-sm font-semibold text-gray-200">행사참가</span>
+              </div>
+            </Link>
+          </div>
+        </div>
+
+        {/* 메인 콘텐츠 */}
+        <div className="px-5 py-4 space-y-6">
+          {/* 내 명함 섹션 */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                내 명함
+              </h2>
+              <Link 
+                href="/client/my-qr" 
+                className="text-xs text-purple-300 hover:text-purple-200 flex items-center gap-1 bg-purple-500/10 px-2 py-1 rounded-full border border-purple-500/20"
+              >
+                QR코드 <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
-<Link href={`/card-books/${userCard?.id}`}>
-              <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-500 rounded-full flex items-center justify-center overflow-hidden">
-                  {profile?.profile_image_url ? (
-                    <img
-                      src={profile.profile_image_url}
-                      alt="프로필"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-white font-bold text-lg">{getInitial()}</span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">{getDisplayName()}</h3>
-                  <p className="text-sm text-gray-600">
-                    {userCard?.job_title && userCard?.company
-                      ? `${userCard.job_title} / ${userCard.company}`
-                      : userCard?.work_field
-                        ? userCard.work_field
-                        : '프로필을 완성해주세요'
-                    }
-                  </p>
+            
+            <Link href={`/card-books/${userCard?.id}`}>
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-all duration-300 group shadow-lg">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-gray-700 to-gray-900 rounded-full flex items-center justify-center overflow-hidden border-2 border-white/10 group-hover:border-purple-500/50 transition-colors">
+                    {profile?.profile_image_url ? (
+                      <img
+                        src={profile.profile_image_url}
+                        alt="프로필"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-white font-bold text-xl">{getInitial()}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-lg text-white truncate">{getDisplayName()}</h3>
+                    <p className="text-sm text-gray-400 truncate">
+                      {userCard?.job_title && userCard?.company
+                        ? `${userCard.job_title} / ${userCard.company}`
+                        : userCard?.work_field
+                          ? userCard.work_field
+                          : '프로필을 완성해주세요'
+                      }
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
                 </div>
               </div>
             </Link>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* 내 이벤트 참가 기록 섹션 */}
-        <Card className="bg-white border border-gray-200 shadow-md">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900">내 이벤트 참가 기록</h2>
-              <Link href="/client/events/history">
-                <Button variant="ghost" size="sm" className="text-purple-600 hover:text-purple-700">
-                  전체 보기
-                </Button>
+          {/* 내 이벤트 참가 기록 섹션 */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-lg font-bold text-white">내 이벤트</h2>
+              <Link 
+                href="/client/events/history"
+                className="text-xs text-gray-400 hover:text-white flex items-center gap-1"
+              >
+                전체보기 <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
 
-            {/* 토글 버튼들 */}
-            <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-lg">
-              {(['진행중', '예정', '종료'] as const).map((tab) => (
-                <Button
-                  key={tab}
-                  variant={activeTab === tab ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 ${
-                    activeTab === tab
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  {tab}
-                </Button>
-              ))}
-            </div>
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-lg">
+              {/* 토글 버튼들 */}
+              <div className="flex p-1 gap-1 border-b border-white/5 bg-black/20">
+                {(['진행중', '예정', '종료'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      activeTab === tab
+                        ? "bg-white/10 text-white shadow-sm"
+                        : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
 
-            {/* 이벤트 목록 */}
-            <div className="space-y-4">
-              {(() => {
-                let filteredEvents: any[] = []
+              {/* 이벤트 목록 */}
+              <div className="p-5">
+                {(() => {
+                  let filteredEvents: any[] = []
 
-                if (activeTab === '진행중') {
-                  filteredEvents = ongoingEvents
-                } else if (activeTab === '예정') {
-                  filteredEvents = upcomingEventsFiltered
-                } else if (activeTab === '종료') {
-                  filteredEvents = completedEvents
-                }
+                  if (activeTab === '진행중') {
+                    filteredEvents = ongoingEvents
+                  } else if (activeTab === '예정') {
+                    filteredEvents = upcomingEventsFiltered
+                  } else if (activeTab === '종료') {
+                    filteredEvents = completedEvents
+                  }
 
-                return filteredEvents.length > 0 ? (
-                  filteredEvents.map((event) => (
-                    <div key={event.id} className="border border-gray-200 rounded-lg p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold text-gray-900 text-sm">{event.title}</h4>
-                        <Badge className="bg-orange-100 text-orange-800 text-xs">
-                          {activeTab}
-                        </Badge>
-                      </div>
+                  return filteredEvents.length > 0 ? (
+                    <div className="space-y-3">
+                      {filteredEvents.map((event) => (
+                        <div key={event.id} className="bg-white/5 border border-white/5 rounded-xl p-4 hover:border-purple-500/30 transition-colors">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-bold text-white text-sm line-clamp-1">{event.title}</h4>
+                            <Badge className={`text-[10px] px-2 py-0.5 border-0 ${
+                              activeTab === '진행중' ? 'bg-green-500/20 text-green-300' :
+                              activeTab === '예정' ? 'bg-blue-500/20 text-blue-300' :
+                              'bg-gray-500/20 text-gray-400'
+                            }`}>
+                              {activeTab}
+                            </Badge>
+                          </div>
 
-                      <div className="space-y-2 mb-4">
-                        <p className="text-sm text-gray-600">
-                          이벤트 일시: {new Date(event.start_date).toLocaleDateString()}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {new Date(event.start_date).toLocaleDateString()} 참가 신청
-                        </p>
-                      </div>
+                          <div className="space-y-1 mb-3">
+                            <p className="text-xs text-gray-400">
+                              {new Date(event.start_date).toLocaleDateString()}
+                            </p>
+                          </div>
 
-                      <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
-                        <Link href={`/client/events/${event.id}?tab=info`} className="flex-1">
-                          <Button variant="outline" className="w-full h-10">이벤트 상세</Button>
-                        </Link>
-                        <Link href={`/client/events/${event.id}?tab=matching`} className="flex-1">
-                          <Button className="w-full h-10 bg-purple-600 hover:bg-purple-700">네트워킹</Button>
-                        </Link>
-                      </div>
+                          <div className="flex gap-2">
+                            <Link 
+                              href={`/client/events/${event.id}?tab=info`} 
+                              className="flex-1 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-xs text-gray-300 transition-colors border border-white/5"
+                            >
+                              상세정보
+                            </Link>
+                            <Link 
+                              href={`/client/events/${event.id}?tab=networking`} 
+                              className="flex-1 h-8 flex items-center justify-center rounded-lg bg-purple-600 hover:bg-purple-500 text-xs text-white transition-colors shadow-lg shadow-purple-900/20"
+                            >
+                              네트워킹
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500 text-sm">
-                    {activeTab} 이벤트가 없습니다
-                  </div>
-                )
-              })()}
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Calendar className="w-6 h-6 text-gray-600" />
+                      </div>
+                      <p className="text-gray-400 text-sm">
+                        {activeTab} 이벤트가 없습니다
+                      </p>
+                    </div>
+                  )
+                })()}
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   )

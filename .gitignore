@@ -23,3 +23,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 certificates
+
+# local env files
+.env*.local
+.env

@@ -592,10 +592,10 @@ export const useAuthStore = create<AuthState>()(persist((set, get) => ({
     user: state.user,
     userSession: state.userSession,
     userProfile: state.userProfile,
-    userInitialized: state.userInitialized,
+    // userInitialized는 저장하지 않음 (새로고침 시 재검증 필요)
     admin: state.admin,
     adminSession: state.adminSession,
     adminProfile: state.adminProfile,
-    adminInitialized: state.adminInitialized
+    // adminInitialized는 저장하지 않음
   })
 }))

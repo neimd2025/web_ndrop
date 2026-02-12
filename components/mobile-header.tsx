@@ -19,25 +19,27 @@ export default function MobileHeader({
   onBack,
 }: MobileHeaderProps) {
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <header className="bg-slate-950/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-40">
       <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center justify-center flex-1">
+        <div className="flex items-center justify-center flex-1 relative">
           {showBackButton && (
-            <Button variant="ghost" size="sm" onClick={onBack} className="mr-3 p-2 -ml-2">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+            <div className="absolute left-0">
+              <Button variant="ghost" size="sm" onClick={onBack} className="p-2 -ml-2 text-white hover:text-white/80 hover:bg-white/10">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </div>
           )}
-          {title && <h1 className="text-lg font-semibold text-gray-900 truncate">{title}</h1>}
+          {title && <h1 className="text-lg font-semibold text-white truncate">{title}</h1>}
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 absolute right-4">
           {showQRButton && (
-            <Button variant="ghost" size="sm" className="p-2">
+            <Button variant="ghost" size="sm" className="p-2 text-white hover:text-white/80 hover:bg-white/10">
               <QrCode className="h-5 w-5" />
             </Button>
           )}
           {showMenuButton && (
-            <Button variant="ghost" size="sm" className="p-2">
+            <Button variant="ghost" size="sm" className="p-2 text-white hover:text-white/80 hover:bg-white/10">
               <MoreHorizontal className="h-5 w-5" />
             </Button>
           )}

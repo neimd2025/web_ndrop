@@ -1,13 +1,8 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { MeetingCard } from "./meeting-card";
 import { createClient } from "@/utils/supabase/client";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
-import { Check, X, Clock, CalendarCheck } from "lucide-react";
+import { Loader2, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Meeting {
   id: string;
@@ -22,7 +17,9 @@ interface Meeting {
     nickname: string | null;
     profile_image_url: string | null;
     role: string | null;
+    job_title?: string | null;
     company: string | null;
+    work_field?: string | null;
   };
   is_received: boolean; // 내가 받은 요청인지 여부
 }
@@ -30,63 +27,135 @@ interface Meeting {
 interface MyMeetingsTabProps {
   eventId: string;
   userId: string;
+  initialMeetingId?: string;
+  initialOpenChat?: boolean;
 }
 
-export function MyMeetingsTab({ eventId, userId }: MyMeetingsTabProps) {
+export function MyMeetingsTab({ eventId, userId, initialMeetingId, initialOpenChat }: MyMeetingsTabProps) {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeSegment, setActiveSegment] = useState<"received" | "sent">("received");
+  const [openChatMeetingId, setOpenChatMeetingId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string>(userId);
 
   const fetchMeetings = async () => {
     setLoading(true);
-    const supabase = createClient();
-    
-    // 내가 참여한 모든 미팅 조회
-    const { data, error } = await supabase
-      .from("event_meetings")
-      .select(`
-        *,
-        requester:user_profiles!event_meetings_requester_id_fkey(id, nickname, profile_image_url, role, company),
-        receiver:user_profiles!event_meetings_receiver_id_fkey(id, nickname, profile_image_url, role, company)
-      `)
-      .eq("event_id", eventId)
-      .or(`requester_id.eq.${userId},receiver_id.eq.${userId}`)
-      .order("created_at", { ascending: false });
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setCurrentUserId(user.id);
 
-    if (error) {
+      const res = await fetch(`/api/events/${eventId}/meetings?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache'
+        }
+      });
+      if (!res.ok) throw new Error("Failed to fetch meetings");
+      const data = await res.json();
+      
+      // 정렬 로직 추가
+      // 1순위: 내가 받은 요청 중 대기중인 것 (액션 필요)
+      // 2순위: 수락된 미팅 (대화 가능)
+      // 3순위: 내가 보낸 요청 중 대기중인 것
+      // 4순위: 나머지 (종료, 거절 등)
+      const sortedMeetings = (data.meetings || []).sort((a: Meeting, b: Meeting) => {
+        const getPriority = (m: Meeting) => {
+          if (m.is_received && m.status === 'pending') return 1;
+          if (m.status === 'accepted' || m.status === 'confirmed') return 2;
+          if (!m.is_received && m.status === 'pending') return 3;
+          return 4;
+        };
+
+        const priorityA = getPriority(a);
+        const priorityB = getPriority(b);
+
+        if (priorityA !== priorityB) return priorityA - priorityB;
+        
+        // 같은 우선순위 내에서는 최신순
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+
+      setMeetings(sortedMeetings);
+    } catch (error) {
       console.error("Error fetching meetings:", error);
       toast.error("미팅 목록을 불러오지 못했습니다.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const formattedMeetings = data.map((m: any) => {
-      const isReceived = m.receiver_id === userId;
-      const otherProfile = isReceived ? m.requester : m.receiver;
-      return {
-        ...m,
-        other_profile: otherProfile,
-        is_received: isReceived,
-      };
-    });
-
-    setMeetings(formattedMeetings);
-    setLoading(false);
   };
 
   useEffect(() => {
     fetchMeetings();
-  }, [eventId, userId]);
+    
+    // 실시간 미팅 요청 구독
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`event_meetings:${eventId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'event_meetings'
+      }, (payload) => {
+        // 내 미팅(보낸거/받은거) 변경사항이 생기면 목록 새로고침
+        const newRecord = payload.new as any;
+        const oldRecord = payload.old as any;
+        
+        // 현재 이벤트와 관련된 것인지 확인
+        const isEventRelated = 
+          (newRecord && newRecord.event_id === eventId) || 
+          (oldRecord && oldRecord.event_id === eventId);
+
+        if (!isEventRelated) return;
+        
+        const isRelated = 
+          (newRecord && (newRecord.requester_id === currentUserId || newRecord.receiver_id === currentUserId)) ||
+          (oldRecord && (oldRecord.requester_id === currentUserId || oldRecord.receiver_id === currentUserId));
+          
+        if (isRelated) {
+          fetchMeetings();
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [eventId, userId, currentUserId]);
+
+  useEffect(() => {
+    if (meetings.length > 0 && initialMeetingId) {
+      const targetMeeting = meetings.find(m => m.id === initialMeetingId);
+      if (targetMeeting) {
+        if (initialOpenChat) {
+          setOpenChatMeetingId(initialMeetingId);
+        }
+        // 스크롤 이동
+        setTimeout(() => {
+          const element = document.getElementById(`meeting-${initialMeetingId}`);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+            // 강조 효과
+            element.classList.add("ring-2", "ring-purple-500");
+            setTimeout(() => element.classList.remove("ring-2", "ring-purple-500"), 2000);
+          }
+        }, 500);
+      }
+    }
+  }, [meetings, initialMeetingId, initialOpenChat]);
 
   const handleUpdateStatus = async (meetingId: string, newStatus: string) => {
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("event_meetings")
-        .update({ status: newStatus })
-        .eq("id", meetingId);
+      const res = await fetch(`/api/events/${eventId}/meetings/${meetingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to update status");
+      }
 
       toast.success(
         newStatus === "accepted" ? "요청을 수락했습니다." : 
@@ -96,145 +165,87 @@ export function MyMeetingsTab({ eventId, userId }: MyMeetingsTabProps) {
       
       // 목록 갱신
       fetchMeetings();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Update status error:", error);
-      toast.error("상태 변경에 실패했습니다.");
+      toast.error(error.message || "상태 변경에 실패했습니다.");
     }
   };
 
-  const filteredMeetings = meetings.filter(
-    (m) => activeSegment === "received" ? m.is_received : !m.is_received
+  const toggleChat = (meetingId: string) => {
+    setOpenChatMeetingId(prev => prev === meetingId ? null : meetingId);
+  };
+
+  const displayMeetings = meetings;
+
+  // 상태별 카운트 계산
+  const statusCounts = meetings.reduce((acc, m) => {
+    if (m.status === 'pending') {
+      if (m.is_received) acc.received_pending++;
+      else acc.sent_pending++;
+    } else if (m.status === 'accepted' || m.status === 'confirmed') {
+      acc.scheduled++;
+    }
+    return acc;
+  }, { received_pending: 0, sent_pending: 0, scheduled: 0 });
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-20">
+      <Loader2 className="w-8 h-8 animate-spin text-purple-500 mb-4" />
+      <p className="text-slate-400">미팅 목록을 불러오는 중...</p>
+    </div>
   );
 
-  if (loading) return <div className="p-8 text-center text-gray-500">로딩 중...</div>;
-
   return (
-    <div className="space-y-4">
-      <div className="flex bg-gray-100 p-1 rounded-lg">
-        <button
-          className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-            activeSegment === "received" ? "bg-white shadow-sm text-purple-700" : "text-gray-500"
-          }`}
-          onClick={() => setActiveSegment("received")}
-        >
-          받은 요청
-        </button>
-        <button
-          className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-            activeSegment === "sent" ? "bg-white shadow-sm text-purple-700" : "text-gray-500"
-          }`}
-          onClick={() => setActiveSegment("sent")}
-        >
-          보낸 요청
-        </button>
+    <div className="space-y-4 pb-20 relative min-h-[500px]">
+      {/* 상태 요약 */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="bg-slate-900/40 border border-white/10 rounded-2xl p-4 text-center backdrop-blur-md relative overflow-hidden group">
+            <div className="absolute inset-0 bg-red-500/5 group-hover:bg-red-500/10 transition-colors" />
+            <div className="relative">
+                <div className="text-xs text-slate-400 mb-1">받은 요청</div>
+                <div className="text-2xl font-bold text-white">{statusCounts.received_pending}</div>
+            </div>
+        </div>
+        <div className="bg-slate-900/40 border border-purple-500/20 rounded-2xl p-4 text-center backdrop-blur-md relative overflow-hidden group">
+            <div className="absolute inset-0 bg-purple-500/5 group-hover:bg-purple-500/10 transition-colors" />
+            <div className="relative">
+                <div className="text-xs text-purple-300 mb-1 font-medium">예정된 미팅</div>
+                <div className="text-2xl font-bold text-purple-400">{statusCounts.scheduled}</div>
+            </div>
+        </div>
+        <div className="bg-slate-900/40 border border-white/10 rounded-2xl p-4 text-center backdrop-blur-md relative overflow-hidden group">
+            <div className="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors" />
+            <div className="relative">
+                <div className="text-xs text-slate-400 mb-1">보낸 요청</div>
+                <div className="text-2xl font-bold text-white">{statusCounts.sent_pending}</div>
+            </div>
+        </div>
       </div>
-
-      {filteredMeetings.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-500">
-            {activeSegment === "received" ? "받은 미팅 요청이 없습니다." : "보낸 미팅 요청이 없습니다."}
-          </p>
+      
+      {displayMeetings.length === 0 ? (
+        <div className="text-center py-16 bg-slate-900/30 rounded-2xl border border-white/5 backdrop-blur-sm">
+          <div className="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MessageSquare className="w-8 h-8 text-slate-500" />
+          </div>
+          <p className="text-slate-300 font-medium mb-1">아직 미팅 내역이 없습니다</p>
+          <p className="text-slate-500 text-sm">참가자들에게 미팅을 요청해보세요!</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {filteredMeetings.map((meeting) => (
-            <Card key={meeting.id} className="overflow-hidden border-gray-200">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={meeting.other_profile?.profile_image_url || undefined} />
-                      <AvatarFallback>{meeting.other_profile?.nickname?.[0]}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-bold text-sm">
-                        {meeting.other_profile?.nickname || "알 수 없음"}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {meeting.other_profile?.company || meeting.other_profile?.role || "정보 없음"}
-                      </div>
-                    </div>
-                  </div>
-                  <Badge 
-                    variant={
-                      meeting.status === "confirmed" ? "default" :
-                      meeting.status === "accepted" ? "secondary" :
-                      meeting.status === "pending" ? "outline" : "destructive"
-                    }
-                    className={
-                        meeting.status === "confirmed" ? "bg-green-600" :
-                        meeting.status === "accepted" ? "bg-blue-100 text-blue-700 hover:bg-blue-200" :
-                        meeting.status === "pending" ? "text-yellow-600 border-yellow-300 bg-yellow-50" : ""
-                    }
-                  >
-                    {meeting.status === "confirmed" ? "확정됨" :
-                     meeting.status === "accepted" ? "수락됨" :
-                     meeting.status === "pending" ? "대기중" :
-                     meeting.status === "declined" ? "거절됨" : "취소됨"}
-                  </Badge>
-                </div>
-
-                {meeting.message && (
-                  <div className="bg-gray-50 p-3 rounded-md text-sm text-gray-700 mb-3">
-                    "{meeting.message}"
-                  </div>
-                )}
-                
-                <div className="flex justify-between items-center text-xs text-gray-400 mb-3">
-                  <span>{format(new Date(meeting.created_at), "M월 d일 a h:mm", { locale: ko })}</span>
-                </div>
-
-                {/* 액션 버튼 */}
-                <div className="flex gap-2 mt-2">
-                  {meeting.is_received && meeting.status === "pending" && (
-                    <>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-                        onClick={() => handleUpdateStatus(meeting.id, "declined")}
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        거절
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-                        onClick={() => handleUpdateStatus(meeting.id, "accepted")}
-                      >
-                        <Check className="w-4 h-4 mr-1" />
-                        수락
-                      </Button>
-                    </>
-                  )}
-
-                  {!meeting.is_received && meeting.status === "pending" && (
-                     <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="w-full border-gray-300 text-gray-500"
-                        onClick={() => handleUpdateStatus(meeting.id, "canceled")}
-                      >
-                        요청 취소
-                      </Button>
-                  )}
-
-                  {meeting.status === "accepted" && (
-                    <Button 
-                      size="sm" 
-                      className="w-full bg-green-600 hover:bg-green-700 text-white"
-                      onClick={() => toast.info("시간 확정 기능은 준비 중입니다.")}
-                    >
-                      <Clock className="w-4 h-4 mr-1" />
-                      시간 확정하기
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+        <div className="space-y-4">
+          {displayMeetings.map((meeting) => (
+            <MeetingCard
+              key={meeting.id}
+              meeting={meeting}
+              eventId={eventId}
+              currentUserId={currentUserId}
+              openChatMeetingId={openChatMeetingId}
+              onUpdateStatus={handleUpdateStatus}
+              onToggleChat={toggleChat}
+            />
           ))}
         </div>
       )}
     </div>
   );
 }
+

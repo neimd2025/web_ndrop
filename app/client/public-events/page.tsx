@@ -234,85 +234,90 @@ const EventsPage = () => {
   };
 
   return (
-    <div className="min-h-screen">
-      {/* 헤더 - 지정된 디자인 적용 */}
-      <div className="bg-white border-b border-gray-200 px-5 py-4">
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="p-2"
-            onClick={() => router.back()}
-          >
-            <ArrowLeft className="w-4 h-4 text-gray-900" />
-          </Button>
-          <h1 className="text-xl font-bold text-gray-900">공식 행사</h1>
-          <div className="w-10"></div>
-        </div>
+    <div className="relative min-h-screen bg-slate-950 text-white overflow-hidden">
+      {/* Background Animation Elements */}
+      <div className="fixed inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#1a103c] to-slate-950 opacity-80"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-blue-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob" style={{ animationDelay: "2s" }}></div>
+        <div className="absolute bottom-[-10%] left-[20%] w-96 h-96 bg-indigo-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob" style={{ animationDelay: "4s" }}></div>
       </div>
 
-      {/* 검색바 - 지정된 디자인 적용 */}
-      <div className="bg-white px-5 pt-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="행사 검색..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      <div className="relative z-10">
+        {/* 헤더 - 지정된 디자인 적용 */}
+        <div className="bg-slate-950/50 backdrop-blur-md border-b border-white/10 px-5 py-4 sticky top-0 z-20">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-2 -ml-2 text-white hover:text-white/80 hover:bg-white/10"
+              onClick={() => router.back()}
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <h1 className="text-xl font-bold text-white">공식 행사</h1>
+            <div className="w-10"></div>
+          </div>
         </div>
-      </div>
 
-      {/* 메인 콘텐츠 */}
-      <div className="px-5 py-5">
-        {/* 지역 필터 드롭다운 */}
-        <div className="mb-6">
-          <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="지역" />
-            </SelectTrigger>
-            <SelectContent>
-              {REGIONS.map((region) => (
-                <SelectItem key={region} value={region}>
-                  {region}
-                </SelectItem>
+        {/* 검색바 - 지정된 디자인 적용 */}
+        <div className="px-5 pt-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <Input
+              placeholder="행사 검색..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-slate-900/50 border-slate-800 text-white placeholder:text-slate-500 focus:border-purple-500"
+            />
+          </div>
+        </div>
+
+        {/* 메인 콘텐츠 */}
+        <div className="px-5 py-5">
+          {/* 지역 필터 드롭다운 */}
+          <div className="mb-6">
+            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+              <SelectTrigger className="w-full bg-slate-900/50 border-slate-800 text-white">
+                <SelectValue placeholder="지역" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                {REGIONS.map((region) => (
+                  <SelectItem key={region} value={region} className="focus:bg-slate-800 focus:text-white cursor-pointer">
+                    {region}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 이벤트 카드 목록 */}
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+              <p className="text-slate-400 mt-2">이벤트를 불러오는 중...</p>
+            </div>
+          ) : filteredEvents.length > 0 ? (
+            <div className="space-y-4">
+              {filteredEvents.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onJoinEvent={handleJoinEvent}
+                  actionLoading={actionLoading}
+                  currentUser={currentUser}
+                  getActionButton={getActionButton}
+                  param="public"
+                />
               ))}
-            </SelectContent>
-          </Select>
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-slate-900/30 rounded-2xl border border-white/5 backdrop-blur-sm">
+              <Calendar className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <p className="text-slate-400">진행 중인 행사가 없습니다.</p>
+            </div>
+          )}
         </div>
-
-        {/* 이벤트 카드 목록 */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-            <p className="text-gray-600 mt-2">이벤트를 불러오는 중...</p>
-          </div>
-        ) : filteredEvents.length > 0 ? (
-          <div className="space-y-4">
-            {filteredEvents.map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                onJoinEvent={handleJoinEvent}
-                actionLoading={actionLoading}
-                currentUser={currentUser}
-                getActionButton={getActionButton}
-                param="public"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              공개된 이벤트가 없습니다
-            </h3>
-            <p className="text-gray-600 mb-6">
-              다른 지역을 선택하거나 검색어를 변경해보세요.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

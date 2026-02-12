@@ -46,23 +46,23 @@ export async function GET(
     .from("user_profiles")
     .select(`
       id,
-      user_id,
       nickname,
       role,
+      job_title,
       work_field,
       company,
       interest_keywords,
       profile_image_url
     `)
-    .in("user_id", recommendedUserIds);
+    .in("id", recommendedUserIds); // user_id -> id
 
   if (profilesError) {
      return NextResponse.json({ error: profilesError.message }, { status: 500 });
   }
 
-  // 3. 데이터 병합 (event_match_recommendations.recommended_user_id ↔ user_profiles.user_id)
-  // user_profiles.user_id 기준 조인
-  const profileMap = new Map((profiles as ProfileRow[]).map((p) => [p.user_id, p]));
+  // 3. 데이터 병합 (event_match_recommendations.recommended_user_id ↔ user_profiles.id)
+  // DB에 user_id 컬럼이 없으므로 id(auth.uid)를 사용
+  const profileMap = new Map(profiles.map((p) => [p.id, { ...p, user_id: p.id }]));
   
   const joinedRecommendations = recommendations.map((rec: RecommendationRow) => ({
     ...rec,

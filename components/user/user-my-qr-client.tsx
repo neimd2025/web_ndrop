@@ -105,19 +105,24 @@ export function UserMyQRClient({ user, businessCards }: UserMyQRClientProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#] pb-24">
+    <div className="min-h-screen bg-slate-950 pb-24 relative overflow-hidden">
+      {/* 배경 효과 */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px]" />
+      </div>
+
       <MobileHeader title="내 QR코드" />
 
-      <div className="px-5 py-6 space-y-6">
+      <div className="px-5 py-6 space-y-6 relative z-10">
         {/* QR 코드 카드 */}
-        <Card className="border border-gray-200 shadow-md">
+        <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-md shadow-lg">
           <CardContent className="p-6 text-center">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-2">
+              <h2 className="text-xl font-bold text-white mb-2">
                 {getUserDisplayName()}
               </h2>
-              <p className="text-gray-600 text-sm">
-                {/* {getUserCompanyInfo()} */}
+              <p className="text-slate-400 text-sm">
                 QR코드를 스캔하면 내 명함을 볼 수 있어요
               </p>
             </div>
@@ -133,10 +138,10 @@ export function UserMyQRClient({ user, businessCards }: UserMyQRClientProps) {
                   />
                 </div>
               ) : (
-                <div className="w-60 h-60 bg-gray-100 rounded-xl flex items-center justify-center">
+                <div className="w-60 h-60 bg-slate-800 rounded-xl flex items-center justify-center">
                   <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
-                    <p className="text-gray-500 text-sm">QR 코드 생성 중...</p>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-2"></div>
+                    <p className="text-slate-400 text-sm">QR 코드 생성 중...</p>
                   </div>
                 </div>
               )}
@@ -145,7 +150,7 @@ export function UserMyQRClient({ user, businessCards }: UserMyQRClientProps) {
             {/* QR 코드 URL */}
             {qrUrl && (
               <div className="mb-6">
-                <p className="text-purple-600 text-sm font-medium">
+                <p className="text-purple-400 text-sm font-medium break-all">
                   {qrUrl}
                 </p>
               </div>
@@ -155,36 +160,36 @@ export function UserMyQRClient({ user, businessCards }: UserMyQRClientProps) {
             <div className="flex justify-between items-center gap-2">
               <Button
                 onClick={handleShare}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white border-none"
                 disabled={!qrUrl}
               >
-                <Share className="w-4 h-4" />
+                <Share className="w-4 h-4 mr-2" />
                 공유
               </Button>
 
               <Button
                 onClick={handleDownload}
                 variant="outline"
-                className="w-full border-gray-200"
+                className="w-full border-slate-700 bg-slate-800/50 text-white hover:bg-slate-800 hover:text-white"
                 disabled={!qrCodeDataURL}
               >
-                <Download className="w-4 h-4 " />
-                QR 코드 저장
+                <Download className="w-4 h-4 mr-2" />
+                저장
               </Button>
             </div>
           </CardContent>
         </Card>
 
         {/* 사용법 안내 */}
-        <Card className="border bg-[#F5F0FF] border-gray-200 shadow-sm">
+        <Card className="border border-slate-800 bg-slate-900/50 backdrop-blur-md shadow-sm">
           <CardContent className="p-4">
             <div className="flex flex-col items-start">
-              <div className="flex items-center gap-2">
-                <Image src="/images/icon/tip.png" alt="QR 코드 팁" width={12} height={12} className="pb-2" />
-                <h3 className="font-semibold text-gray-900 mb-2">QR 코드 팁</h3>
+              <div className="flex items-center gap-2 mb-2">
+                <Image src="/images/icon/tip.png" alt="QR 코드 팁" width={16} height={16} className="" />
+                <h3 className="font-semibold text-white">QR 코드 팁</h3>
               </div>
-              <div className="pl-4">
-                <ul className="text-sm text-gray-600 space-y-1">
+              <div className="pl-6">
+                <ul className="text-sm text-slate-400 space-y-1 list-disc">
                   <li>상대방에게 QR 코드를 보여주세요</li>
                   <li>상대방이 카메라로 스캔하면 내 명함을 볼 수 있어요</li>
                   <li>QR 코드를 저장해서 인쇄물에도 사용할 수 있어요</li>

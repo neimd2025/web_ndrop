@@ -39,7 +39,7 @@ export default function MobileBottomNav() {
   ]
 
   return (
-    <nav className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 z-50 shadow-lg">
+    <nav className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-slate-950/80 backdrop-blur-md border-t border-white/10 z-50 shadow-lg pb-safe">
       <div className="flex justify-around items-center py-2 pb-6 safe-area-bottom">
         {navItems.map((item) => {
           const isActive = pathname === item.href
@@ -49,14 +49,14 @@ export default function MobileBottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center py-2 px-3 min-w-0 flex-1 transition-all duration-200 active:scale-95 ${
-                isActive ? "text-purple-600" : "text-gray-500"
+              className={`flex flex-col items-center py-2 px-3 min-w-0 flex-1 transition-all duration-200 active:scale-95 group ${
+                isActive ? "text-purple-400" : "text-gray-400 hover:text-gray-200"
               }`}
             >
-              <div className={`p-2 rounded-2xl transition-colors ${isActive ? "bg-purple-100" : "hover:bg-gray-100"}`}>
-                <Icon className={`h-6 w-6 ${isActive ? "text-purple-600" : ""}`} />
+              <div className={`p-2 rounded-2xl transition-colors ${isActive ? "bg-purple-500/20" : "group-hover:bg-white/5"}`}>
+                <Icon className={`h-6 w-6 ${isActive ? "text-purple-400" : ""}`} />
               </div>
-              <span className={`text-xs font-medium mt-1 ${isActive ? "text-purple-600" : ""}`}>{item.label}</span>
+              <span className={`text-xs font-medium mt-1 ${isActive ? "text-purple-400" : ""}`}>{item.label}</span>
             </Link>
           )
         })}

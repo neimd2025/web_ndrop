@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/server'
 import jwt from 'jsonwebtoken'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -29,8 +29,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: '유효하지 않은 토큰입니다.' }, { status: 401 })
     }
 
-    // 서비스 역할 키로 Supabase 클라이언트 생성
-    const supabase = await createClient()
+    // 서비스 역할 키로 Supabase 클라이언트 생성 (RLS 우회)
+    const supabase = await createAdminClient()
 
     // 이벤트 존재 여부 및 권한 확인
     const { data: existingEvent, error: fetchError } = await supabase
@@ -46,13 +46,16 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // 이벤트 생성자 확인 (자신이 생성한 이벤트만 삭제 가능)
-    if (existingEvent.admin_created_by !== decoded.adminId) {
+    // 주의: 슈퍼 관리자가 있다면 이 체크를 건너뛰거나 수정해야 할 수 있음
+    if ((existingEvent as any)?.admin_created_by && (existingEvent as any).admin_created_by !== decoded.adminId) {
       return NextResponse.json({
         error: '이 이벤트를 삭제할 권한이 없습니다.'
       }, { status: 403 })
     }
 
     // 관련 데이터 삭제 (참여자, 피드백, 알림 등)
+    // ON DELETE CASCADE가 설정되어 있다면 자동으로 삭제되지만, 
+    // 안전을 위해 명시적으로 삭제하거나 로그를 남길 수 있음
     try {
       // 참여자 삭제
       await supabase

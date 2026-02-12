@@ -73,50 +73,49 @@ export function AdminNotificationsClient({
         const selectedEvent = initialEvents.find(event => event.title === newNotification.target_event)
         if (selectedEvent) {
           targetEventId = selectedEvent.id
-
-          // 해당 이벤트의 참가자 목록 가져오기
-          const { data: participants, error: participantError } = await supabase
-            .from('event_participants')
-            .select('user_id')
-            .eq('event_id', selectedEvent.id)
-            .eq('status', 'confirmed')
-
-          if (participantError) {
-            console.error('참가자 목록 가져오기 오류:', participantError)
-            toast.error('참가자 목록을 가져오는데 실패했습니다.')
-            return
-          }
-
-          targetIds = participants?.map(p => p.user_id) || []
+          // API에서 참가자 조회를 수행하므로 여기서는 ID만 전달
         }
       }
 
-      const { data, error } = await supabase
-        .from('notifications')
-        .insert({
+      // API 호출로 변경 (RLS 우회 및 안정성 확보)
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
+        return
+      }
+
+      const response = await fetch('/api/admin/send-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({
           title: newNotification.title,
           message: newNotification.message,
           target_type: newNotification.target_type,
           target_event_id: targetEventId,
-          target_ids: targetIds.length > 0 ? targetIds : null,
-          sent_date: new Date().toISOString(),
-          delivered_count: 0,
-          read_count: 0,
-          status: "sent"
+          target_ids: targetIds.length > 0 ? targetIds : null, // specific인 경우 여기서 채워야 함 (현재 UI에는 specific 선택 시 사용자 선택 로직이 없음, 추후 구현 필요)
         })
-        .select()
-        .single()
+      })
 
-      if (error) {
-        console.error('알림 전송 오류:', error)
-        toast.error('알림 전송에 실패했습니다.')
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('알림 전송 오류:', result)
+        toast.error(result.error || '알림 전송에 실패했습니다.')
         return
       }
 
-      setNotifications(prev => [data, ...prev])
+      const createdNotifications = result.notifications || []
+      // UI 업데이트 (하나의 대표 알림만 추가하거나, 반환된 것 중 하나만 추가)
+      if (createdNotifications.length > 0) {
+          setNotifications(prev => [createdNotifications[0], ...prev])
+      }
+
       setNewNotification({ title: "", message: "", target_type: "all", target_event: "" })
       setIsCreating(false)
-      toast.success(`알림이 성공적으로 전송되었습니다. (대상: ${targetIds.length}명)`)
+      toast.success(`알림이 성공적으로 전송되었습니다. (대상: ${result.targetCount}명)`)
     } catch (error) {
       console.error('알림 전송 오류:', error)
       toast.error('알림 전송에 실패했습니다.')

@@ -53,13 +53,13 @@ export function NotificationModal({ notification, isOpen, onClose }: Notificatio
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg bg-slate-900 border border-white/10 text-white">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-              <Megaphone className="h-5 w-5 text-orange-600" />
+            <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+              <Megaphone className="h-5 w-5 text-orange-400" />
             </div>
-            <DialogTitle className="text-xl">알림</DialogTitle>
+            <DialogTitle className="text-xl text-white">알림</DialogTitle>
           </div>
         </DialogHeader>
 
@@ -67,19 +67,19 @@ export function NotificationModal({ notification, isOpen, onClose }: Notificatio
           {/* 공지사항 내용 섹션 */}
           <div className="space-y-3">
             <div>
-              <div className="text-sm text-gray-500 mb-1">행사명</div>
-              <div className="text-md font-bold text-gray-900">{eventTitle}</div>
+              <div className="text-sm text-slate-400 mb-1">행사명</div>
+              <div className="text-md font-bold text-white">{eventTitle}</div>
             </div>
 
             <div>
-              <div className="text-sm text-gray-500 mb-1">제목</div>
-              <div className="text-xl font-bold text-gray-900">{notification.title}</div>
+              <div className="text-sm text-slate-400 mb-1">제목</div>
+              <div className="text-xl font-bold text-white">{notification.title}</div>
             </div>
 
             <div>
-              <div className="text-sm text-gray-500 mb-2">내용</div>
-              <div className="bg-white p-4 rounded-lg border border-gray-200 min-h-[120px]">
-                <p className="text-gray-800 whitespace-pre-line leading-relaxed">
+              <div className="text-sm text-slate-400 mb-2">내용</div>
+              <div className="bg-slate-800/50 p-4 rounded-lg border border-white/10 min-h-[120px]">
+                <p className="text-slate-200 whitespace-pre-line leading-relaxed">
                   {notification.message}
                 </p>
               </div>
@@ -87,8 +87,8 @@ export function NotificationModal({ notification, isOpen, onClose }: Notificatio
           </div>
 
           {/* 발송 정보 */}
-          <div className="pt-4 border-t border-gray-200">
-            <div className="text-xs text-gray-500 space-y-1">
+          <div className="pt-4 border-t border-white/10">
+            <div className="text-xs text-slate-500 space-y-1">
               {notification.created_at && (
                 <div className="flex items-center gap-1">
                   <span className="font-medium">발송일시:</span>

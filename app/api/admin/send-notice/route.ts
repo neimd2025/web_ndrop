@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient, createAdminClient } from '@/utils/supabase/server'
 import jwt from 'jsonwebtoken'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '이벤트 ID, 제목, 메시지가 모두 필요합니다.' }, { status: 400 })
     }
 
-    // 서비스 역할 키로 Supabase 클라이언트 생성
-    const supabase = await createClient()
+    // 서비스 역할 키로 Supabase 클라이언트 생성 (RLS 우회)
+    const supabase = await createAdminClient()
 
     // 해당 이벤트의 참가자 목록 가져오기
     const { data: participants, error: participantError } = await supabase
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '참가자 목록을 가져오는데 실패했습니다.' }, { status: 500 })
     }
 
-    const targetIds = participants?.map(p => p.user_id) || []
+    const targetIds = (participants as any[])?.map((p: any) => p.user_id) || []
 
     // 각 참가자에게 개별 알림 생성 (실제 스키마에 맞춤)
     const notifications = targetIds.map(userId => ({
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     const { data: createdNotifications, error: notificationError } = await supabase
       .from('notifications')
-      .insert(notifications)
+      .insert(notifications as any)
       .select()
 
     if (notificationError) {

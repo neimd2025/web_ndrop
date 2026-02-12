@@ -120,7 +120,7 @@ export default function AuthCallbackPage() {
               .eq('id', data.session.user.id)
               .single()
 
-            if (userProfile?.role_id !== 2) {
+            if ((userProfile as any)?.role_id !== 2) {
               console.log('❌ 관리자 권한 없음 - 사용자 홈으로 리다이렉트')
               toast.warning('관리자 권한이 없습니다. 사용자 홈으로 이동합니다.')
               returnTo = '/client/home'
@@ -135,7 +135,7 @@ export default function AuthCallbackPage() {
               .eq('id', data.session.user.id)
               .single()
 
-            if (userProfile?.role_id !== 1) {
+            if ((userProfile as any)?.role_id !== 1) {
               console.log('❌ 사용자 권한 없음 - 관리자 페이지로 리다이렉트')
               toast.warning('사용자 권한이 없습니다. 관리자 페이지로 이동합니다.')
               returnTo = '/admin'

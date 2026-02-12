@@ -70,87 +70,99 @@ export function UserEventsHistoryClient({
   }
 
   return (
-    <div className="min-h-screen">
-      {/* 헤더 */}
-      <div className="bg-white border-b border-gray-200 px-5 py-4">
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="p-2"
-            onClick={() => router.back()}
-          >
-            <ArrowLeft className="w-4 h-4 text-gray-900" />
-          </Button>
-          <h1 className="text-xl font-bold text-gray-900">참가 이벤트</h1>
-          <div className="w-10"></div>
-        </div>
+    <div className="min-h-screen bg-slate-950 relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="fixed inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#1a103c] to-slate-950 opacity-80"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-blue-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob" style={{ animationDelay: "2s" }}></div>
+        <div className="absolute bottom-[-10%] left-[20%] w-96 h-96 bg-indigo-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob" style={{ animationDelay: "4s" }}></div>
       </div>
 
-      {/* 검색바 */}
-      <div className="bg-white px-5 pt-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="이벤트 검색..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
-
-      {/* 메인 콘텐츠 */}
-      <div className="px-5 py-5">
-        {/* 토글 버튼들 */}
-        <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
-          {(['진행중', '예정', '종료'] as const).map((tab) => (
+      <div className="relative z-10">
+        {/* 헤더 */}
+        <div className="bg-slate-950/50 backdrop-blur-md border-b border-white/10 px-5 py-4 sticky top-0 z-20">
+          <div className="flex items-center justify-between">
             <Button
-              key={tab}
-              variant={activeTab === tab ? "default" : "ghost"}
+              variant="ghost"
               size="sm"
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 ${
-                activeTab === tab
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
+              className="p-2 -ml-2 text-white hover:text-white/80 hover:bg-white/10"
+              onClick={() => router.back()}
             >
-              {tab}
+              <ArrowLeft className="w-5 h-5" />
             </Button>
-          ))}
+            <h1 className="text-xl font-bold text-white">참가 이벤트</h1>
+            <div className="w-10"></div>
+          </div>
         </div>
 
-        {/* 이벤트 목록 */}
-        <div className="space-y-4">
-          {getCurrentEvents().length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                {activeTab} 이벤트가 없습니다
-              </h3>
-              <p className="text-gray-600 mb-6">
-                새로운 이벤트에 참가해보세요!
-              </p>
-              <Link href="/client/events/join">
-                <Button className="bg-purple-600 hover:bg-purple-700">
-                  이벤트 참가하기
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            getCurrentEvents().map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                onJoinEvent={() => {}} // 마이페이지에서는 필요 없음
-                actionLoading={actionLoading}
-                currentUser={{ id: user.id, email: user.email }}
-                getActionButton={getActionButton}
-                param="history"
-              />
-            ))
-          )}
+        {/* 검색바 */}
+        <div className="px-5 pt-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <Input
+              placeholder="이벤트 검색..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-slate-900/80 border-slate-700 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500"
+            />
+          </div>
+        </div>
+
+        {/* 메인 콘텐츠 */}
+        <div className="px-5 py-5">
+          {/* 토글 버튼들 */}
+          <div className="flex gap-2 mb-6 bg-slate-900/50 p-1 rounded-lg border border-white/5">
+            {(['진행중', '예정', '종료'] as const).map((tab) => (
+              <Button
+                key={tab}
+                variant={activeTab === tab ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 ${
+                  activeTab === tab
+                    ? "bg-purple-600 text-white shadow-lg shadow-purple-900/20"
+                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                {tab}
+              </Button>
+            ))}
+          </div>
+
+          {/* 이벤트 목록 */}
+          <div className="space-y-4">
+            {getCurrentEvents().length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
+                  <Calendar className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  {activeTab} 이벤트가 없습니다
+                </h3>
+                <p className="text-slate-400 mb-6">
+                  새로운 이벤트에 참가해보세요!
+                </p>
+                <Link href="/client/events/join">
+                  <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white border-0 shadow-lg shadow-purple-900/20">
+                    이벤트 참가하기
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              getCurrentEvents().map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onJoinEvent={() => {}} // 마이페이지에서는 필요 없음
+                  actionLoading={actionLoading}
+                  currentUser={{ id: user.id, email: user.email }}
+                  getActionButton={getActionButton}
+                  param="history"
+                />
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

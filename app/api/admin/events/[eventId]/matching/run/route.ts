@@ -49,8 +49,9 @@ export async function POST(
     .eq("event_id", eventId)
     .single();
 
-  const maxRecommendations = config?.max_requests_per_user || 5;
-  const scoringWeights = (config?.scoring_weights as Record<string, any>) || {};
+  // 기본 추천 인원: 3명 (사용자 요청 반영)
+  const maxRecommendations = (config as any)?.max_requests_per_user || 3;
+  const scoringWeights = ((config as any)?.scoring_weights as Record<string, any>) || {};
   
   // 확장 가능한 제외 정책 설정 (matching_config.rules가 없으므로 scoring_weights 내에 rules 객체를 포함한다고 가정하거나 기본값 사용)
   const rules = scoringWeights.rules || {
@@ -76,7 +77,7 @@ export async function POST(
 
   const meetingPairs = new Set<string>();
   if (existingMeetings) {
-    for (const m of existingMeetings) {
+    for (const m of (existingMeetings as any[])) {
       // 양방향 체크를 위해 정렬해서 키 생성
       const [u1, u2] = [m.requester_id, m.receiver_id].sort();
       meetingPairs.add(`${u1}:${u2}`);
@@ -110,7 +111,7 @@ export async function POST(
   const batchId = crypto.randomUUID();
   const recommendationsToInsert: MatchRecommendationInsert[] = [];
 
-  for (const participant of participants) {
+  for (const participant of (participants as any[])) {
     const userId = participant.user_id;
     // 타입 단언을 사용하여 안전하게 접근
     const userProfile = (participant as unknown as EventParticipant).user_profiles;
@@ -118,7 +119,7 @@ export async function POST(
     if (!userProfile) continue;
 
     // 후보군: 자기 자신 제외 AND 이미 미팅 관계가 있는 사람 제외
-    const candidates = participants.filter((p: any) => {
+    const candidates = (participants as any[]).filter((p: any) => {
       if (p.user_id === userId) return false;
       
       const [u1, u2] = [userId, p.user_id].sort();
@@ -135,27 +136,59 @@ export async function POST(
       let score = 0;
       const reasons: Record<string, any> = {};
 
-      // 로직 1: 관심사 매칭
+      // 로직 1: 업무 분야(Industry) 매칭 (가장 중요)
+      if (userProfile.work_field && userProfile.work_field === candidateProfile.work_field) {
+        const weight = scoringWeights.same_work_field || 30; // 가중치 상향 (5 -> 30)
+        score += weight;
+        reasons.same_work_field = userProfile.work_field;
+      }
+
+      // 로직 2: 직무(Role) 매칭 (중요)
+      if (userProfile.role && userProfile.role === candidateProfile.role) {
+        const weight = 20; // 가중치 추가
+        score += weight;
+        reasons.same_role = userProfile.role;
+      }
+
+      // 로직 3: 관심사 매칭 (보완)
       if (userProfile.interest_keywords && candidateProfile.interest_keywords) {
         const myInterests = new Set(userProfile.interest_keywords);
         const commonInterests = candidateProfile.interest_keywords.filter((k: string) =>
           myInterests.has(k)
         );
         if (commonInterests.length > 0) {
-          const weight = scoringWeights.interest_match || 10;
+          const weight = scoringWeights.interest_match || 5; // 가중치 하향 (10 -> 5)
           score += commonInterests.length * weight;
           reasons.common_interests = commonInterests;
         }
       }
 
-      // 로직 2: 직군/업계 매칭 (예시)
-      if (userProfile.work_field && userProfile.work_field === candidateProfile.work_field) {
-        const weight = scoringWeights.same_work_field || 5;
-        score += weight;
-        reasons.same_work_field = true;
+      // 추천 사유 생성 (문장형 요약)
+      const summaryParts = [];
+      if (reasons.same_work_field) {
+        summaryParts.push(`같은 ${reasons.same_work_field} 분야에 계시네요.`);
+      } else if (reasons.same_role) {
+         summaryParts.push(`비슷한 ${reasons.same_role} 직무를 갖고 계세요.`);
       }
 
-      // 로직 3: 랜덤 요소 (다양성을 위해 약간의 랜덤 점수 추가)
+      if (reasons.common_interests && reasons.common_interests.length > 0) {
+        const interests = reasons.common_interests.join(", ");
+        if (summaryParts.length > 0) {
+          summaryParts.push(`특히 ${interests}에 공통된 관심사가 있어 대화가 잘 통하실 거예요!`);
+        } else {
+          summaryParts.push(`${interests} 분야에 관심이 있으셔서 추천해 드려요!`);
+        }
+      } else {
+        if (summaryParts.length > 0) {
+           summaryParts.push("업무 연관성이 높아 시너지를 기대해 볼 수 있어요!");
+        } else {
+           summaryParts.push("새로운 분야의 분과 교류해보시는 건 어떨까요?");
+        }
+      }
+      
+      reasons.summary = summaryParts.join(" ");
+
+      // 로직 4: 랜덤 요소 (약간의 다양성)
       score += Math.random() * 5;
 
       return {
@@ -188,7 +221,7 @@ export async function POST(
     // (1) 새로운 배치 삽입
     const { error: insertError } = await supabaseAdmin
       .from("event_match_recommendations")
-      .insert(recommendationsToInsert);
+      .insert(recommendationsToInsert as any);
 
     if (insertError) {
       console.error("Match insert error:", insertError);

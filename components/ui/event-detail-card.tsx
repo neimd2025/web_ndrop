@@ -40,6 +40,7 @@ interface EventDetailCardProps {
   showOrganizerInfo?: boolean
   onJoinSuccess?: () => void
   onLeaveSuccess?: () => void
+  isDarkTheme?: boolean
 }
 
 export function EventDetailCard({
@@ -48,6 +49,7 @@ export function EventDetailCard({
   showOrganizerInfo = true,
   onJoinSuccess,
   onLeaveSuccess,
+  isDarkTheme = false,
 }: EventDetailCardProps) {
   const [event, setEvent] = useState(initialEvent)
   const [actionLoading, setActionLoading] = useState(false)
@@ -58,6 +60,16 @@ export function EventDetailCard({
   const searchParams = useSearchParams()
   const source = searchParams.get('source')
 
+  // Theme helper classes
+  const cardBgClass = isDarkTheme 
+    ? "bg-slate-900/40 border border-white/10 text-white backdrop-blur-md shadow-xl" 
+    : "bg-white"
+  const textTitleClass = isDarkTheme ? "text-white" : "text-gray-900"
+  const textBodyClass = isDarkTheme ? "text-slate-300" : "text-gray-600"
+  const textLabelClass = isDarkTheme ? "text-slate-400" : "text-gray-500"
+  const textValueClass = isDarkTheme ? "text-slate-200" : "font-medium"
+  const iconClass = isDarkTheme ? "text-slate-400" : "text-gray-500"
+  
   // 뒤로가기 경로 결정
   const getBackUrl = () => {
     switch (source) {
@@ -122,11 +134,11 @@ export function EventDetailCard({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'upcoming':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">예정</Badge>
+        return <Badge variant="secondary" className={isDarkTheme ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" : "bg-blue-100 text-blue-800"}>예정</Badge>
       case 'ongoing':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800">진행중</Badge>
+        return <Badge variant="secondary" className={isDarkTheme ? "bg-green-500/20 text-green-300 border border-green-500/30" : "bg-green-100 text-green-800"}>진행중</Badge>
       case 'completed':
-        return <Badge variant="secondary" className="bg-gray-100 text-gray-800">종료</Badge>
+        return <Badge variant="secondary" className={isDarkTheme ? "bg-slate-500/20 text-slate-400 border border-slate-500/30" : "bg-gray-100 text-gray-800"}>종료</Badge>
       default:
         return <Badge variant="secondary">예정</Badge>
     }
@@ -276,7 +288,7 @@ export function EventDetailCard({
       {/* 뒤로가기 버튼 */}
       <div className="mb-4">
         <Link href={getBackUrl()}>
-          <Button variant="ghost" className="flex items-center gap-2">
+          <Button variant="ghost" className={`flex items-center gap-2 ${isDarkTheme ? 'text-white hover:text-white/80 hover:bg-white/10' : ''}`}>
             <ArrowLeft className="h-4 w-4" />
             뒤로가기
           </Button>
@@ -287,30 +299,33 @@ export function EventDetailCard({
       <div className="space-y-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className={`text-3xl font-bold mb-2 ${textTitleClass}`}>
               {event.title}
             </h1>
             {getStatusBadge(event.status)}
           </div>
         </div>
 
-        <p className="text-lg text-gray-600 leading-relaxed">
+        <p className={`text-lg leading-relaxed ${textBodyClass}`}>
           {event.description}
         </p>
       </div>
 
       {/* 이벤트 개요 */}
       {(event.overview_points && event.overview_points.length > 0) && (
-        <Card className="border-0 shadow-lg">
-          <CardContent className="p-6">
+        <Card className={`border-0 shadow-lg ${cardBgClass} relative overflow-hidden group`}>
+          {isDarkTheme && <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-transparent group-hover:from-red-500/10 transition-colors" />}
+          <CardContent className="p-6 relative">
             <div className="flex items-center gap-2 mb-4">
-              <Pin className="h-5 w-5 text-red-500" />
-              <h2 className="text-xl font-semibold text-gray-900">이벤트 개요</h2>
+              <div className={isDarkTheme ? "bg-red-500/20 p-2 rounded-xl" : ""}>
+                <Pin className={`h-5 w-5 ${isDarkTheme ? "text-red-400" : "text-red-500"}`} />
+              </div>
+              <h2 className={`text-xl font-semibold ${textTitleClass}`}>이벤트 개요</h2>
             </div>
-            <ul className="space-y-2 text-gray-700">
+            <ul className={`space-y-2 ${isDarkTheme ? 'text-slate-300' : 'text-gray-700'}`}>
               {event.overview_points.map((point, index) => (
                 <li key={index} className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <div className={`w-1.5 h-1.5 rounded-full ${isDarkTheme ? "bg-red-400" : "bg-red-500"}`}></div>
                   {point}
                 </li>
               ))}
@@ -321,16 +336,19 @@ export function EventDetailCard({
 
       {/* 참가 대상 */}
       {(event.target_audience && event.target_audience.length > 0) && (
-        <Card className="border-0 shadow-lg">
-          <CardContent className="p-6">
+        <Card className={`border-0 shadow-lg ${cardBgClass} relative overflow-hidden group`}>
+          {isDarkTheme && <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent group-hover:from-blue-500/10 transition-colors" />}
+          <CardContent className="p-6 relative">
             <div className="flex items-center gap-2 mb-4">
-              <Target className="h-5 w-5 text-red-500" />
-              <h2 className="text-xl font-semibold text-gray-900">참가 대상</h2>
+              <div className={isDarkTheme ? "bg-blue-500/20 p-2 rounded-xl" : ""}>
+                <Target className={`h-5 w-5 ${isDarkTheme ? "text-blue-400" : "text-blue-500"}`} />
+              </div>
+              <h2 className={`text-xl font-semibold ${textTitleClass}`}>참가 대상</h2>
             </div>
-            <ul className="space-y-2 text-gray-700">
+            <ul className={`space-y-2 ${isDarkTheme ? 'text-slate-300' : 'text-gray-700'}`}>
               {event.target_audience.map((audience, index) => (
                 <li key={index} className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <div className={`w-1.5 h-1.5 rounded-full ${isDarkTheme ? "bg-blue-400" : "bg-blue-500"}`}></div>
                   {audience}
                 </li>
               ))}
@@ -341,16 +359,19 @@ export function EventDetailCard({
 
       {/* 특별 혜택 */}
       {(event.special_benefits && event.special_benefits.length > 0) && (
-        <Card className="border-0 shadow-lg">
-          <CardContent className="p-6">
+        <Card className={`border-0 shadow-lg ${cardBgClass} relative overflow-hidden group`}>
+          {isDarkTheme && <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 via-transparent to-transparent group-hover:from-yellow-500/10 transition-colors" />}
+          <CardContent className="p-6 relative">
             <div className="flex items-center gap-2 mb-4">
-              <Lightbulb className="h-5 w-5 text-yellow-500" />
-              <h2 className="text-xl font-semibold text-gray-900">특별 혜택</h2>
+              <div className={isDarkTheme ? "bg-yellow-500/20 p-2 rounded-xl" : ""}>
+                <Lightbulb className={`h-5 w-5 ${isDarkTheme ? "text-yellow-400" : "text-yellow-500"}`} />
+              </div>
+              <h2 className={`text-xl font-semibold ${textTitleClass}`}>특별 혜택</h2>
             </div>
-            <ul className="space-y-2 text-gray-700">
+            <ul className={`space-y-2 ${isDarkTheme ? 'text-slate-300' : 'text-gray-700'}`}>
               {event.special_benefits.map((benefit, index) => (
                 <li key={index} className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <div className={`w-1.5 h-1.5 rounded-full ${isDarkTheme ? "bg-yellow-400" : "bg-yellow-500"}`}></div>
                   {benefit}
                 </li>
               ))}
@@ -361,7 +382,7 @@ export function EventDetailCard({
 
       {/* 이벤트 이미지 */}
       {event.image_url && (
-        <Card className="border-0 shadow-lg overflow-hidden">
+        <Card className={`border-0 shadow-lg overflow-hidden ${cardBgClass}`}>
           <CardContent className="p-0">
             <div className="relative h-64 w-full">
               <Image
@@ -377,24 +398,24 @@ export function EventDetailCard({
       )}
 
       {/* 이벤트 상세 정보 */}
-      <Card className="border-0 shadow-lg">
+      <Card className={`border-0 shadow-lg ${cardBgClass}`}>
         <CardContent className="p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">이벤트 정보</h2>
+          <h2 className={`text-xl font-semibold mb-6 ${textTitleClass}`}>이벤트 정보</h2>
           <div className="space-y-6">
             {/* Row 1: 날짜 | 참가자 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-gray-500" />
+                <Calendar className={`h-5 w-5 ${iconClass}`} />
                 <div>
-                  <p className="text-sm text-gray-500">날짜</p>
-                  <p className="font-medium">{formatDate(event.start_date)}</p>
+                  <p className={`text-sm ${textLabelClass}`}>날짜</p>
+                  <p className={`${textValueClass}`}>{formatDate(event.start_date)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Users className="h-5 w-5 text-gray-500" />
+                <Users className={`h-5 w-5 ${iconClass}`} />
                 <div>
-                  <p className="text-sm text-gray-500">참가자</p>
-                  <p className="font-medium">{event.current_participants}명</p>
+                  <p className={`text-sm ${textLabelClass}`}>참가자</p>
+                  <p className={`${textValueClass}`}>{event.current_participants}명</p>
                 </div>
               </div>
             </div>
@@ -403,20 +424,20 @@ export function EventDetailCard({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {event.region ? (
                 <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-gray-500" />
+                  <MapPin className={`h-5 w-5 ${iconClass}`} />
                   <div>
-                    <p className="text-sm text-gray-500">지역</p>
-                    <p className="font-medium">{event.region}</p>
+                    <p className={`text-sm ${textLabelClass}`}>지역</p>
+                    <p className={`${textValueClass}`}>{event.region}</p>
                   </div>
                 </div>
               ) : <div />}
               
               {showEventCode && (
                 <div className="flex items-center gap-3">
-                  <QrCode className="h-5 w-5 text-gray-500" />
+                  <QrCode className={`h-5 w-5 ${iconClass}`} />
                   <div>
-                    <p className="text-sm text-gray-500">이벤트 코드</p>
-                    <p className="font-medium font-mono">{event.event_code}</p>
+                    <p className={`text-sm ${textLabelClass}`}>이벤트 코드</p>
+                    <p className={`${textValueClass} font-mono`}>{event.event_code}</p>
                   </div>
                 </div>
               )}
@@ -424,10 +445,10 @@ export function EventDetailCard({
 
             {/* Row 3: 시간 */}
             <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-gray-500" />
+              <Clock className={`h-5 w-5 ${iconClass}`} />
               <div>
-                <p className="text-sm text-gray-500">시간</p>
-                <p className="font-medium">
+                <p className={`text-sm ${textLabelClass}`}>시간</p>
+                <p className={`${textValueClass}`}>
                   {formatTime(event.start_date)} - {formatTime(event.end_date)}
                 </p>
               </div>
@@ -435,10 +456,10 @@ export function EventDetailCard({
 
             {/* Row 4: 장소 */}
             <div className="flex items-center gap-3">
-              <MapPin className="h-5 w-5 text-gray-500" />
+              <MapPin className={`h-5 w-5 ${iconClass}`} />
               <div>
-                <p className="text-sm text-gray-500">장소</p>
-                <p className="font-medium">{event.location}</p>
+                <p className={`text-sm ${textLabelClass}`}>장소</p>
+                <p className={`${textValueClass}`}>{event.location}</p>
               </div>
             </div>
           </div>
@@ -452,47 +473,47 @@ export function EventDetailCard({
 
       {/* 이벤트 현황 */}
       <div className="grid grid-cols-2 gap-6">
-        <Card className="border-0 shadow-lg bg-blue-50">
+        <Card className={`border-0 shadow-lg ${isDarkTheme ? 'bg-blue-900/20' : 'bg-blue-50'}`}>
           <CardContent className="p-6 text-center">
-            <div className="text-4xl font-bold text-blue-600 mb-2">
+            <div className={`text-4xl font-bold mb-2 ${isDarkTheme ? 'text-blue-400' : 'text-blue-600'}`}>
               {event.current_participants}
             </div>
-            <p className="text-blue-800 font-medium">참가자</p>
+            <p className={`${isDarkTheme ? 'text-blue-300' : 'text-blue-800'} font-medium`}>참가자</p>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-green-50">
+        <Card className={`border-0 shadow-lg ${isDarkTheme ? 'bg-green-900/20' : 'bg-green-50'}`}>
           <CardContent className="p-6 text-center">
-            <div className="text-4xl font-bold text-green-600 mb-2">
+            <div className={`text-4xl font-bold mb-2 ${isDarkTheme ? 'text-green-400' : 'text-green-600'}`}>
               {event.max_participants}
             </div>
-            <p className="text-green-800 font-medium">최대인원</p>
+            <p className={`${isDarkTheme ? 'text-green-300' : 'text-green-800'} font-medium`}>최대인원</p>
           </CardContent>
         </Card>
       </div>
 
       {/* 주최자 정보 */}
       {showOrganizerInfo && event.organizer_name && (
-        <Card className="border-0 shadow-lg">
+        <Card className={`border-0 shadow-lg ${cardBgClass}`}>
           <CardContent className="p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">주최자 정보</h2>
+            <h2 className={`text-xl font-semibold mb-4 ${textTitleClass}`}>주최자 정보</h2>
             <div className="space-y-3">
               <div>
-                <p className="text-sm text-gray-500">주최자</p>
-                <p className="font-medium">{event.organizer_name}</p>
+                <p className={`text-sm ${textLabelClass}`}>주최자</p>
+                <p className={`${textValueClass}`}>{event.organizer_name}</p>
               </div>
 
               {event.organizer_email && (
                 <div>
-                  <p className="text-sm text-gray-500">문의 이메일</p>
-                  <p className="font-medium">{event.organizer_email}</p>
+                  <p className={`text-sm ${textLabelClass}`}>문의 이메일</p>
+                  <p className={`${textValueClass}`}>{event.organizer_email}</p>
                 </div>
               )}
 
               {event.organizer_phone && (
                 <div>
-                  <p className="text-sm text-gray-500">전화</p>
-                  <p className="font-medium">{event.organizer_phone}</p>
+                  <p className={`text-sm ${textLabelClass}`}>전화</p>
+                  <p className={`${textValueClass}`}>{event.organizer_phone}</p>
                 </div>
               )}
             </div>
