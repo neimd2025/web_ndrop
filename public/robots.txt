@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /client/my-page/
+Disallow: /client/my-namecard/
+Disallow: /client/notifications/
 
 Sitemap: https://www.ndrop.kr/sitemap.xml
