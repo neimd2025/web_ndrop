@@ -61,6 +61,14 @@ const SCAN_PATTERN = /^\/(client\/scan-card|client\/events\/scan)$/
 const PUBLIC_CARD_BOOK_PATTERN = /^\/client\/card-books\//
 
 export async function middleware(req: NextRequest) {
+  // 0. 도메인 리다이렉트 (non-www -> www)
+  const host = req.headers.get('host') || '';
+  if (process.env.NODE_ENV === 'production' && host === 'ndrop.kr') {
+    const url = new URL(req.url);
+    url.host = 'www.ndrop.kr';
+    return NextResponse.redirect(url, { status: 301 });
+  }
+
   const { supabase, supabaseResponse } = createClient(req)
   const redis = getRedisClient()
   

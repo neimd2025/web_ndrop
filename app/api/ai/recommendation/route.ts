@@ -4,24 +4,28 @@ import { createClient } from '@/utils/supabase/server';
 
 export const runtime = "nodejs"; // Force Node.js runtime
 
-// Gemini 클라이언트 초기화
-const apiKey = process.env.GEMINI_API_KEY;
-console.log("Gemini API Key Loaded:", !!apiKey); // 키 존재 여부만 로그 출력 (보안)
-
-const genAI = new GoogleGenerativeAI(apiKey || "");
+// Gemini 클라이언트 초기화 (요청 시마다 확인)
+const getGeminiModel = () => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.warn("GEMINI_API_KEY is missing. AI features will be disabled.");
+    return null;
+  }
+  const genAI = new GoogleGenerativeAI(apiKey);
+  return genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+};
 
 export async function POST(req: Request) {
-  console.log("AI route hit");
-  console.log("GEMINI_API_KEY exists?", !!process.env.GEMINI_API_KEY);
-
   try {
-    const { userProfile, candidateProfiles, eventId } = await req.json();
-
-    // 1. API 키가 없거나 프로필 정보가 부족한 경우 에러 처리
-    if (!apiKey) {
-      console.error("GEMINI_API_KEY is missing.");
-      return NextResponse.json({ error: "API Key Missing" }, { status: 500 });
+    const model = getGeminiModel();
+    if (!model) {
+      return NextResponse.json({ 
+        recommendations: [], 
+        error: "AI service unavailable" 
+      }, { status: 503 }); // 503 Service Unavailable is better than 500
     }
+
+    const { userProfile, candidateProfiles, eventId } = await req.json();
 
     if (!userProfile || !candidateProfiles || candidateProfiles.length === 0) {
       return NextResponse.json({ recommendations: [] });
@@ -132,8 +136,6 @@ export async function POST(req: Request) {
     console.log("-----------------------------------");
 
     // Gemini API 호출
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-
     const result = await model.generateContent(prompt);
     const response = await result.response;
     console.log("Gemini raw response:", JSON.stringify(response, null, 2));

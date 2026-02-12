@@ -207,17 +207,29 @@ export async function getUserAuth(options: GetUserAuthOptions = {}): Promise<Use
     const supabase = await createClient()
 
     // 🔥 세션 복구 시도
-    const user = await recoverUserSession(supabase)
+    let user = null;
+    try {
+      // 1. getUser() 먼저 시도 (가장 안전)
+      const { data, error } = await supabase.auth.getUser()
+      if (!error && data?.user) {
+        user = data.user
+      } else if (error) {
+        // AuthSessionMissingError 등은 로그 레벨 낮춤
+        if (error.name !== 'AuthSessionMissingError') {
+          console.warn('getUser check failed:', error.message)
+        }
+      }
+    } catch (authError) {
+      console.warn('Auth check exception:', authError)
+    }
 
     if (!user) {
       if (requireAuth) {
         if (throwOnError) {
           throw new Error('인증이 필요합니다')
         }
-        console.warn('인증 필요')
         return null
       }
-      // 🔥 인증이 필수가 아닌 경우 null 반환
       return null
     }
 
@@ -239,11 +251,13 @@ export async function getUserAuth(options: GetUserAuthOptions = {}): Promise<Use
       created_at: user.created_at
     } as UserProfile
   } catch (error) {
+    // 치명적인 에러라도 서버 컴포넌트 500 방지
+    console.error('Critical Auth Error (Recovered):', error)
+    
     if (throwOnError) {
       throw error
     }
     
-    console.warn('사용자 인증 확인 오류:', error)
     return null
   }
 }
