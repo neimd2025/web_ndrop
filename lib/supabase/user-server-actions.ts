@@ -209,14 +209,21 @@ export async function getUserAuth(options: GetUserAuthOptions = {}): Promise<Use
     // 🔥 세션 복구 시도
     let user = null;
     try {
-      // 1. getUser() 먼저 시도 (가장 안전)
+      // 1. getUser() 먼저 시도 (가장 안전, DB 상태 확인)
       const { data, error } = await supabase.auth.getUser()
       if (!error && data?.user) {
         user = data.user
-      } else if (error) {
-        // AuthSessionMissingError 등은 로그 레벨 낮춤
-        if (error.name !== 'AuthSessionMissingError') {
-          console.warn('getUser check failed:', error.message)
+      } else {
+        // 2. getUser 실패 시 getSession으로 폴백 (JWT 유효성만 확인, 덜 엄격함)
+        // 네트워크 이슈나 일시적인 DB 조회 실패로 인한 로그아웃 방지
+        if (error?.name !== 'AuthSessionMissingError') {
+          console.warn('getUser failed, attempting getSession fallback:', error?.message)
+        }
+        
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+        if (!sessionError && sessionData.session?.user) {
+          user = sessionData.session.user
+          // console.log('✅ Session recovered via getSession')
         }
       }
     } catch (authError) {
