@@ -13,7 +13,12 @@ export default async function SavedCardsPage() {
           savedCards={savedCards} 
         />
     );
-  } catch (error) {
+  } catch (error: any) {
+    // Redirect 에러는 다시 던져서 Next.js가 처리하게 함
+    if (error?.digest?.startsWith?.('NEXT_REDIRECT')) {
+      throw error;
+    }
+
     console.error('명함첩 데이터 로드 오류:', error);
     
     // 에러 UI
