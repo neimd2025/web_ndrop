@@ -11,6 +11,12 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 export async function createClient() {
   const cookieStore = await cookies();
 
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      "Supabase URL or Anon Key is missing. Please check your environment variables."
+    );
+  }
+
   return createServerClient<Database>(
     supabaseUrl,
     supabaseAnonKey,
