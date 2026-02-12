@@ -148,7 +148,7 @@ const config: Config = {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "bounce-slow": "bounce 3s infinite",
+        "bounce-slow": "bounce 2s infinite",
         blob: "blob 7s infinite",
         twinkle: "twinkle 2s ease-in-out infinite",
         "shooting-star": "shooting-star 3s ease-in-out infinite",
