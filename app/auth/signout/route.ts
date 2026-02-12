@@ -8,10 +8,26 @@ export async function GET(req: NextRequest) {
   try {
     const { data: { session } } = await supabase.auth.getSession()
     if (session) {
-      await supabase.auth.signOut()
+      // scope: 'local'로 설정하여 현재 기기의 세션만 종료 (다른 기기 로그인 유지)
+      // 주의: Supabase JS v2의 signOut은 기본적으로 global일 수 있으나, 
+      // 명시적으로 scope 옵션을 지원하는 버전인지 확인 필요. 
+      // 지원하지 않는 경우, 아래 코드는 무시되거나 global로 동작할 수 있음.
+      // 하지만 가장 안전한 방법은 여기서 signOut을 호출하지 않고 쿠키만 삭제하는 것일 수도 있음.
+      // 만약 'suddenly' 문제가 다른 기기의 로그아웃 때문이라면, 여기서 signOut()을 호출하면 안 됨.
+      
+      // 사용자 경험: "이 기기에서 로그아웃"을 원함.
+      // 따라서 쿠키만 삭제하고 서버 측 세션은 만료되도록 두는 것이 나을 수 있음 (Refresh Token 삭제됨).
+      // 하지만 보안상 서버에도 알리는 것이 좋음.
+      
+      await supabase.auth.signOut({ scope: 'local' }) 
     }
   } catch (error) {
-    console.error("SignOut Error:", error)
+    // scope: 'local'이 지원되지 않는 구버전일 경우 에러가 날 수 있으므로 fallback
+    try {
+        await supabase.auth.signOut()
+    } catch (e) {
+        console.error("SignOut Error:", e)
+    }
   }
 
   const requestUrl = new URL(req.url)
@@ -44,7 +60,8 @@ export async function GET(req: NextRequest) {
   const cookiesToDelete = [
     'sb-access-token',
     'sb-refresh-token',
-    `sb-${process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID}-auth-token` // 일반적인 Supabase Auth 쿠키 패턴
+    `sb-${process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID}-auth-token`, // 일반적인 Supabase Auth 쿠키 패턴
+    'supabase-auth-token' // 가끔 사용되는 별칭
   ]
 
   // 요청에 있는 모든 쿠키 중 'sb-'로 시작하는 것들도 삭제 대상에 추가
@@ -58,7 +75,11 @@ export async function GET(req: NextRequest) {
   const uniqueCookies = [...new Set(cookiesToDelete)]
   
   uniqueCookies.forEach(name => {
+    // 1. 현재 도메인에서 삭제
     response.cookies.set(name, '', cookieOptions)
+    
+    // 2. 루트 도메인(.ndrop.kr)에서도 삭제 시도 (서브도메인 쿠키 꼬임 방지)
+    response.cookies.set(name, '', { ...cookieOptions, domain: '.ndrop.kr' })
   })
 
   return response

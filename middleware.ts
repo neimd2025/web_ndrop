@@ -81,7 +81,8 @@ export async function middleware(req: NextRequest) {
       pathname.includes('public/') ||
       pathname === '/favicon.ico' ||
       pathname === '/robots.txt' ||
-      pathname === '/sitemap.xml') {
+      pathname === '/sitemap.xml' ||
+      pathname.startsWith('/auth/signout')) { // 로그아웃 경로는 즉시 통과
     return supabaseResponse
   }
   
@@ -95,10 +96,12 @@ export async function middleware(req: NextRequest) {
   }
   
   // 3. 세션 토큰 추출
-  const sessionToken = req.cookies.get('sb-access-token')?.value
+  // const sessionToken = req.cookies.get('sb-access-token')?.value
   let session = null
-  let sessionSource = 'none'
+  let sessionSource = 'database' // 기본값을 database로 변경 (캐시 사용 안함)
   
+  // 캐시 로직 제거: 다중 기기 환경에서 세션 상태 불일치 방지
+  /*
   // 4. 메모리 캐시 확인 (가장 빠름)
   if (sessionToken) {
     const memoryCached = memoryCache.getSession(sessionToken)
@@ -122,14 +125,16 @@ export async function middleware(req: NextRequest) {
       console.warn('Redis 세션 조회 오류:', error)
     }
   }
+  */
   
-  // 6. DB 조회 (캐시 미스 시)
+  // 6. DB 조회 (항상 최신 상태 확인)
   if (!session) {
     const dbStart = Date.now()
     try {
       const { data: sessionData } = await supabase.auth.getSession()
       session = sessionData.session
       
+      /* 캐시 저장 로직 제거
       if (session && sessionToken) {
         // 캐시 저장
         memoryCache.setSession(sessionToken, session)
@@ -146,6 +151,7 @@ export async function middleware(req: NextRequest) {
           console.log(`⏱️ DB 세션 조회: ${Date.now() - dbStart}ms (${sessionSource})`)
         }
       }
+      */
     } catch (error) {
       console.error('세션 조회 오류:', error)
     }
