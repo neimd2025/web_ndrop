@@ -62,6 +62,7 @@ const PUBLIC_CARD_BOOK_PATTERN = /^\/client\/card-books\//
 
 export async function middleware(req: NextRequest) {
   // 0. 도메인 리다이렉트 (non-www -> www)
+  // 301 redirect to www.ndrop.kr (canonical domain)
   const host = req.headers.get('host') || '';
   if (process.env.NODE_ENV === 'production' && host === 'ndrop.kr') {
     const url = new URL(req.url);

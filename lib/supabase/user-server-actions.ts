@@ -296,15 +296,15 @@ export async function requireUserAuth(options: {
   }
   
   if (!user) {
-    const headersList = await headers()
-    const referer = headersList.get('referer')
-    const fromPath = referer || '/'
-    
-    const redirectUrl = redirectTo || `/login?type=user&from=${encodeURIComponent(fromPath)}`
-    
-    // 헤더를 직접 설정하여 리다이렉트 대신 next/navigation의 redirect 사용
-    redirect(redirectUrl)
-  }
+      const headersList = await headers()
+      const referer = headersList.get('referer')
+      const fromPath = referer || '/'
+      
+      const redirectUrl = redirectTo || `/login?type=user&from=${encodeURIComponent(fromPath)}`
+      
+      // 헤더를 직접 설정하여 리다이렉트 대신 next/navigation의 redirect 사용
+      redirect(redirectUrl)
+    }
   
   return user
 }

@@ -53,7 +53,6 @@ export async function GET(req: NextRequest) {
     path: '/',
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
-    // domain: '.ndrop.kr' // 필요시 주석 해제하여 도메인 통합
   }
 
   // Supabase 기본 쿠키 이름들 삭제
@@ -79,7 +78,10 @@ export async function GET(req: NextRequest) {
     response.cookies.set(name, '', cookieOptions)
     
     // 2. 루트 도메인(.ndrop.kr)에서도 삭제 시도 (서브도메인 쿠키 꼬임 방지)
-    response.cookies.set(name, '', { ...cookieOptions, domain: '.ndrop.kr' })
+    // 주의: 로컬호스트에서는 domain 설정을 하면 쿠키가 삭제되지 않을 수 있으므로 프로덕션에서만 적용
+    if (process.env.NODE_ENV === 'production') {
+      response.cookies.set(name, '', { ...cookieOptions, domain: '.ndrop.kr' })
+    }
   })
 
   return response
