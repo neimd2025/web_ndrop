@@ -75,12 +75,15 @@ export async function middleware(req: NextRequest) {
   
   const pathname = req.nextUrl.pathname
   
-  // 1. 정적 파일, 공개 API는 즉시 반환
+  // 1. 정적 파일, 개발 자원, 공개 API는 즉시 반환
   if (STATIC_EXT_PATTERN.test(pathname) || 
       PUBLIC_API_PATTERN.test(pathname) ||
       pathname.includes('_next/') ||
+      pathname.includes('@vite/') ||
       pathname.includes('public/') ||
       pathname === '/favicon.ico' ||
+      pathname === '/apple-touch-icon.png' ||
+      pathname === '/apple-touch-icon-precomposed.png' ||
       pathname === '/robots.txt' ||
       pathname === '/sitemap.xml' ||
       pathname.startsWith('/auth/signout')) { // 로그아웃 경로는 즉시 통과
@@ -221,8 +224,8 @@ export async function middleware(req: NextRequest) {
     }
   }
   
-  // 개발 환경에서 캐시 히트율 로깅
-  if (process.env.NODE_ENV === 'development' && sessionToken) {
+  // 개발 환경에서 로깅
+  if (process.env.NODE_ENV === 'development' && session) {
     console.log(`🎯 세션: ${sessionSource}, 역할: ${roleSource}`)
   }
   

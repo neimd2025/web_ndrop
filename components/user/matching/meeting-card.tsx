@@ -173,7 +173,7 @@ export const MeetingCard = memo(function MeetingCard({
         </div>
 
         {/* Chat Area */}
-        {meeting.status === "accepted" && (
+        {(meeting.status === "accepted" || meeting.status === "confirmed") && (
           <div className={`mt-4 border-t border-white/10 pt-4 animate-in slide-in-from-top-2 duration-200 ${openChatMeetingId === meeting.id ? 'block' : 'hidden'}`}>
              {/* Only mount chat if open to save resources, or use CSS display:none if we want to keep state */}
              {openChatMeetingId === meeting.id && (

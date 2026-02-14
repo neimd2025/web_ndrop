@@ -253,6 +253,32 @@ export function UserHomeClient({
     )
   }
 
+  function EventMeetingCounts({ eventId }: { eventId: string }) {
+    const [counts, setCounts] = useState<{ requests: number; accepted: number } | null>(null)
+    useEffect(() => {
+      let active = true
+      const load = async () => {
+        try {
+          const res = await fetch(`/api/events/${eventId}/meetings?t=${Date.now()}`, { cache: 'no-store' })
+          if (!res.ok) throw new Error('fail')
+          const data = await res.json()
+          const requests = (data.meetings || []).filter((m: any) => m.status === 'pending' && m.is_received).length
+          const accepted = (data.meetings || []).filter((m: any) => m.status === 'accepted').length
+          if (active) setCounts({ requests, accepted })
+        } catch {
+          if (active) setCounts({ requests: 0, accepted: 0 })
+        }
+      }
+      load()
+      return () => { active = false }
+    }, [eventId])
+    return (
+      <p className="text-xs text-gray-400">
+        요청 {counts ? counts.requests : '–'} · 수락 {counts ? counts.accepted : '–'}
+      </p>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 relative text-white pb-20 overflow-x-hidden">
       {/* Background Animation Elements */}
@@ -433,24 +459,17 @@ export function UserHomeClient({
 
                           <div className="space-y-1 mb-3">
                             <p className="text-xs text-gray-400">
-                              {new Date(event.start_date).toLocaleDateString()}
+                              {event.status === 'ongoing' ? '진행중' : event.status === 'upcoming' ? '예정' : '종료'} · 참가자 {event.current_participants ?? 0}명
                             </p>
+                            <EventMeetingCounts eventId={event.id} />
                           </div>
 
-                          <div className="flex gap-2">
-                            <Link 
-                              href={`/client/events/${event.id}?tab=info`} 
-                              className="flex-1 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-xs text-gray-300 transition-colors border border-white/5"
-                            >
-                              상세정보
-                            </Link>
-                            <Link 
-                              href={`/client/events/${event.id}?tab=networking`} 
-                              className="flex-1 h-8 flex items-center justify-center rounded-lg bg-purple-600 hover:bg-purple-500 text-xs text-white transition-colors shadow-lg shadow-purple-900/20"
-                            >
-                              네트워킹
-                            </Link>
-                          </div>
+                          <Link 
+                            href={`/client/events/${event.id}`} 
+                            className="block text-center w-full h-9 leading-9 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs text-white transition-colors shadow-lg shadow-purple-900/20"
+                          >
+                            행사 들어가기
+                          </Link>
                         </div>
                       ))}
                     </div>

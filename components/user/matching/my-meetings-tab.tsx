@@ -177,17 +177,6 @@ export function MyMeetingsTab({ eventId, userId, initialMeetingId, initialOpenCh
 
   const displayMeetings = meetings;
 
-  // 상태별 카운트 계산
-  const statusCounts = meetings.reduce((acc, m) => {
-    if (m.status === 'pending') {
-      if (m.is_received) acc.received_pending++;
-      else acc.sent_pending++;
-    } else if (m.status === 'accepted' || m.status === 'confirmed') {
-      acc.scheduled++;
-    }
-    return acc;
-  }, { received_pending: 0, sent_pending: 0, scheduled: 0 });
-
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-20">
       <Loader2 className="w-8 h-8 animate-spin text-purple-500 mb-4" />
@@ -197,31 +186,6 @@ export function MyMeetingsTab({ eventId, userId, initialMeetingId, initialOpenCh
 
   return (
     <div className="space-y-4 pb-20 relative min-h-[500px]">
-      {/* 상태 요약 */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="bg-slate-900/40 border border-white/10 rounded-2xl p-4 text-center backdrop-blur-md relative overflow-hidden group">
-            <div className="absolute inset-0 bg-red-500/5 group-hover:bg-red-500/10 transition-colors" />
-            <div className="relative">
-                <div className="text-xs text-slate-400 mb-1">받은 요청</div>
-                <div className="text-2xl font-bold text-white">{statusCounts.received_pending}</div>
-            </div>
-        </div>
-        <div className="bg-slate-900/40 border border-purple-500/20 rounded-2xl p-4 text-center backdrop-blur-md relative overflow-hidden group">
-            <div className="absolute inset-0 bg-purple-500/5 group-hover:bg-purple-500/10 transition-colors" />
-            <div className="relative">
-                <div className="text-xs text-purple-300 mb-1 font-medium">예정된 미팅</div>
-                <div className="text-2xl font-bold text-purple-400">{statusCounts.scheduled}</div>
-            </div>
-        </div>
-        <div className="bg-slate-900/40 border border-white/10 rounded-2xl p-4 text-center backdrop-blur-md relative overflow-hidden group">
-            <div className="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors" />
-            <div className="relative">
-                <div className="text-xs text-slate-400 mb-1">보낸 요청</div>
-                <div className="text-2xl font-bold text-white">{statusCounts.sent_pending}</div>
-            </div>
-        </div>
-      </div>
-      
       {displayMeetings.length === 0 ? (
         <div className="text-center py-16 bg-slate-900/30 rounded-2xl border border-white/5 backdrop-blur-sm">
           <div className="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -248,4 +212,3 @@ export function MyMeetingsTab({ eventId, userId, initialMeetingId, initialOpenCh
     </div>
   );
 }
-

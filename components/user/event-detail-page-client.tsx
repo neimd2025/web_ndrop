@@ -83,7 +83,7 @@ export function EventDetailPageClient({
                 value="meetings"
                 className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-slate-400 hover:text-white hover:bg-white/5"
               >
-                내 미팅
+                미팅
               </TabsTrigger>
             </TabsList>
           <TabsContent value="info">
