@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "↺ Running lint:fix before commit..."
+npm run lint:fix || true
+git add -A
