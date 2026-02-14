@@ -8,6 +8,10 @@ export async function GET(
 ) {
   const supabase = await createClient();
   const { meetingId } = await params;
+  const { searchParams } = new URL(request.url);
+  const limitParam = searchParams.get("limit");
+  const beforeParam = searchParams.get("before");
+  const limit = Math.min(Math.max(parseInt(limitParam || "50", 10) || 50, 1), 200);
 
   // 인증 확인
   const {
@@ -18,8 +22,8 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // 메시지 조회 (오래된 순으로 정렬)
-  const { data, error } = await supabase
+  // 메시지 조회 (오래된 순으로 정렬), 페이지네이션 지원
+  let query = supabase
     .from("event_meeting_messages")
     .select(`
       *,
@@ -30,7 +34,14 @@ export async function GET(
       )
     `)
     .eq("meeting_id", meetingId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(limit);
+
+  if (beforeParam) {
+    query = query.lt("created_at", beforeParam);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching messages:", error);

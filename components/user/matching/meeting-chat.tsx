@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Send, Loader2, MessageSquare } from "lucide-react";
@@ -35,16 +35,35 @@ export function MeetingChat({ eventId, meetingId, currentUserId, isOpen }: Meeti
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastReadAtByOther, setLastReadAtByOther] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
+  const earliest = useCallback(() => {
+    if (messages.length === 0) return null;
+    return messages[0]?.created_at || null;
+  }, [messages]);
+
   // 메시지 로드
-  const fetchMessages = async () => {
+  const fetchMessages = async (opts?: { before?: string | null; append?: boolean }) => {
     try {
-      const res = await fetch(`/api/events/${eventId}/meetings/${meetingId}/messages`);
+      const params = new URLSearchParams();
+      params.set("limit", opts?.before ? "50" : "50");
+      if (opts?.before) params.set("before", opts.before);
+      const res = await fetch(`/api/events/${eventId}/meetings/${meetingId}/messages?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load messages");
       const data = await res.json();
-      setMessages(data.messages || []);
+      const loaded: Message[] = data.messages || [];
+      if (opts?.append) {
+        setMessages((prev) => [...loaded, ...prev]);
+      } else {
+        setMessages(loaded);
+      }
+      if (loaded.length < 50) {
+        setHasMore(false);
+      }
     } catch (error) {
       console.error("Error loading messages:", error);
       // 조용히 실패 (테이블 없을 수 있음)
@@ -53,22 +72,57 @@ export function MeetingChat({ eventId, meetingId, currentUserId, isOpen }: Meeti
     }
   };
 
+  const markReadForMeeting = useCallback(async () => {
+    try {
+      await supabase
+        .from("notifications")
+        .update({ read_at: new Date().toISOString() })
+        .eq("user_id", currentUserId)
+        .eq("notification_type", "meeting_chat")
+        .is("read_at", null)
+        .contains("metadata", { meeting_id: meetingId });
+    } catch {}
+  }, [currentUserId, meetingId, supabase]);
+
+  const fetchReadReceipt = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}/read-receipt`)
+      if (!res.ok) return
+      const data = await res.json()
+      setLastReadAtByOther(data.lastReadAt || null)
+    } catch {}
+  }, [meetingId])
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+    if (nearBottom) {
+      markReadForMeeting();
+    }
+  }, [markReadForMeeting]);
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      await fetchMessages({ before: earliest(), append: true });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       fetchMessages();
+      markReadForMeeting();
+      fetchReadReceipt();
       
       // 실시간 구독 설정
       const channel = supabase
         .channel(`meeting_chat:${meetingId}`)
-        .on('postgres_changes', { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'event_meeting_messages',
-          filter: `meeting_id=eq.${meetingId}`
-        }, (payload) => {
-          // 새 메시지가 오면 메시지 목록 다시 불러오기 (간단한 동기화)
-          // 또는 payload.new를 직접 추가할 수도 있지만, sender 정보(join)가 필요하므로 fetch가 안전함
-          fetchMessages(); 
+        .on("postgres_changes", { schema: "public", table: "event_meeting_messages", filter: `meeting_id=eq.${meetingId}` }, () => {
+          fetchMessages();
         })
         .subscribe();
 
@@ -76,7 +130,29 @@ export function MeetingChat({ eventId, meetingId, currentUserId, isOpen }: Meeti
         supabase.removeChannel(channel);
       };
     }
-  }, [isOpen, meetingId]);
+  }, [isOpen, meetingId, markReadForMeeting, fetchReadReceipt]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onFocus = () => markReadForMeeting();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") markReadForMeeting();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [isOpen, markReadForMeeting]);
+
+  useEffect(() => {
+    if (!isOpen) return
+    const id = setInterval(() => {
+      fetchReadReceipt()
+    }, 10000)
+    return () => clearInterval(id)
+  }, [isOpen, fetchReadReceipt])
 
   // 스크롤 하단 이동
   useEffect(() => {
@@ -121,8 +197,21 @@ export function MeetingChat({ eventId, meetingId, currentUserId, isOpen }: Meeti
       
       <div 
         ref={scrollRef}
+        onScroll={handleScroll}
         className="h-[250px] overflow-y-auto mb-3 space-y-4 pr-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent bg-slate-950/30 rounded-xl p-4 border border-white/5 shadow-inner"
       >
+        {hasMore && (
+          <div className="flex justify-center mb-3">
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="text-[11px] px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10"
+            >
+              {loadingMore ? "불러오는 중..." : "이전 메시지 더 보기"}
+            </button>
+          </div>
+        )}
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
@@ -158,7 +247,16 @@ export function MeetingChat({ eventId, meetingId, currentUserId, isOpen }: Meeti
                     {msg.content}
                   </div>
                   <span className="text-[10px] text-slate-500 mt-1 px-1">
-                    {format(new Date(msg.created_at), "a h:mm", { locale: ko })}
+                    {format(new Date(msg.created_at), "a h:mm", { locale: ko })}{" "}
+                    {(() => {
+                      if (!lastReadAtByOther) return null
+                      if (!isMe) return null
+                      const lr = new Date(lastReadAtByOther).getTime()
+                      const mc = new Date(msg.created_at).getTime()
+                      const newerMineExists = messages.some(m => m.sender_id === currentUserId && new Date(m.created_at).getTime() > mc && new Date(m.created_at).getTime() <= lr)
+                      const readThis = lr >= mc && !newerMineExists
+                      return readThis ? <span className="ml-1 text-purple-400">읽음</span> : null
+                    })()}
                   </span>
                 </div>
               </div>

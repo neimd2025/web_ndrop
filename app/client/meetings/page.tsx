@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { createClient } from "@/utils/supabase/client"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 type Profile = {
   id: string
@@ -37,135 +37,180 @@ type PersonItem = {
   created_at: string
   eventId: string
   lastIsChat?: boolean
+  unreadCount?: number
 }
 
 export default function AllMeetingsPage() {
   const [items, setItems] = useState<PersonItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true)
-      try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-          setItems([])
-          setLoading(false)
-          return
-        }
-
-        const { data: baseMeetings, error: baseErr } = await supabase
-          .from("event_meetings")
-          .select("id, event_id, status, requester_id, receiver_id, created_at")
-          .or(`requester_id.eq.${user.id},receiver_id.eq.${user.id}`)
-          .order("created_at", { ascending: false })
-
-        if (baseErr) {
-          setItems([])
-        } else {
-          const rows = (baseMeetings || []) as unknown as MeetingRow[]
-
-          // Collect other user ids and event ids
-          const otherIds = Array.from(new Set(rows.map((m) => (m.receiver_id === user.id ? m.requester_id : m.receiver_id))))
-          const eventIds = Array.from(new Set(rows.map((m) => m.event_id)))
-
-          // Fetch profiles and events in batch
-          const [{ data: profiles }, { data: events }] = await Promise.all([
-            otherIds.length > 0
-              ? supabase.from("user_profiles").select("id, nickname, profile_image_url, job_title, company, role, work_field").in("id", otherIds)
-              : Promise.resolve({ data: [] as any[] } as any),
-            eventIds.length > 0
-              ? supabase.from("events").select("id, title").in("id", eventIds)
-              : Promise.resolve({ data: [] as any[] } as any),
-          ])
-
-          const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]))
-          const eventMap = new Map((events || []).map((e: any) => [e.id, e]))
-
-          const meetingIds = rows.map(r => r.id)
-          let lastByMeeting = new Map<string, string>()
-          let hasChat = new Set<string>()
-          if (meetingIds.length > 0) {
-            const { data: msgs } = await supabase
-              .from("event_meeting_messages")
-              .select("meeting_id, created_at")
-              .in("meeting_id", meetingIds)
-              .order("created_at", { ascending: false })
-            if (msgs) {
-              for (const msg of msgs as any[]) {
-                if (!lastByMeeting.has(msg.meeting_id)) {
-                  lastByMeeting.set(msg.meeting_id, msg.created_at)
-                  hasChat.add(msg.meeting_id)
-                }
-              }
-            }
-          }
-
-          const mapped = rows.map((m: any) => {
-            const isSent = m.requester_id === user.id
-            const otherId = isSent ? m.receiver_id : m.requester_id
-            const profile = profileMap.get(otherId) as Profile | undefined
-            const e: any = eventMap.get(m.event_id) || null
-            return {
-              key: `${profile?.id ?? ""}`,
-              profile: profile || {
-                id: otherId,
-                nickname: "알 수 없음",
-                profile_image_url: null,
-                job_title: null,
-                company: null,
-                role: null,
-                work_field: null,
-              },
-              eventTitle: e?.title ?? "",
-              meetingId: m.id,
-              status: m.status,
-              direction: isSent ? "sent" as const : "received" as const,
-              created_at: lastByMeeting.get(m.id) || m.created_at,
-              eventId: m.event_id,
-              lastIsChat: hasChat.has(m.id)
-            }
-          }).filter(i => i.profile && i.profile.id)
-
-          // Filter: show only meetings with chat started
-          const chatOnly = rows.filter(r => hasChat.has(r.id))
-
-          const dedup = new Map<string, PersonItem>()
-          const statusPriority = (s: PersonItem["status"]) => (
-            s === "confirmed" ? 0 :
-            s === "accepted" ? 1 :
-            s === "pending" ? 2 :
-            s === "completed" ? 3 : 4
-          )
-          for (const it of mapped.filter(m => chatOnly.find(r => r.id === m.meetingId))) {
-            const prev = dedup.get(it.key)
-            if (!prev) {
-              dedup.set(it.key, it)
-            } else {
-              const p1 = statusPriority(prev.status)
-              const p2 = statusPriority(it.status)
-              if (p2 < p1 || (p2 === p1 && new Date(it.created_at).getTime() > new Date(prev.created_at).getTime())) {
-                dedup.set(it.key, it)
-              }
-            }
-          }
-          const arr = Array.from(dedup.values()).sort((a, b) => {
-            const sp = statusPriority(a.status) - statusPriority(b.status)
-            if (sp !== 0) return sp
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          })
-          setItems(arr)
-        }
-      } finally {
+  const fetchItems = useCallback(async () => {
+    setLoading(true)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setItems([])
         setLoading(false)
+        return
       }
+
+      const { data: baseMeetings, error: baseErr } = await supabase
+        .from("event_meetings")
+        .select("id, event_id, status, requester_id, receiver_id, created_at")
+        .or(`requester_id.eq.${user.id},receiver_id.eq.${user.id}`)
+        .order("created_at", { ascending: false })
+
+      if (baseErr) {
+        setItems([])
+      } else {
+        const rows = (baseMeetings || []) as unknown as MeetingRow[]
+
+        const otherIds = Array.from(new Set(rows.map((m) => (m.receiver_id === user.id ? m.requester_id : m.receiver_id))))
+        const eventIds = Array.from(new Set(rows.map((m) => m.event_id)))
+
+        const [{ data: profiles }, { data: events }] = await Promise.all([
+          otherIds.length > 0
+            ? supabase.from("user_profiles").select("id, nickname, profile_image_url, job_title, company, role, work_field").in("id", otherIds)
+            : Promise.resolve({ data: [] as any[] } as any),
+          eventIds.length > 0
+            ? supabase.from("events").select("id, title").in("id", eventIds)
+            : Promise.resolve({ data: [] as any[] } as any),
+        ])
+
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+        const eventMap = new Map((events || []).map((e: any) => [e.id, e]))
+
+        const meetingIds = rows.map(r => r.id)
+        let lastByMeeting = new Map<string, string>()
+        let hasChat = new Set<string>()
+        if (meetingIds.length > 0) {
+          const { data: msgs } = await supabase
+            .from("event_meeting_messages")
+            .select("meeting_id, created_at")
+            .in("meeting_id", meetingIds)
+            .order("created_at", { ascending: false })
+          if (msgs) {
+            for (const msg of msgs as any[]) {
+              if (!lastByMeeting.has(msg.meeting_id)) {
+                lastByMeeting.set(msg.meeting_id, msg.created_at)
+                hasChat.add(msg.meeting_id)
+              }
+            }
+          }
+        }
+
+        const { data: notis } = await createClient()
+          .from("notifications")
+          .select("id, metadata, read_at, notification_type, user_id")
+          .eq("notification_type", "meeting_chat")
+          .eq("user_id", user.id)
+          .is("read_at", null)
+        const unreadByMeeting = new Map<string, number>()
+        if (notis) {
+          for (const n of notis as any[]) {
+            const mid = n?.metadata?.meeting_id
+            if (mid) unreadByMeeting.set(mid, (unreadByMeeting.get(mid) || 0) + 1)
+          }
+        }
+
+        const mapped = rows.map((m: any) => {
+          const supUser = user
+          const isSent = m.requester_id === supUser.id
+          const otherId = isSent ? m.receiver_id : m.requester_id
+          const profile = profileMap.get(otherId) as Profile | undefined
+          const e: any = eventMap.get(m.event_id) || null
+          return {
+            key: `${profile?.id ?? ""}`,
+            profile: profile || {
+              id: otherId,
+              nickname: "알 수 없음",
+              profile_image_url: null,
+              job_title: null,
+              company: null,
+              role: null,
+              work_field: null,
+            },
+            eventTitle: e?.title ?? "",
+            meetingId: m.id,
+            status: m.status,
+            direction: isSent ? "sent" as const : "received" as const,
+            created_at: lastByMeeting.get(m.id) || m.created_at,
+            eventId: m.event_id,
+            lastIsChat: hasChat.has(m.id),
+            unreadCount: unreadByMeeting.get(m.id) || 0
+          }
+        }).filter(i => i.profile && i.profile.id)
+
+        const chatOnly = rows.filter(r => hasChat.has(r.id))
+
+        const dedup = new Map<string, PersonItem>()
+        const statusPriority = (s: PersonItem["status"]) => (
+          s === "confirmed" ? 0 :
+          s === "accepted" ? 1 :
+          s === "pending" ? 2 :
+          s === "completed" ? 3 : 4
+        )
+        for (const it of mapped.filter(m => chatOnly.find(r => r.id === m.meetingId))) {
+          const prev = dedup.get(it.key)
+          if (!prev) {
+            dedup.set(it.key, it)
+          } else {
+            const p1 = statusPriority(prev.status)
+            const p2 = statusPriority(it.status)
+            if (p2 < p1 || (p2 === p1 && new Date(it.created_at).getTime() > new Date(prev.created_at).getTime())) {
+              dedup.set(it.key, it)
+            }
+          }
+        }
+        const arr = Array.from(dedup.values()).sort((a, b) => {
+          const ua = (a.unreadCount || 0) > 0 ? 0 : 1
+          const ub = (b.unreadCount || 0) > 0 ? 0 : 1
+          if (ua !== ub) return ua - ub
+          const sp = statusPriority(a.status) - statusPriority(b.status)
+          if (sp !== 0) return sp
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        })
+        setItems(arr)
+      }
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
 
-  const empty = useMemo(() => items.length === 0, [items.length])
+  useEffect(() => {
+    fetchItems()
+  }, [fetchItems])
 
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase.channel("client-meetings-realtime")
+    channel.on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, (payload) => {
+      const row: any = payload.new || payload.old
+      if (row && row.notification_type === "meeting_chat") {
+        fetchItems()
+      }
+    })
+    channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "event_meeting_messages" }, () => {
+      fetchItems()
+    })
+    channel.subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [fetchItems])
+ 
+  const empty = useMemo(() => items.length === 0, [items.length])
+  const [visibleCount, setVisibleCount] = useState(20)
+  useEffect(() => {
+    const onScroll = () => {
+      const nearBottom = window.innerHeight + window.scrollY > document.body.offsetHeight - 300
+      if (nearBottom) setVisibleCount((c) => Math.min(c + 20, items.length))
+    }
+    window.addEventListener("scroll", onScroll)
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [items.length])
+ 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-20">
       <div className="max-w-md mx-auto px-5 py-6">
@@ -177,7 +222,7 @@ export default function AllMeetingsPage() {
           <div className="text-center py-16 text-slate-400">표시할 채팅이 없습니다</div>
         ) : (
           <div className="space-y-3">
-            {items.map((p) => (
+            {items.slice(0, visibleCount).map((p) => (
               <div key={p.key} className="bg-white/5 border border-white/10 rounded-xl p-4">
                 <div className="flex gap-3 items-center">
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center border border-white/10">
@@ -197,7 +242,13 @@ export default function AllMeetingsPage() {
                           {p.profile.company ? ` · ${p.profile.company}` : ""}
                         </div>
                       </div>
-                      <div className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                      <div className="flex items-center gap-2">
+                        {p.unreadCount ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-600/30 text-purple-200 border border-purple-500/30">
+                            {p.unreadCount}
+                          </span>
+                        ) : null}
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
                         p.status === "confirmed" ? "bg-green-500/20 text-green-300 border-green-500/30" :
                         p.status === "accepted" ? "bg-blue-500/20 text-blue-300 border-blue-500/30" :
                         p.status === "pending" ? "bg-yellow-500/20 text-yellow-300 border-yellow-700/30" :
@@ -206,6 +257,7 @@ export default function AllMeetingsPage() {
                         {p.status === "confirmed" ? "확정" :
                          p.status === "accepted" ? "수락" :
                          p.status === "pending" ? "요청" : "완료"}
+                        </span>
                       </div>
                     </div>
                     <div className="text-[11px] text-slate-500 mt-1">

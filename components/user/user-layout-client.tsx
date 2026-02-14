@@ -8,6 +8,7 @@ import { UserProfile } from '@/lib/supabase/user-server-actions'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { createClient } from '@/utils/supabase/client'
 
 interface UserLayoutClientProps {
   children: React.ReactNode
@@ -48,6 +49,34 @@ export function UserLayoutClient({ children, user }: UserLayoutClientProps) {
       return
     }
   }, [mounted, initialized, user?.id, profileLoading, cardLoading, needsOnboarding, needsBusinessCard, pathname])
+
+  // 브라우저 알림: 권한 요청 및 실시간 메시지 알림
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!mounted || !initialized) return
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {})
+    }
+    const supabase = createClient()
+    const channel = supabase
+      .channel('browser-notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'event_meeting_messages' }, (payload: any) => {
+        const row = payload?.new
+        if (!row) return
+        if (row.sender_id === user?.id) return
+        if (document.visibilityState === 'visible') return
+        if ('Notification' in window && Notification.permission === 'granted') {
+          const body = (row.content || '').slice(0, 60)
+          try {
+            new Notification('새 메시지', { body })
+          } catch {}
+        }
+      })
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [mounted, initialized, user?.id])
 
   // 로딩 중
   if (!mounted || loading || !initialized || (user && (profileLoading || cardLoading))) {

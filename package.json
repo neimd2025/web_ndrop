@@ -7,7 +7,7 @@
     "dev": "next dev -H 0.0.0.0",
     "dev:clean": "rm -rf .next && next dev",
     "dev:https": "next dev --experimental-https",
-    "lint": "next lint",
+    "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "prepare": "husky install",
     "start": "next start",
