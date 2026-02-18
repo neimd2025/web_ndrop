@@ -112,32 +112,11 @@ export function SimpleUserLayout({ children }: { children: React.ReactNode }) {
     return <>{children}</>
   }
 
-  // 일반 레이아웃 표시
+  // 일반 레이아웃 표시 (사용자용은 모바일 뷰 중심 컨테이너)
   return (
-    <div className="min-h-screen ">
-      <div className="flex">
-        <div className="flex-1">
-          {/* 헤더 추후에 사용예정  */}
-          {/* <div className="bg-white shadow-sm border-b px-6 py-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                ndrop
-              </h2>
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-600">
-                  {user.full_name || user.email}
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="text-sm text-red-600 hover:text-red-700 hover:underline"
-                >
-                  로그아웃
-                </button>
-              </div>
-            </div>
-          </div> */}
-            {children}
-        </div>
+    <div className="min-h-screen bg-slate-950">
+      <div className="mx-auto w-full max-w-md bg-slate-950 text-white">
+        {children}
       </div>
     </div>
   )

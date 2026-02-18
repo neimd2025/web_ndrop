@@ -1,10 +1,7 @@
+import { redirect } from 'next/navigation'
+
 export const dynamic = 'force-dynamic'
-import { AdminEventsClient } from '@/components/admin/admin-events-client'
 
 export default function AdminEventsPage() {
-  return (
-    <div className="min-h-screen ">
-      <AdminEventsClient initialEvents={[]} />
-    </div>
-  )
+  redirect('/admin')
 }

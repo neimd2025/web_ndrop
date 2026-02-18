@@ -5,8 +5,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
-  const supabase = await createClient(); // Auth check
-  const supabaseAdmin = await createAdminClient(); // Read config
+  const supabase = await createClient();
+  const supabaseAdmin = await createAdminClient();
   const { eventId } = await params;
 
   const {
@@ -17,15 +17,13 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // TODO: Add admin check if needed
-
   const { data, error } = await supabaseAdmin
     .from("event_matching_configs")
     .select("*")
     .eq("event_id", eventId)
     .single();
 
-  if (error && error.code !== "PGRST116") {
+  if (error && (error as any).code !== "PGRST116") {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -36,8 +34,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
-  const supabase = await createClient(); // Auth check
-  const supabaseAdmin = await createAdminClient(); // Write config
+  const supabase = await createClient();
+  const supabaseAdmin = await createAdminClient();
   const { eventId } = await params;
   
   try {
@@ -51,9 +49,6 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // TODO: Add admin check
-
-    // Upsert config
     const { data, error } = await supabaseAdmin
       .from("event_matching_configs")
       .upsert({

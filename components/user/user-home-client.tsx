@@ -459,7 +459,7 @@ export function UserHomeClient({
 
                           <div className="space-y-1 mb-3">
                             <p className="text-xs text-gray-400">
-                              {event.status === 'ongoing' ? '진행중' : event.status === 'upcoming' ? '예정' : '종료'} · 참가자 {event.current_participants ?? 0}명
+                              {activeTab} · 참가자 {event.current_participants ?? 0}명
                             </p>
                             <EventMeetingCounts eventId={event.id} />
                           </div>

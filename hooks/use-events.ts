@@ -1,4 +1,4 @@
-import { eventAPI } from '@/lib/supabase/database'
+import { eventAPI, calculateEventStatus } from '@/lib/supabase/database'
 import { Database } from '@/types/supabase'
 import { useEffect, useState } from 'react'
 import { useAuth } from './use-auth'
@@ -142,9 +142,9 @@ export const useEvents = () => {
     }
   }
 
-  // 이벤트 상태별 필터링
+  // 이벤트 상태별 필터링 (날짜 기준)
   const getEventsByStatus = (status: 'upcoming' | 'ongoing' | 'completed') => {
-    return events.filter(event => event.status === status)
+    return events.filter(event => calculateEventStatus(event) === status)
   }
 
   // 진행중인 이벤트

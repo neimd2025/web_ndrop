@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { UserEvent, UserProfile } from '@/lib/supabase/user-server-actions'
+import { calculateEventStatus } from '@/lib/supabase/database'
 import { ArrowLeft, Calendar, MapPin, QrCode, Search, Users } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -26,17 +27,6 @@ export function UserEventsAvailableClient({ user, availableEvents: initialEvents
   const [showCodeInput, setShowCodeInput] = useState(false)
   const [eventCode, setEventCode] = useState(['', '', '', '', '', ''])
   const [joiningByCode, setJoiningByCode] = useState(false)
-
-  // 이벤트 상태 계산
-  const calculateEventStatus = (event: UserEvent): 'upcoming' | 'ongoing' | 'completed' => {
-    const now = new Date()
-    const startDate = new Date(event.start_date)
-    const endDate = new Date(event.end_date)
-
-    if (now < startDate) return 'upcoming'
-    if (now >= startDate && now <= endDate) return 'ongoing'
-    return 'completed'
-  }
 
   // 이벤트 필터링
   useEffect(() => {

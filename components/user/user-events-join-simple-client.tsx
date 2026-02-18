@@ -123,18 +123,22 @@ export function UserEventsJoinSimpleClient({ user, userParticipations }: UserEve
         return
       }
 
-      // 이미 참가했는지 확인
       const { data: existingParticipation } = await supabase
         .from('event_participants')
-        .select('id')
+        .select('id,status')
         .eq('event_id', event.id)
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (existingParticipation) {
-        alert('이미 참가한 이벤트입니다.')
-        router.push(`/client/events/${event.id}`)
-        return
+        if (existingParticipation.status === 'removed') {
+          alert('관리자에 의해 내보내진 참가자는 이 이벤트에 다시 참가할 수 없습니다.')
+          return
+        } else {
+          alert('이미 참가한 이벤트입니다.')
+          router.push(`/client/events/${event.id}`)
+          return
+        }
       }
 
       // 이벤트 참가

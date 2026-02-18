@@ -50,13 +50,9 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body className={`${inter.className}`} suppressHydrationWarning>
-        {/* 전체 앱 컨테이너 */}
-        <div className="min-h-screen max-w-md mx-auto bg-white shadow-xl relative">
-          <ConditionalAuthProvider>
-            {children}
-          </ConditionalAuthProvider>
-        </div>
-        {/* 네비게이션바는 컨테이너 밖에서 하단 고정 */}
+        <ConditionalAuthProvider>
+          {children}
+        </ConditionalAuthProvider>
         <MobileBottomNav />
         <Toaster />
       </body>

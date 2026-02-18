@@ -24,14 +24,8 @@ type LoginFormData = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
   const searchParams = useSearchParams()
-  const isAdminLogin = searchParams.get('type') === 'admin'
   const router = useRouter()
-
-  // 관리자 로그인 시도 시 관리자 로그인 페이지로 리다이렉트
-  if (isAdminLogin) {
-    router.push('/admin/login')
-    return null
-  }
+  const isAdminLogin = searchParams.get('type') === 'admin'
 
   const { signInWithEmail, signInWithOAuth, user, loading: authLoading } = useAuth('user')
 
@@ -45,6 +39,12 @@ export default function LoginPage() {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema)
   })
+
+  useEffect(() => {
+    if (isAdminLogin) {
+      router.push('/admin/login')
+    }
+  }, [isAdminLogin, router])
 
   // 이미 로그인된 경우 리다이렉트
   useEffect(() => {

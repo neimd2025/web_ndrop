@@ -99,7 +99,16 @@ export async function middleware(req: NextRequest) {
     return supabaseResponse
   }
   
-  // 3. 세션 토큰 추출
+  // 3. 루트 경로: 항상 사용자용 진입점으로 사용
+  if (pathname === '/') {
+    const sessionToken = req.cookies.get('sb-access-token')?.value
+    if (sessionToken) {
+      return NextResponse.redirect(new URL('/client/home', req.url))
+    }
+    return supabaseResponse
+  }
+  
+  // 4. 세션 토큰 추출
   // const sessionToken = req.cookies.get('sb-access-token')?.value
   let session = null
   let sessionSource = 'database' // 기본값을 database로 변경 (캐시 사용 안함)
@@ -237,21 +246,6 @@ export async function middleware(req: NextRequest) {
   
   // 9. 나머지 로직
   const returnTo = req.nextUrl.pathname
-  
-  // 루트 경로 처리
-  if (pathname === '/') {
-    // 세션이 없으면 랜딩 페이지(app/page.tsx)를 보여줌
-    if (!session) {
-      return supabaseResponse
-    }
-    
-    // 세션이 있으면 역할에 따라 대시보드로 리다이렉트
-    if (userRole === 2) {
-      return NextResponse.redirect(new URL('/admin', req.url))
-    } else {
-      return NextResponse.redirect(new URL('/client/home', req.url))
-    }
-  }
   
   // Admin 경로 접근 제어
   if (isAdminRoute && !isAdminAuthRoute) {

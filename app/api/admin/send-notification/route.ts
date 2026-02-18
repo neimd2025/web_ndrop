@@ -40,19 +40,18 @@ export async function POST(request: NextRequest) {
     let notificationsToInsert: any[] = []
     
     if (target_type === 'all') {
-      // 전체 알림: 1개 생성
+      // 전체 사용자 대상 시스템 공지 (전 플랫폼 공지)
       notificationsToInsert.push({
         title,
         message,
         target_type: 'all',
         target_event_id: null,
         user_id: null,
-        sent_by: decoded.id || null, // 관리자 ID 기록 (있다면)
-        notification_type: 'system', // 기본값
-        sent_date: new Date().toISOString(),
-        delivered_count: 0,
-        read_count: 0,
-        status: 'sent'
+        notification_type: 'system',
+        related_event_id: null,
+        metadata: {},
+        sent_by: null,
+        read_at: null,
       })
     } else if (target_type === 'specific') {
       // 특정 사용자 알림: target_ids 배열 처리
@@ -66,12 +65,11 @@ export async function POST(request: NextRequest) {
         target_type: 'specific',
         target_event_id: null,
         user_id: userId,
-        sent_by: decoded.id || null,
         notification_type: 'system',
-        sent_date: new Date().toISOString(),
-        delivered_count: 0,
-        read_count: 0,
-        status: 'sent'
+        related_event_id: null,
+        metadata: {},
+        sent_by: null,
+        read_at: null,
       }))
     } else if (target_type === 'event_participants') {
       // 이벤트 참가자 알림: 참가자 조회 후 개별 알림 생성 (Realtime 호환성 위해)
@@ -104,15 +102,14 @@ export async function POST(request: NextRequest) {
       notificationsToInsert = participantIds.map((userId: string) => ({
         title,
         message,
-        target_type: 'specific', // specific으로 변환하여 개별 전송
+        target_type: 'specific', // 개별 사용자 알림으로 전환
         target_event_id: target_event_id,
         user_id: userId,
-        sent_by: decoded.id || null,
         notification_type: 'system',
-        sent_date: new Date().toISOString(),
-        delivered_count: 0,
-        read_count: 0,
-        status: 'sent'
+        related_event_id: target_event_id,
+        metadata: {},
+        sent_by: null,
+        read_at: null,
       }))
     } else {
         return NextResponse.json({ error: '지원하지 않는 알림 대상입니다.' }, { status: 400 })

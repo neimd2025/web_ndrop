@@ -8,10 +8,14 @@ export default async function SavedCardsPage() {
     const { user, savedCards } = await getUserSavedCardsData();
 
     return (
-        <UserSavedCardsClient 
-          user={user} 
-          savedCards={savedCards} 
-        />
+      <div className="min-h-screen bg-slate-950">
+        <div className="mx-auto w-full max-w-md">
+          <UserSavedCardsClient 
+            user={user} 
+            savedCards={savedCards} 
+          />
+        </div>
+      </div>
     );
   } catch (error: any) {
     // Redirect 에러는 다시 던져서 Next.js가 처리하게 함

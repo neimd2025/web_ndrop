@@ -1,21 +1,23 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 export default function AdminStartPage() {
-  const router = useRouter()
-
-  useEffect(() => {
-    // 미들웨어에서 이미 인증을 처리했으므로 바로 이벤트 관리 페이지로 리다이렉트
-    router.replace('/admin/events')
-  }, [router])
-
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">이벤트 관리 페이지로 이동 중...</p>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="max-w-md w-full text-center space-y-4">
+        <h1 className="text-2xl font-bold text-gray-900">운영 대시보드</h1>
+        <p className="text-sm text-gray-500">
+          아직 생성된 행사가 없습니다. 새 이벤트를 만들어 ndrop Event Console을 시작하세요.
+        </p>
+        <div className="flex items-center justify-center">
+          <Link href="/admin/events/new">
+            <Button className="bg-purple-600 hover:bg-purple-700 text-white px-5">
+              새 이벤트 만들기
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   )

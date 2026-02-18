@@ -32,14 +32,8 @@ type SignupFormData = z.infer<typeof signupSchema>
 
 export default function SignupPage() {
   const searchParams = useSearchParams()
-  const isAdminSignup = searchParams.get('type') === 'admin'
   const router = useRouter()
-
-  // 관리자 회원가입 시도 시 관리자 회원가입 페이지로 리다이렉트
-  if (isAdminSignup) {
-    router.push('/admin/signup')
-    return null
-  }
+  const isAdminSignup = searchParams.get('type') === 'admin'
 
   const { signUpWithEmail, user, loading: authLoading } = useAuth('user')
 
@@ -63,6 +57,12 @@ export default function SignupPage() {
       termsConsent: false
     }
   })
+
+  useEffect(() => {
+    if (isAdminSignup) {
+      router.push('/admin/signup')
+    }
+  }, [isAdminSignup, router])
 
   const watchedEmail = watch('email')
 

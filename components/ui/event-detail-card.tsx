@@ -4,7 +4,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { eventParticipantAPI } from '@/lib/supabase/database'
+import { eventParticipantAPI, calculateEventStatus } from '@/lib/supabase/database'
 import { createClient } from '@/utils/supabase/client'
 import { ArrowLeft, Calendar, Clock, Lightbulb, MapPin, Pin, QrCode, Target, Users } from 'lucide-react'
 import Image from 'next/image'
@@ -220,7 +220,8 @@ export function EventDetailCard({
     }
 
     const isEventFull = event.max_participants && event.current_participants >= event.max_participants
-    const isPastEvent = new Date(event.end_date) < new Date()
+    const status = calculateEventStatus(event)
+    const isPastEvent = status === 'completed'
 
     if (actionLoading) {
       return (
@@ -302,7 +303,7 @@ export function EventDetailCard({
             <h1 className={`text-3xl font-bold mb-2 ${textTitleClass}`}>
               {event.title}
             </h1>
-            {getStatusBadge(event.status)}
+            {getStatusBadge(calculateEventStatus(event))}
           </div>
         </div>
 

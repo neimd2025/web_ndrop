@@ -15,23 +15,25 @@ export default function UserTheirCardDetailPage({ user, businessCards = [], card
   const router = useRouter();
 
   return (
-    <div className="min-h-screen">
-      <div className="bg-[#242E3A] border-0 px-5 py-4">
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="p-2"
-            onClick={() => router.back()}
-          >
-            <ArrowLeft className="w-4 h-4 text-white" />
-          </Button>
-          <h1 className="text-xl font-bold text-white">명함 상세</h1>
-          <div className="w-10"></div>
+    <div className="min-h-screen bg-slate-950">
+      <div className="mx-auto w-full max-w-md bg-slate-950 text-white">
+        <div className="bg-[#242E3A] border-0 px-5 py-4">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-2"
+              onClick={() => router.back()}
+            >
+              <ArrowLeft className="w-4 h-4 text-white" />
+            </Button>
+            <h1 className="text-xl font-bold text-white">명함 상세</h1>
+            <div className="w-10"></div>
+          </div>
         </div>
-      </div>
 
-      <UserCardDetail user={user} businessCards={businessCards} cardOwner={cardOwner}/>
+        <UserCardDetail user={user} businessCards={businessCards} cardOwner={cardOwner}/>
+      </div>
     </div>
   );
 }

@@ -40,7 +40,9 @@ export async function POST(request: NextRequest) {
           full_name,
           email,
           company,
-          role,
+          job_title,
+          work_field,
+          affiliation_type,
           contact,
           profile_image_url
         )
@@ -54,18 +56,31 @@ export async function POST(request: NextRequest) {
     }
 
     // 데이터 형식 변환
-    const formattedParticipants = (participants || []).map((item: any) => ({
-      id: item.id,
-      name: item.user_profiles?.full_name || '알 수 없음',
-      email: item.user_profiles?.email || '알 수 없음',
-      phone: item.user_profiles?.contact || '',
-      company: item.user_profiles?.company || '',
-      position: item.user_profiles?.role || '',
-      profile_image_url: item.user_profiles?.profile_image_url || null,
-      event_id: item.event_id,
-      status: item.status,
-      created_at: item.created_at
-    }))
+    const formattedParticipants = (participants || []).map((item: any) => {
+      const profile = item.user_profiles || {}
+      const affiliationType = profile.affiliation_type
+
+      // 소속/미소속에 따라 "하는 일" 텍스트 분기
+      let position = ''
+      if (affiliationType === '소속') {
+        position = profile.job_title || ''
+      } else {
+        position = profile.work_field || ''
+      }
+
+      return {
+        id: item.id,
+        name: profile.full_name || '알 수 없음',
+        email: profile.email || '알 수 없음',
+        phone: profile.contact || '',
+        company: profile.company || '',
+        position,
+        profile_image_url: profile.profile_image_url || null,
+        event_id: item.event_id,
+        status: item.status,
+        created_at: item.created_at,
+      }
+    })
 
     return NextResponse.json({
       success: true,

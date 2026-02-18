@@ -7,8 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { createClient } from "@/utils/supabase/client"
-import { Bell, X } from "lucide-react"
+import { Bell, Users, X } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -16,22 +15,33 @@ interface NotificationSendModalProps {
   open: boolean
   onClose: () => void
   onSuccess?: () => void
+  eventId: string | null
+  eventTitle?: string
 }
 
-export default function NotificationSendModal({ open, onClose, onSuccess }: NotificationSendModalProps) {
+export default function NotificationSendModal({
+  open,
+  onClose,
+  onSuccess,
+  eventId,
+  eventTitle,
+}: NotificationSendModalProps) {
   const [formData, setFormData] = useState({
     title: "",
     message: "",
-    target_type: "all" as "all" | "specific" | "event_participants",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
     try {
+      if (!eventId) {
+        toast.error("행사를 먼저 선택해주세요.")
+        return
+      }
+
       const adminToken = localStorage.getItem('admin_token')
       if (!adminToken) {
         toast.error('인증 토큰이 없습니다. 다시 로그인해주세요.')
@@ -47,8 +57,8 @@ export default function NotificationSendModal({ open, onClose, onSuccess }: Noti
         body: JSON.stringify({
           title: formData.title,
           message: formData.message,
-          target_type: formData.target_type,
-          // target_event_id: ... (Modal doesn't support selecting event yet, defaulting to null)
+          target_type: "event_participants",
+          target_event_id: eventId,
         })
       })
 
@@ -59,11 +69,10 @@ export default function NotificationSendModal({ open, onClose, onSuccess }: Noti
         return
       }
 
-      toast.success('알림이 성공적으로 발송되었습니다!')
+      toast.success('이 행사 참가자에게 공지가 전송되었습니다.')
       setFormData({
         title: "",
         message: "",
-        target_type: "all",
       })
       onSuccess?.()
       onClose()
@@ -82,15 +91,24 @@ export default function NotificationSendModal({ open, onClose, onSuccess }: Noti
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Bell className="h-5 w-5" />
-              <span>푸시 알림 발송</span>
+              <span>행사 참가자 공지 전송</span>
             </div>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+            <Users className="w-4 h-4 text-purple-600" />
+            <div className="flex flex-col">
+              <span className="font-medium text-gray-800">
+                {eventTitle || "선택된 행사 참가자 전체"}
+              </span>
+              <span className="text-[11px] text-gray-500">
+                이 행사에 참가한 모든 사용자에게 공지가 발송됩니다.
+              </span>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="title">알림 제목</Label>
             <Input
@@ -113,45 +131,6 @@ export default function NotificationSendModal({ open, onClose, onSuccess }: Noti
               className="border-2 border-gray-200 focus:border-purple-500 min-h-[120px]"
               required
             />
-          </div>
-
-          <div className="space-y-3">
-            <Label>발송 대상</Label>
-            <div className="space-y-2">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name="targetType"
-                  value="all"
-                  checked={formData.target_type === "all"}
-                  onChange={(e) => setFormData({ ...formData, target_type: e.target.value as any })}
-                  className="text-purple-600"
-                />
-                <span>전체 회원</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name="targetType"
-                  value="event_participants"
-                  checked={formData.target_type === "event_participants"}
-                  onChange={(e) => setFormData({ ...formData, target_type: e.target.value as any })}
-                  className="text-purple-600"
-                />
-                <span>이벤트 참가자</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name="targetType"
-                  value="specific"
-                  checked={formData.target_type === "specific"}
-                  onChange={(e) => setFormData({ ...formData, target_type: e.target.value as any })}
-                  className="text-purple-600"
-                />
-                <span>특정 회원</span>
-              </label>
-            </div>
           </div>
 
           <div className="flex space-x-3 pt-4">

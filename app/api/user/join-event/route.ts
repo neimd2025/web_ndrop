@@ -44,15 +44,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '유효하지 않은 이벤트입니다.' }, { status: 404 })
     }
 
-    // 이미 참가했는지 확인
     const { data: existingParticipant } = await supabase
       .from('event_participants')
-      .select('id')
+      .select('id,status')
       .eq('event_id', event.id)
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
     if (existingParticipant) {
+      if (existingParticipant.status === 'removed') {
+        return NextResponse.json(
+          { error: '관리자에 의해 내보내진 참가자는 다시 참가할 수 없습니다.' },
+          { status: 403 }
+        )
+      }
       return NextResponse.json({ error: '이미 참가한 이벤트입니다.' }, { status: 400 })
     }
 

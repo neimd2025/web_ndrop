@@ -5,9 +5,9 @@ import { ArrowRight, Sparkles, Users, Calendar } from "lucide-react";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 overflow-x-hidden relative text-white">
+    <div className="min-h-screen bg-slate-950 overflow-x-hidden relative text-white">
       {/* Background Animation Elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+      <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#1a103c] to-slate-950 opacity-80"></div>
         <div className="absolute top-[-5%] left-[-10%] w-96 h-96 bg-purple-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob"></div>
         <div className="absolute top-[-5%] right-[-10%] w-96 h-96 bg-blue-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob" style={{ animationDelay: "2s" }}></div>
@@ -33,34 +33,36 @@ export default function LandingPage() {
         ))}
       </div>
 
-      {/* Header */}
-      <header className="fixed top-0 w-full max-w-md mx-auto left-0 right-0 bg-slate-950/50 backdrop-blur-md z-50 border-b border-white/5">
-        <div className="px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <img 
-              src="/assets/logo-text.png" 
-              alt="ndrop text logo" 
-              style={{ height: 22, width: "auto", display: "block" }} 
-            />
-          </Link>
-          <div className="flex items-center gap-2 shrink-0">
-            <Link href="/login">
-              <Button variant="ghost" className="text-gray-300 hover:text-white hover:bg-white/10 px-2 text-xs h-8">
-                로그인
-              </Button>
+      {/* Mobile-centered content container */}
+      <div className="relative z-10 min-h-screen mx-auto w-full max-w-md flex flex-col">
+        {/* Header */}
+        <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-slate-950/50 backdrop-blur-md z-50 border-b border-white/5">
+          <div className="px-4 h-14 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2 shrink-0">
+              <img 
+                src="/assets/logo-text.png" 
+                alt="ndrop text logo" 
+                style={{ height: 22, width: "auto", display: "block" }} 
+              />
             </Link>
-            <Link href="/signup">
-              <Button className="bg-white text-slate-950 hover:bg-gray-100 rounded-full px-3 text-xs h-8 font-semibold">
-                시작하기
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link href="/login">
+                <Button variant="ghost" className="text-gray-300 hover:text-white hover:bg-white/10 px-2 text-xs h-8">
+                  로그인
+                </Button>
+              </Link>
+              <Link href="/signup">
+                <Button className="bg-white text-slate-950 hover:bg-gray-100 rounded-full px-3 text-xs h-8 font-semibold">
+                  시작하기
+                </Button>
+              </Link>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Hero Section */}
-      <main className="flex-1 pt-16 pb-8 relative z-10">
-        <div className="px-4">
+        {/* Hero Section */}
+        <main className="flex-1 pt-16 pb-8">
+          <div className="px-4">
           <div className="text-center space-y-2 py-4">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-purple-200 text-[10px] font-medium mb-1 shadow-sm backdrop-blur-sm">
               <Sparkles className="w-3 h-3 text-purple-300" />
@@ -140,17 +142,18 @@ export default function LandingPage() {
               </p>
             </div>
           </div>
-        </div>
-      </main>
+          </div>
+        </main>
 
-      {/* Footer */}
-      <footer className="py-8 bg-slate-950 border-t border-white/5 relative z-10">
-        <div className="px-4 text-center">
-          <p className="text-[10px] text-gray-600">
-            © 2024 ndrop. All rights reserved.
-          </p>
-        </div>
-      </footer>
+        {/* Footer */}
+        <footer className="py-8 bg-slate-950/80 border-t border-white/5">
+          <div className="px-4 text-center">
+            <p className="text-[10px] text-gray-600">
+              © 2024 ndrop. All rights reserved.
+            </p>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }

@@ -22,19 +22,25 @@ type CollectedCardInsert = Tables['collected_cards']['Insert']
 type Notification = Tables['notifications']['Row']
 type NotificationInsert = Tables['notifications']['Insert']
 
-// 이벤트 상태 계산 함수 (DB 수정 없이)
+// 이벤트 상태 계산 함수 (DB 수정 없이, 날짜 기준)
 export const calculateEventStatus = (event: any) => {
   const now = new Date()
-  const startDate = new Date(event.start_date)
-  const endDate = new Date(event.end_date)
+  const start = new Date(event.start_date)
+  const end = new Date(event.end_date)
 
-  if (now < startDate) {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate())
+
+  if (today < startDay) {
     return 'upcoming'
-  } else if (now >= startDate && now < endDate) {
-    return 'ongoing'
-  } else {
+  }
+
+  if (today > endDay) {
     return 'completed'
   }
+
+  return 'ongoing'
 }
 
 // 이벤트 상태별 필터링 함수

@@ -119,7 +119,7 @@ export function MeetingChat({ eventId, meetingId, currentUserId, isOpen }: Meeti
       fetchReadReceipt();
       
       // 실시간 구독 설정
-      const channel = supabase
+      const channel = (supabase as any)
         .channel(`meeting_chat:${meetingId}`)
         .on("postgres_changes", { schema: "public", table: "event_meeting_messages", filter: `meeting_id=eq.${meetingId}` }, () => {
           fetchMessages();
